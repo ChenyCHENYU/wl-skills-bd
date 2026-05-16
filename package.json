@@ -1,0 +1,38 @@
+{
+  "name": "@agile-team/wl-skills-bd",
+  "version": "0.0.1",
+  "description": "AI Skill 模板包（后端方向）— Spring Boot + MyBatis(-Plus) + jh4j-cloud 后端工程的规范 / Skill / MCP / Pipeline 体系，与 wl-skills-kit（前端）对齐，组成完整全栈 AI 工作流。",
+  "main": "bin/wl-skills-bd.js",
+  "bin": {
+    "wl-skills-bd": "bin/wl-skills-bd.js"
+  },
+  "scripts": {
+    "lint:skills": "echo \"TODO: 复用 wl-skills-kit 的 lint-skills 脚本\"",
+    "version:verify": "echo \"TODO: 跨文件版本一致性自检\"",
+    "test": "echo \"TODO: 接入 vitest\""
+  },
+  "files": [
+    "bin",
+    "files",
+    "mcp",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "ai",
+    "skills",
+    "spring-boot",
+    "mybatis",
+    "jh4j-cloud",
+    "backend",
+    "agent",
+    "copilot",
+    "wl-skills"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "agile-team",
+  "license": "MIT",
+  "private": true
+}
