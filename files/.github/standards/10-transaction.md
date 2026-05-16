@@ -35,3 +35,25 @@
 - **不要随意调整**到 `SERIALIZABLE`，会导致性能急剧下降
 
 > TODO（0.1.x）：补事务消息 / TCC / 本地消息表的团队选型与代码模板。
+
+---
+
+## 线程安全（与事务相关的并发规则）
+
+以下规则直接影响事务正确性，审计时一并检查：
+
+| 规则 | 说明 | 详见 |
+|------|------|------|
+| R08 线程池 | @Transactional 方法内禁止显式创建线程，统一用线程池 | 17-bug-prevention.md 前置规则 |
+| R40 SimpleDateFormat | 不得声明为 static；事务日志中时间字段需线程安全 | 17-bug-prevention.md#R40 |
+| R43 ThreadLocal | 事务上下文若存入 ThreadLocal，必须在 finally 中 remove() | 17-bug-prevention.md#R43 |
+
+> **任务类型 A（service-codegen）含异步逻辑时，同步读取 17-bug-prevention.md 的 R40 / R43 节。**
+
+---
+
+## 变更记录
+
+- 2026-05-17 v0.0.2 补充线程安全交叉引用
+- 2026-05-14 v0.0.1 骨架
+
