@@ -14,7 +14,6 @@
   "files": [
     "bin",
     "files",
-    "mcp",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -29,10 +28,16 @@
     "copilot",
     "wl-skills"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/ycyplus163/wl-skills-bd.git"
+  },
   "engines": {
     "node": ">=18"
   },
   "author": "agile-team",
   "license": "MIT",
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  }
 }
