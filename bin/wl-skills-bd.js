@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 /**
- * wl-skills-bd CLI（v0.0.2）
+ * wl-skills-bd CLI（v0.0.3）
  *
  * 支持：init / help / version
  * 待实现：update / diff / clean / check / validate / doctor / export
@@ -11,7 +11,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const VERSION  = '0.0.2';
+const VERSION  = '0.0.3';
 const PKG_ROOT = path.join(__dirname, '..');
 const SRC_DIR  = path.join(PKG_ROOT, 'files');
 

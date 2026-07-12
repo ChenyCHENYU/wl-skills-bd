@@ -14,7 +14,7 @@
 2. `.github/skills/_registry.md` — 触发词 → SKILL 路径单一数据源
 3. `.github/standards/index.md` — 规范门控（任务类型 → 必读 standards 映射）
 
-> **禁止** 一次性 `read_file` 全部 14 条 standards 与全部 9 个 SKILL.md。按需加载。
+> **禁止** 一次性 `read_file` 全部 17 条 standards 与全部 10 个 SKILL.md。按需加载。
 
 ---
 
@@ -109,7 +109,7 @@ api.md(前端产出) ──► api-design-be ──► entity-codegen ──► 
 
 ## 7. 当前阶段说明（v0.0.2）
 
-- 9 个核心 SKILL.md 仅含 frontmatter + 流程纲要 + Pre-flight 占位，**模板细节待 0.1.x → 0.2.x 补齐**
+- 9 个代码生成主线 SKILL（②-⑨ + business-doc-extract）+ 1 个横切 ops SKILL（`standard-env-config-be`），共 10 个 SKILL.md 仅含 frontmatter + 流程纲要 + Pre-flight 占位，**模板细节待 0.1.x → 0.2.x 补齐**
 - **17 条 standards**：03 / 07 / 15 / 16 / 17 本次新增落地；02 / 04 / 05 / 06 / 12 已落地；01 / 08 / 09 / 10 / 11 / 13 / 14 仍为骨架
 - MCP / CLI / 单元测试体系尚未启动
 

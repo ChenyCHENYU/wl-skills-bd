@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.0.1 骨架）
+# Backend Skills 注册表（v0.0.3 骨架）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 
@@ -17,6 +17,7 @@
 | 建表 / DDL / 表结构变更 / 字段新增                    | [`data/db-migration`](data/db-migration/SKILL.md)                        | ⑥   | 🟡 骨架  | DB（待）   |
 | 生成单元测试 / Mock 测试 / Controller 测试            | [`test/unit-test-gen`](test/unit-test-gen/SKILL.md)                      | ⑦   | 🟡 骨架  | —          |
 | 修复规范违规 / 按审计报告改代码                        | [`ops/code-fix-be`](ops/code-fix-be/SKILL.md)                            | ⑨   | 🟡 骨架  | —          |
+| 后端环境标准化 / 切华新 / 本地启动配不起来 / K8s 部署清单对齐 | [`ops/standard-env-config-be`](ops/standard-env-config-be/SKILL.md) | ops  | 🟡 骨架  | —          |
 
 ---
 
@@ -28,7 +29,7 @@
 
 ---
 
-## 9 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
+## 10 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
 
 ```
 business-doc-extract-be → api-design-be → entity-codegen → service-codegen

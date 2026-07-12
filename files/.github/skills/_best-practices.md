@@ -127,8 +127,33 @@ business-doc-extract-be（读 controller+service+xml+表注释）→ docs/busine
 
 ---
 
+## 场景 7：环境配置标准化 / 切换客户环境（本地启动 + K8s 部署）
+
+**典型说话方式**：
+
+- "这个项目要从 172 切到华新，帮我把配置标准化"
+- "clone 下来本地起不来，连不上 Nacos"
+- "K8s 部署清单补一下，pre 环境缺 / 有冲突"
+- "后端环境标准化"
+
+**推荐 Skill**：
+
+```
+ops/standard-env-config-be（scan → plan → 确认 → apply → verify → 再 plan no-op）
+```
+
+**关键约束**：
+
+- 默认只读 / dry-run，必须用户确认地址、模块名、文件清单后才写入
+- 华新项目必须显式 `--profile walsin`，不静默套华新地址
+- secret（Nacos 密码 / DB 账密 / 集成 token）不落明文、报告脱敏
+- git 冲突标记 🔴 阻断，必须先人工解决
+- 不碰 Nacos 内配置、不碰镜像构建（Dockerfile / CI）
+
+---
+
 ## 反模式（禁止）
 
 - ❌ 用户问 "这段代码哪里有问题" → 不要直接动手改代码，先 ⑧ 审计输出报告
 - ❌ 用户说 "建个表" → 不要直接生成 DDL 后执行，必须走 ⑥ 并人工确认
-- ❌ 用户说 "全套来一下" → 不要把 9 个 Skill 一次性堆砌，按 Pipeline 顺序逐步推进
+- ❌ 用户说 "全套来一下" → 不要把代码生成主线 Skill（②-⑨）一次性堆砌，按 Pipeline 顺序逐步推进

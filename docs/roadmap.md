@@ -1,25 +1,28 @@
 # wl-skills-bd 路线图
 
-## v0.0.1 — 骨架（当前）
+## v0.0.x — 骨架增强（当前）
 
-- ✅ 14 条 standards（6 ✅ 落地 / 8 🟡 骨架）
-- ✅ 9 个 SKILL frontmatter + 流程纲要
+- ✅ 17 条 standards（落地状态见 `files/.github/standards/index.md`）
+- ✅ 10 个 SKILL frontmatter + 流程纲要（新增 `standard-env-config-be` 环境标准化横切能力）
 - ✅ copilot-instructions.md 主入口
 - ✅ 三件套：`_registry.md` / `_pipeline.md` / `_best-practices.md`
 - ✅ kit-internal 维护文档（ADR-001/002/003）
 - ✅ `docs/analysis-report.md` 分析报告
+- ✅ `docs/env-standard-analysis.md` 环境标准化需求基线
 
 ## v0.1.x — PoC（1-2 个迭代）
 
 - 🎯 选 `mdm-service` 一个真实模块（特征量分类）跑通 ②→⑨ 全链路
 - 🎯 8 条骨架 standards 补内容
-- 🎯 9 个 SKILL 模板补完整（产物示例 + 反例 + 回归用例）
+- 🎯 10 个 SKILL 模板补完整（产物示例 + 反例 + 回归用例）
 - 🎯 CLI `init` 实现：从 `wl-skills-bd/files/.github` 安装到业务工程
+- 🎯 **`standard-env-config-be` 用 mdm-service 跑通 scan→verify 闭环**（含双模块、oracle/mysql、五环境、集成样本）
 - 🎯 PoC 验收报告归档到 `docs/poc-report.md`
 
 ## v0.2.x — 工程化
 
 - 🎯 CLI `update / diff / check / doctor` 实现
+- 🎯 **CLI `standard-env scan|plan|apply|verify` 实现**（dry-run + 备份 + 脱敏 + 幂等）
 - 🎯 多 AI 编辑器派生：`CLAUDE.md` / `AGENTS.md` / `.cursorrules` / `.windsurf` / `.clinerules` / `.kiro` / `.trae` / `.qoder` 自动生成
 - 🎯 与 wl-skills-kit 共享契约同步检查（权限码、api.md 格式）
 - 🎯 上线 npm（私有源）
@@ -37,8 +40,8 @@
 
 ## v1.0 — 稳定生产版
 
-- 🎯 全 14 条 standards 落地
-- 🎯 9 个核心 SKILL 全部 ✅
+- 🎯 全 17 条 standards 落地
+- 🎯 10 个 SKILL 全部 ✅
 - 🎯 至少 3 个真实业务服务全量接入
 - 🎯 单测覆盖率红线 / 审计自动化跑在 CI
 

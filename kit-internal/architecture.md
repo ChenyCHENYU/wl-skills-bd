@@ -34,3 +34,12 @@
 - **决策**：v0.0.1 仅交付 frontmatter + 流程纲要 + Pre-flight 占位；v0.1.x 选 `mdm-service` 一个真实模块跑完 ②→⑨ 全链路后再补完整模板与回归用例。
 - **理由**：以真实代码反向校验模板，胜过纸面设计。
 - **后果**：0.0.1 期间 AI 触发时会"按 mdm-service 真实代码风格倒推"，需要在 copilot-instructions.md §7 明确告知。
+
+## ADR-004：新增 standard-env-config-be，横切 ops 类独立于代码生成主线
+
+- **日期**：2026-07-12
+- **状态**：accepted（扩展 ADR-003 的 Skill 集合，不推翻 ADR-003）
+- **背景**：历史后端项目从 172 / 其他内网 / 客户环境切换到华新时，需手动逐文件改配置；后端配置与前端不同（运行时配置住 Nacos，代码仓只放 bootstrap.yml 引导 + K8s 部署清单），需要一套独立的环境标准化能力。
+- **决策**：新增 `ops/standard-env-config-be`，作为横切 ops Skill，**不并入代码生成主线 ②-⑨**；与前端 `wl-skills-kit/standard-env-config` 职责对称、对象不同（后端管 bootstrap.yml + K8s yaml，前端管 .env + vite.config）。
+- **理由**：(1) jh4j-cloud archetype 同源，bootstrap.yml + Nacos + K8s 是框架强制范式，跨项目通用；(2) 镜像前端已验证的安全模型（dry-run + confirm + 备份 + 脱敏 + 幂等）；(3) CI/CD 是平台层，明确不碰。
+- **后果**：Skill 数 9 → 10；核心 Skill 集合扩展。CLI `standard-env` 子命令与 MCP 待 0.2.x；需求基线见 `docs/env-standard-analysis.md`。

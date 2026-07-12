@@ -23,6 +23,13 @@
 
 ---
 
+## 横切 ops Skill（独立于主线 ②-⑨，可随时触发）
+
+- `standard-env-config-be` ──► 本地启动模板 + K8s 四环境清单标准化 + 冲突/漂移检测（写配置，dry-run + 备份 + 幂等闭环）
+  - 不消费/不产出上述任何主线产物；与前端 `wl-skills-kit/standard-env-config` 职责对称、对象不同（后端管 bootstrap.yml + K8s yaml）
+
+---
+
 ## 产物契约（输入 / 输出 / 下一步）
 
 ### ② api-design-be
@@ -102,7 +109,7 @@ next_suggest: ⑧ convention-audit-be
 input_from: 整个工程或指定 module
 output_file: reports/AUDIT_BE_{ts}.md
 output_contains:
-  - 违规清单（按 standards/ 14 条分类）
+  - 违规清单（按 standards/ 17 条分类）
   - 严重度（🔴 阻断 / 🟡 警告 / 🟢 建议）
   - 修复建议
 next_suggest: ⑨ code-fix-be（如有 🔴 项）
