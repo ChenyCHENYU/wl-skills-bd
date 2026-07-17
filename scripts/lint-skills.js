@@ -127,6 +127,19 @@ if (fs.existsSync(JAVA_QUALITY)) {
   }
 }
 
+// 5.5 core codegen Skill 必须配 USAGE.md（执行细节）
+const CODEGEN_WITH_USAGE = [
+  "core/entity-codegen",
+  "core/service-codegen",
+  "core/mapper-xml-gen",
+];
+for (const dir of CODEGEN_WITH_USAGE) {
+  const usage = path.join(SKILLS, dir, "USAGE.md");
+  if (!fs.existsSync(usage)) {
+    errors.push(`${dir}/: 落地级 Skill 必须配 USAGE.md（执行细节+典型场景+FAQ）`);
+  }
+}
+
 // 6. 规则覆盖矩阵：阻断规则必须有执行器兜底
 function readOptional(rel) {
   const fp = path.join(ROOT, rel);

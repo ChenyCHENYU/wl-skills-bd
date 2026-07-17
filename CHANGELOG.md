@@ -4,6 +4,33 @@
 
 ---
 
+## [0.4.0] - 2026-07-17 (codegen SKILL 补厚落地)
+
+### 重大改进：3 个 codegen Skill 从骨架升级到落地深度
+
+解决 codegen SKILL.md 过薄（56~83 行）导致 AI 生成时缺乏执行步骤/边界用例/正反例的问题。对标 wl-skills-kit 的 SKILL.md（平均 200+ 行）+ USAGE.md（12 个）。
+
+### Changed — SKILL.md 补厚（56→150+ 行）
+- `entity-codegen/SKILL.md`：补完整执行步骤（5步）、字段类型映射表、占位符填空规则、DTO 校验生成规则、边界用例（树形/金额/富文本/枚举/时间范围）、正反例对照
+- `service-codegen/SKILL.md`：补执行步骤（4步）、CRUD 5 方法模板展开、状态变更四段式、软删除实现、权限码命名速查、validate 自检对照、边界用例（批量/树形/联表/状态机）、正反例
+- `mapper-xml-gen/SKILL.md`：补执行步骤（4步）、BaseColumns 生成规则、动态查询类型表、Oracle vs MySQL 差异表、foreach 批量、validate 自检对照、边界用例（联表/动态排序/IN/大字段）、正反例
+- 三个 SKILL status 🟡骨架 → ✅已落地
+
+### Added — 3 个 USAGE.md（执行细节，对标 kit 12 个）
+- `entity-codegen/USAGE.md`：4 典型场景（标准CRUD/树形/金额/仅补VO）+ 占位符填空示例 + FAQ
+- `service-codegen/USAGE.md`：4 典型场景（标准CRUD/状态变更/批量导入/联表详情）+ 权限码速查 + validate 对照 + FAQ
+- `mapper-xml-gen/USAGE.md`：4 典型场景（分页/联表/批量IN/简单lambdaQuery）+ Oracle/MySQL 速查 + validate 对照 + FAQ
+
+### Changed — 自检
+- `lint-skills.js`：新增 core codegen Skill 必须配 USAGE.md 校验（entity/service/mapper）
+- 版本 0.3.1 → 0.4.0
+
+### Notes
+- codegen 质量三层保障强化：① SKILL.md 有执行步骤指引 ② USAGE.md 有典型场景 + FAQ ③ templates 填空 + validate 自检
+- 验证：`npm run verify` 全绿（含 USAGE.md 存在性校验）
+
+---
+
 ## [0.3.1] - 2026-07-17 (多编辑器适配)
 
 ### Added — 全编辑器 MCP 接入（对标 wl-skills-kit）
@@ -210,6 +237,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.4.0]: about:blank
 [0.3.1]: about:blank
 [0.3.0]: about:blank
 [0.2.0]: about:blank
