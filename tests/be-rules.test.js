@@ -191,4 +191,42 @@ public class BadServiceImpl {
   console.log("  ✔ B11 检出高圈复杂度（>10）");
 })();
 
+// ─── B12: 业务方法缺 Javadoc ────────────────────────────────────────────
+
+(function testB12() {
+  const f = fixture(
+    "service/demo/NoDocService.java",
+    `package x.service.demo;
+public class NoDocService {
+    public void save(String dto) {
+        // 无 Javadoc 的写方法
+    }
+}`,
+  );
+  write(f);
+  const { issues } = runBeRules(f.dir);
+  assert.ok(hasRule(issues, "B12").length > 0, "B12 应检出缺 Javadoc 的业务方法");
+  console.log("  ✔ B12 检出业务方法缺 Javadoc");
+})();
+
+// B12 不误报：有 Javadoc 的方法
+(function testB12Ok() {
+  const f = fixture(
+    "service/demo/DocedService.java",
+    `package x.service.demo;
+public class DocedService {
+    /**
+     * 保存。
+     * @param dto 参数
+     */
+    public void save(String dto) {
+    }
+}`,
+  );
+  write(f);
+  const { issues } = runBeRules(f.dir);
+  assert.strictEqual(hasRule(issues, "B12").length, 0, "B12 不应误报有 Javadoc 的方法");
+  console.log("  ✔ B12 不误报有 Javadoc 的方法");
+})();
+
 console.log("\n✅ be-rules 测试全部通过");

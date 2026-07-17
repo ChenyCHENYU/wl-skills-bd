@@ -23,6 +23,7 @@ const RULE_DESC = {
   B9: "类长度 >500 行（上帝类）",
   B10: "方法长度 >80 行（长方法）",
   B11: "圈复杂度 >10",
+  B12: "业务/接口方法缺 Javadoc",
 };
 
 function resolveProjectRoot() {

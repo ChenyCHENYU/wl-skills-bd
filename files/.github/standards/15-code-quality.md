@@ -184,47 +184,23 @@ if (status != expected) { ... }
 
 ---
 
-## R23 · 类必须有 Javadoc（@author @since）
+## R23/R24 · Javadoc 注释规范
 
-> 依据黄山版第一章·注释 + Clean Code。所有 public 类必须有类级 Javadoc。
-
-```java
-/**
- * 特征量分类服务。
- * <p>负责特征量分类的 CRUD、树形查询、状态变更。
- *
- * @author wl-skills-bd codegen
- * @since 1.0.0
- */
-@Service
-public class MdmFeatureCategoryService extends JhServiceImpl<...> { ... }
-```
-
-Checkstyle `JavadocType` 兜底检查。
-
-## R24 · public 方法 / 抽象方法必须有 Javadoc（@param @return @throws）
-
-```java
-/**
- * 分页查询特征量分类。
- *
- * @param page    分页参数（current/size）
- * @param params  查询条件（全可选）
- * @return        分页结果列表
- * @throws ServiceException 当参数非法
- */
-public JhPage<MdmFeatureCategoryPageVO> queryPage(JhPage page, MdmFeatureCategoryPageDTO params) { ... }
-```
-
-豁免：明显的 getter/setter、toString、equals/hashCode（IDE 生成）。
-
-> **Clean Code 原则**：注释解释"为什么"而非"做什么"。代码自解释优先，注释补充意图/陷阱/历史。详见 standards/19 §9。
-
-Checkstyle `JavadocMethod` 兜底检查。
+> **本规范由 standards/19 §9 统一定义（单一数据源）**，此处仅保留强制度声明，避免重复维护。
+>
+> - **类 Javadoc 强制**（@author @since + 职责说明）— Checkstyle `JavadocType` 兜底
+> - **接口/抽象方法 Javadoc 强制**（@param/@return/@throws）— Checkstyle `JavadocMethod` 兜底
+> - **复杂业务方法 Javadoc 强制**（业务规则、@throws 场景、状态变更说明）
+> - **纯数据类字段**：用 `@ApiModelProperty` 即可（不重复 Javadoc）
+> - **Controller 方法**：`@ApiOperation`（给 Swagger UI）+ 简短 Javadoc（给读代码者）并存，受众不同不算重复
+>
+> 完整边界、正反例、Clean Code 原则详见 **[`standards/19-design.md` §9](19-design.md#9-注释设计黄山版第一章注释与-15-联动)**。
+> 代码模板已内置合规注释，codegen 读模板填空即满足本规范。
 
 ---
 
 ## 变更记录
 
+- 2026-07-17 v0.6 R23/R24 合并到 19 §9 单一数据源（避免三处重复）
 - 2026-07-17 v0.5 新增 R23/R24（Javadoc 规范，联动 19 §9 + Checkstyle）
 - 2026-05-17 v0.0.2 新增（基于《后端代码规范》PDF R09–R22）

@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  {{Entity}}Mapper.xml — {{apiDesc}}的 SQL 映射
+  namespace 必须与 Mapper.java 全限定名一致
+  规则：禁 SELECT 星号 / 禁 ${} 注入 / 软删除条件常驻（standards/06）
+-->
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="{{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper">
 

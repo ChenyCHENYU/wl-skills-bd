@@ -18,7 +18,7 @@
 | `J4` | SpotBugs 字节码 | `files/.github/java-quality/spotbugs/` | ✅ 确定性（mvn verify） |
 | `J5` | Spotless 格式 | `files/.github/java-quality/spotless/` | ✅ 确定性（mvn verify） |
 | `J6` | **P3C 阿里黄山版 + 设计级** | `files/.github/java-quality/pmd/ali-p3c-ruleset.xml` | ✅ 确定性（mvn verify） |
-| `regex` | 正则/行级扫描 | `lib/be-rules.js`（B1~B11） | ✅ 确定性（AI 审计/CLI/MCP 即时跑） |
+| `regex` | 正则/行级扫描 | `lib/be-rules.js`（B1~B12） | ✅ 确定性（AI 审计/CLI/MCP 即时跑） |
 | `AI` | 仅 SKILL.md 约定 | 各 `SKILL.md` | ⚠️ 非确定性（靠 AI 自觉） |
 
 ---
@@ -38,7 +38,7 @@
 | standards/06 | XML 使用 ${} 拼接（注入） | **regex** B4 | error | 是 |
 | standards/08 | 抛裸 RuntimeException | **regex** B8 | warn | 否 |
 | standards/11 | SELECT 缺 COMPANY_ID | **regex** B7 | warn | 否 |
-| standards/15 | 魔法值 / 未用 import / **类与方法 Javadoc** | **J2 / J3** | warn | 否 |
+| standards/15 | 魔法值 / 未用 import / **类与方法 Javadoc** | **J2 / B12** | warn | 否 |
 | standards/17 | NPE / 资源未关 / equals 误用 | **J4** | error | 是 |
 | standards/15 | 代码格式统一 | **J5** | warn | 否 |
 | **standards/19** | **类长度 >500（上帝类）** | **regex B9** | error | 是 |
@@ -62,5 +62,6 @@
 ---
 
 ## 变更记录
-- 2026-07-17 v0.3 J3/J4/J5 全部落地（PMD/SpotBugs/Spotless）；MCP 工具层（validate/standards/templates）
+- 2026-07-17 v0.6 新增 B12（业务/接口方法缺 Javadoc）；注释规范单一数据源（15 引用 19 §9）
+- 2026-07-17 v0.5 J3/J4/J5 全部落地 + 新增 19 设计规约 + J6 P3C + B9/B10/B11
 - 2026-07-17 v0.1 初始化（对标 kit/rule-coverage.md）；落地 J1/J2 + regex B1~B8

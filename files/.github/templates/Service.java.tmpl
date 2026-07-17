@@ -20,21 +20,35 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * {{apiDesc}}({{Entity}})表服务实现
- *
- * 继承 JhServiceImpl 获 baseMapper / lambdaQuery / saveBatch 等能力。
- * 构造注入（@RequiredArgsConstructor），不写 @Autowired。
+ * {{apiDesc}}({{Entity}})表服务实现。
+ * <p>继承 JhServiceImpl 获 baseMapper / lambdaQuery / saveBatch 等能力。
+ * <p>构造注入（@RequiredArgsConstructor），不写 @Autowired。
  *
  * @author wl-skills-bd codegen
+ * @since 1.0.0
  */
 @RequiredArgsConstructor
 @Service("{{entity}}Service")
 public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}}> {
 
+    /**
+     * 分页查询{{apiDesc}}。
+     *
+     * @param page   分页参数（current/size）
+     * @param params 查询条件（全可选）
+     * @return 分页结果列表
+     */
     public JhPage<{{Entity}}PageVO> query{{Entity}}Page(JhPage page, {{Entity}}PageDTO params) {
         return baseMapper.queryPage(page, params);
     }
 
+    /**
+     * 主键查询{{apiDesc}}详情。
+     *
+     * @param id 主键
+     * @return {{apiDesc}}详情 VO（含展示字段）
+     * @throws ServiceException 当 id 对应记录不存在
+     */
     public {{Entity}}VO getById(String id) {
         {{Entity}} entity = baseMapper.selectById(id);
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
@@ -43,6 +57,13 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         return vo;
     }
 
+    /**
+     * 新增{{apiDesc}}。
+     * <p>自动填充审计字段（id/createUserNo/createDateTime/companyId）。
+     *
+     * @param dto 新增参数（已 @Validated 校验）
+     * @return 新生成的主键 id
+     */
     @Transactional(rollbackFor = Exception.class)
     public String save({{Entity}}DTO dto) {
         {{Entity}} entity = new {{Entity}}();
@@ -53,6 +74,13 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         return entity.getId();
     }
 
+    /**
+     * 修改{{apiDesc}}。
+     * <p>自动填充更新审计字段（updateUserNo/updateDateTime）。
+     *
+     * @param dto 修改参数（必须含 id）
+     * @throws ServiceException 当 id 为空 或 记录不存在
+     */
     @Transactional(rollbackFor = Exception.class)
     public void updateById({{Entity}}DTO dto) {
         ServiceAssert.isTrue(Objects.nonNull(dto.getId()), "主键不能为空");
@@ -63,9 +91,15 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         baseMapper.updateById(entity);
     }
 
+    /**
+     * 删除{{apiDesc}}（软删除）。
+     * <p>团队基线：IS_DELETE = 0 表示已删除（1=有效），不物理删除。
+     *
+     * @param id 主键
+     * @throws ServiceException 当记录不存在
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(String id) {
-        // 软删除（团队基线：IS_DELETE = 0）
         {{Entity}} entity = baseMapper.selectById(id);
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
         entity.setIsDelete(0);
@@ -73,6 +107,12 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         baseMapper.updateById(entity);
     }
 
+    /**
+     * 批量删除{{apiDesc}}（物理删除，谨慎使用）。
+     *
+     * @param ids 主键列表
+     * @return 实际删除条数
+     */
     public int deleteByIds(List<String> ids) {
         return baseMapper.deleteBatchIds(ids);
     }

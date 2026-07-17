@@ -4,6 +4,41 @@
 
 ---
 
+## [0.6.0] - 2026-07-17 (注释闭环 · 修复"规范要求 vs 模板实现"自相矛盾)
+
+### Fixed — 🔴 核心 bug：模板零方法注释 vs 规范要求 Javadoc
+之前 8 个 templates 全部缺方法 Javadoc，但 15 R24 要求"public 方法必须有 Javadoc"——AI 跟模板填空生成的代码反而违规（自己挖坑自己跳）。本次修复。
+
+### Changed — 8 个 templates 补全合规注释（按"必要注释"原则）
+- `Controller.java.tmpl`：类 Javadoc 补 @since + 职责（方法保留 @ApiOperation，不加重复 Javadoc）
+- `Service.java.tmpl`：★ 每个方法补完整 Javadoc（业务规则 + @param/@return/@throws + 软删除说明）—— 业务核心，注释最重要
+- `Mapper.java.tmpl`：接口方法补 @param/@return（黄山版 R24：接口方法强制）+ 常量注释
+- `Entity/DTO/VO/PageDTO.java.tmpl`：类 Javadoc 补 @since + 职责说明（纯数据类字段已有 @ApiModelProperty，不重复）
+- `Mapper.xml.tmpl`：补文件级注释（namespace 规则 + 三大硬约束提醒）
+
+### Changed — 注释规范单一数据源（消除三处重复）
+- `15 R23/R24`：删除正文，改为引用 `19 §9`（避免 15 R23/R24 + 19 §9 + Checkstyle 三处重复维护）
+- `19 §9`：升级为权威定义，补 9.1 强制度分级表（接口/抽象强制 + 业务方法强制 + 纯数据类豁免 + Controller @ApiOperation 豁免）+ 9.3 模板已内置声明
+
+### Added — be-rules B12（必要注释机器兜底）
+- `lib/be-rules.js` 新增 B12：业务方法（save/update/delete/状态变更）+ Mapper 接口方法 缺 Javadoc → warn
+- 豁免：Controller（@ApiOperation 已覆盖）、getter/setter、纯数据类字段
+- 测试：2 个新用例（检出 + 不误报）全过
+
+### Changed
+- `AGENTS.md`：B1~B8 → B1~B12
+- `rule-coverage.md`：B12 + 15 Javadoc 执行器更新
+- 版本 0.5.1 → 0.6.0
+
+### Notes
+- "必要注释"边界（Clean Code + 黄山版平衡）：
+  - 🔴 强制：类 Javadoc / 接口方法 / 复杂业务方法
+  - 🟡 建议：普通 public 方法（签名自解释可豁免）/ Controller（@ApiOperation 已说明）
+  - ⚪ 豁免：getter/setter / 纯数据类字段（用 @ApiModelProperty）
+- 解决用户反馈："规范说了但模板没做"的自相矛盾；现在 codegen 读模板填空即合规
+
+---
+
 ## [0.5.1] - 2026-07-17 (一致性修正 + codegen 闭环权威文档)
 
 ### Fixed — registry/pipeline 状态滞后（v0.4~v0.5 补厚后状态未同步）
@@ -366,6 +401,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.6.0]: about:blank
 [0.5.1]: about:blank
 [0.5.0]: about:blank
 [0.4.2]: about:blank

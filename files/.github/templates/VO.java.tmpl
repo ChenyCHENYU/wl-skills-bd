@@ -7,10 +7,12 @@ import lombok.Setter;
 import lombok.ToString;
 
 /**
- * {{apiDesc}}({{Entity}})VO类
- * 出参：常 extends Entity 复用字段，再补展示字段（如外键名称）
+ * {{apiDesc}}({{Entity}})详情 VO。
+ * <p>出参：extends Entity 复用数据库字段，再补展示字段（如外键关联名称、枚举中文、子列表）。
+ * <p>VO 只用于返回，**不接受请求**（入参用 DTO）。
  *
  * @author wl-skills-bd codegen
+ * @since 1.0.0
  */
 @Getter
 @Setter

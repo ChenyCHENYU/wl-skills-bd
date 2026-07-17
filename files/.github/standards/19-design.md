@@ -238,29 +238,49 @@ public void save(DTO dto) {
 
 ---
 
-## 9. 注释设计（黄山版第一章·注释，与 15 联动）
+## 9. 注释设计（黄山版第一章·注释，单一数据源 · 15 R23/R24 引用此处）
 
+> **本节是注释规范的唯一权威定义**。15 R23/R24 只声明强制度，具体内容回到这里。
 > **Clean Code 原则**：好代码自解释，注释解释"为什么"而非"做什么"。
+
+### 9.1 强制度分级（黄山版 R23/R24 + Clean Code 平衡）
+
+| 对象 | 强制度 | 说明 |
+|------|:---:|------|
+| 类 Javadoc（@author @since + 职责）| 🔴 强制 | 所有 public 类，Checkstyle JavadocType 兜底 |
+| 接口/抽象方法 Javadoc（@param/@return/@throws）| 🔴 强制 | 黄山版明确：接口方法必须注释，Checkstyle JavadocMethod 兜底 |
+| 复杂业务方法 Javadoc（业务规则/@throws 场景）| 🔴 强制 | 状态变更、多步业务、有副作用的写方法 |
+| 普通 public 方法（查询/简单转换）| 🟡 建议 | 签名自解释时可豁免，但建议加一句话业务意图 |
+| Controller 方法（已有 @ApiOperation）| 🟡 建议 | @ApiOperation 给 Swagger UI，Javadoc 给读代码者；简短并存不算重复 |
+| getter/setter/toString/equals/hashCode | ⚪ 豁免 | IDE 生成，加注释是噪音 |
+| 纯数据类字段（Entity/DTO/VO）| ⚪ 用 @ApiModelProperty | 字段已有 Swagger 注解，不重复 Javadoc |
+| 行内注释（解释"为什么"）| 🟡 建议 | 业务/陷阱/历史，写在做决策的代码上方 |
+
+### 9.2 该写 vs 不该写（Clean Code 核心边界）
 
 | 注释类型 | 何时写 | 何时不写 |
 |---------|--------|---------|
 | 类 Javadoc | 所有 public 类（含 @author @since）| private 类 |
-| public 方法 Javadoc | 接口/抽象方法（含 @param/@return/@throws）| 显然的 getter/setter |
+| 方法 Javadoc | 接口/抽象方法（含 @param/@return/@throws）| 显然的 getter/setter |
 | 字段注释 | 业务含义不明显的字段 | `String name;` 这种 |
 | 行内注释 | 解释"为什么这么做"（业务/历史/陷阱）| 解释"做了什么"（看代码就行）|
 | TODO | 明确的待办 + 责任人 + 时间 | 模糊的"以后优化" |
 
 ```java
-// ✅ 解释为什么
+// ✅ 解释为什么（业务决策/陷阱）
 // Oracle 11g 不支持 LIMIT，用 ROWNUM 子查询（已在 12c+ 弃用）
 String sql = "SELECT * FROM (SELECT t.*, ROWNUM rn FROM ...) WHERE rn <= ?";
 
-// ❌ 解释做什么（代码已说明）
+// ❌ 解释做什么（代码已说明，是噪音）
 // 查询数据库
 List<User> users = mapper.selectList(null);
 ```
 
-> 详见 standards/15 R19 + 本规范。Javadoc 强制由 Checkstyle `JavadocType`/`JavadocMethod` 兜底。
+### 9.3 代码模板已内置合规注释
+
+8 个 templates 已按本节规范内置注释（类 Javadoc + 接口方法 @param/@return + 业务方法 @throws）。codegen 读模板填空即满足 R23/R24，无需 AI 自由发挥注释风格。详见 `templates/README.md`。
+
+> Checkstyle `JavadocType` + `JavadocMethod` 兜底机器卡控（见 `java-quality/checkstyle/`）。
 
 ---
 

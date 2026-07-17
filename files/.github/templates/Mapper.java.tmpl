@@ -9,20 +9,26 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * {{apiDesc}}({{Entity}})表数据库访问层
- *
- * 继承 JhBaseMapper 获得 selectById/insert/updateById/deleteBatchIds 等。
- * 复杂查询/联表/动态条件写自定义方法 + XML。
+ * {{apiDesc}}({{Entity}})表数据库访问层。
+ * <p>继承 JhBaseMapper 获得 selectById/insert/updateById/deleteBatchIds 等。
+ * <p>复杂查询/联表/动态条件写自定义方法 + XML。
  *
  * @author wl-skills-bd codegen
+ * @since 1.0.0
  */
 @Mapper
 public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
 
+    /** XML 中引用查询参数的 key 名 */
     String QUERY_PARAM_KEY = "param";
 
     /**
-     * 分页查询（XML 实现，禁止 SELECT *）
+     * 分页查询{{apiDesc}}。
+     * <p>实现见同名 Mapper.xml（禁止 SELECT 星号，软删除条件常驻）。
+     *
+     * @param page    分页参数（current/size，由 MP 拦截器自动包裹）
+     * @param pageDTO 查询条件（@Param("param")，XML 用 param.xxx 引用）
+     * @return 分页结果，元素为 {{Entity}}PageVO
      */
     JhPage<{{Entity}}PageVO> queryPage(JhPage<{{Entity}}PageVO> page, @Param(QUERY_PARAM_KEY) {{Entity}}PageDTO pageDTO);
 }

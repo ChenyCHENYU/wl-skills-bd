@@ -28,7 +28,7 @@
 - 权限：`@PreAuthorize("@pms.hasPermission('xxx_yyy_zzz')")`
 - 数据库：检测方式见 `.github/standards/01-toolchain.md`
 - 代码生成：读 `.github/templates/` 填空（非自由发挥）
-- 自检：`wl-skills-bd validate`（B1~B8）或 MCP `wls_be_validate`
+- 自检：`wl-skills-bd validate`（B1~B12）或 MCP `wls_be_validate`
 - Java 检查工具：Checkstyle / PMD / SpotBugs / ArchUnit / Spotless（见 `.github/java-quality/`）
 
 ---

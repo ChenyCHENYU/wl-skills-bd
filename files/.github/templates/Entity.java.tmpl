@@ -12,9 +12,12 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 /**
- * {{apiDesc}}({{Entity}})表实体类
+ * {{apiDesc}}({{Entity}})表实体类。
+ * <p>映射数据库表 {{table}}，继承 CoreEntity 复用审计字段（id/companyId/isDelete/revision/create*/update*）。
+ * <p>本类仅含业务字段，审计字段勿重复声明。
  *
  * @author wl-skills-bd codegen
+ * @since 1.0.0
  */
 @Getter
 @Setter
