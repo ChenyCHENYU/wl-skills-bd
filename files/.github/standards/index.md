@@ -1,16 +1,16 @@
 # Backend Standards 规范门控（懒加载入口）
 
-> **版本**：v0.0.2  **维护者**：CHENY（工号 409322）
+> **版本**：v0.0.5  **维护者**：CHENY（工号 409322）
 > **加载策略**：AI 按当前任务类型，**只读取相关条目**，不全量加载。
 
 ---
 
-## 17 条后端规范清单
+## 18 条后端规范清单
 
 | 编号 | 文件                          | 主题                          | 强制度        | 状态     |
 | ---- | ----------------------------- | ----------------------------- | ------------- | -------- |
 | 01   | `01-toolchain.md`             | JDK / Maven / Lombok 前置检测 | 🔴 阻断       | 🟡 骨架   |
-| 02   | `02-project-structure.md`     | 包结构 + 分层 + 禁止跨层      | 🔴 必遵       | ✅ 已落地 |
+| 02   | `02-project-structure.md`     | 包结构 + 分层 + 禁止跨层 + 单目录粒度 + 业务中心包名映射 | 🔴 必遵 | ✅ 已落地 |
 | 03   | `03-naming.md`                | 类 / 方法 / 字段 / 路径命名   | 🔴 必遵       | ✅ 已落地 |
 | 04   | `04-controller.md`            | Controller 模板 + 权限 + 返回 | 🔴 必遵       | ✅ 已落地 |
 | 05   | `05-service.md`               | Service 接口 + 实现 + 状态变更 | 🔴 必遵      | ✅ 已落地 |
@@ -20,12 +20,13 @@
 | 09   | `09-logging.md`               | SLF4J 占位符 + 级别 + 敏感    | 🔴 必遵       | 🟡 骨架   |
 | 10   | `10-transaction.md`           | @Transactional 粒度 + 禁止    | 🔴 必遵       | 🟡 骨架   |
 | 11   | `11-security-permission.md`   | 权限码 + 租户隔离             | 🔴 必遵       | 🟡 骨架   |
-| 12   | `12-database-ddl.md`          | 建表 + 索引 + 序列 + 命名     | 🔴 必遵 + 阻断 | ✅ 已落地 |
+| 12   | `12-database-ddl.md`          | 建表 + 索引 + 序列 + 命名 + 物理库归属 | 🔴 必遵 + 阻断 | ✅ 已落地 |
 | 13   | `13-api-doc-swagger.md`       | @Api / @ApiOperation / @ApiModelProperty | 🟡 建议 | 🟡 骨架   |
 | 14   | `14-test-coverage.md`         | 单测覆盖红线 + Mock 规范      | 🟡 建议       | 🟡 骨架   |
 | 15   | `15-code-quality.md`          | 编程质量（过时方法/常量/枚举注释/大括号/字符串常量/switch-break 等 14 条） | 🔴 必遵 | ✅ 已落地 |
 | 16   | `16-performance.md`           | 性能优化（BeanUtils/集合容量/正则预编译/StringBuilder 等 5 条） | 🔴 必遵 | ✅ 已落地 |
 | 17   | `17-bug-prevention.md`        | 漏洞防护（BigDecimal/equals/float精度/NPE/ThreadLocal/SimpleDateFormat 等 16 条） | 🔴 必遵 | ✅ 已落地 |
+| 18   | `18-git-commit.md`            | Git 提交信息格式（类型code + 模块名 + 功能点） | 🔴 必遵 | ✅ 已落地 |
 
 ---
 
@@ -58,13 +59,13 @@
 ### 任务类型 D：DDL 与数据迁移（db-migration）
 
 ```
-必读：12 / 11（租户字段强制） / 02（领域包对齐）
+必读：12（含 §0.5 物理库归属选库） / 11（租户字段强制） / 02（领域包对齐）
 ```
 
 ### 任务类型 E：后端规范审计（convention-audit-be）
 
 ```
-必读：全部 17 条（审计需要完整对照）
+必读：全部 18 条（审计需要完整对照，含 18 Git 提交规范）
 ```
 
 ### 任务类型 F：接口契约审查（api-design-be）
@@ -99,7 +100,7 @@
 ✅ 已读取 standards/11-security-permission.md → @pms.hasPermission 规范
 ```
 
-> **不要** 一次性读取全部 17 条。错误示范：`✅ 已读取 standards/01 ~ standards/17`。
+> **不要** 一次性读取全部 18 条。错误示范：`✅ 已读取 standards/01 ~ standards/18`。
 
 ---
 

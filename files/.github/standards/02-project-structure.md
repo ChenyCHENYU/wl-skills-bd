@@ -4,6 +4,39 @@
 
 ---
 
+## 业务中心 × 工程包名映射（团队开发要求）
+
+> 依据《项目开发手册》§"工程及包名称约定" / §"工程目录具体划分"。新建工程或新模块时（service-codegen / entity-codegen），**根包与工程名必须按下表对齐**，不得套用单一样例。
+
+| 业务中心   | 后端工程      | 后端包名            | 前端工程        |
+| ---------- | ------------- | ------------------- | --------------- |
+| 销售管理   | `wl-sale`     | `com.jhict.sale`    | `wl-ui-sale`    |
+| 质量管理   | `wl-quality`  | `com.jhict.quality` | `wl-ui-quality` |
+| 生产订单   | `wl-produce`  | `com.jhict.produce` | `wl-ui-produce` |
+| 成本管理   | `wl-cost`     | `com.jhict.cost`    | `wl-ui-cost`    |
+| 安全       | `wl-safe`     | `com.jhict.safe`    | `wl-ui-safe`    |
+| 主数据(MDM)| `mdm-service` | `com.jhict.mdm`     | —               |
+
+> 手册标注"待定/作业计划/物料实绩/仓储管理"的业务中心，按定稿后补登本表，编号顺序预留。
+
+### 工程目录角色（团队全局）
+
+| 目录         | 角色                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `wl-apis`    | **所有 api 及 api 涉及的 DTO**、平台开放工程（网关等）、业务基础实体类、通用 Service 基类、基础业务组件、跨服务业务校验工具、通用注解 |
+| `wl-common`  | 公共服务工程                                                                                           |
+| `wl-xxx`     | 各业务中心后端工程                                                                                     |
+| `wl-ui-xxx`  | 各业务中心前端工程                                                                                     |
+
+> **依赖与构建顺序（有跨域 api 依赖时）**：本地先 `install wl-apis`，再打包/启动；部署时流水线先发布 `wl-apis`，再发布业务模块。**单服务特例**：独立建仓服务（如 mdm-service）自带 `-entity/-api`，援引手册"单服务可不依赖 wl-apis"豁免。
+
+### AI 使用约束
+
+- `service-codegen` / `entity-codegen` 在新工程生成代码前，**先核对工程根包**（读父 `pom.xml` 的 `groupId`），按本表确认业务域，禁止把 `com.jhict.mdm` 套到非 MDM 工程
+- 发现包名与业务中心不匹配（如 `wl-sale` 却用了 `com.jhict.mdm`）→ 记为违规并提示修正
+
+---
+
 ## 多模块工程标准
 
 业务服务（如 `xxx-service`）通常拆为 3 个 Maven 模块：
@@ -69,6 +102,24 @@ Controller → Service(impl) → Mapper → XML
 
 ---
 
+## 单目录文件粒度（🔴 必遵）
+
+> 依据《项目开发手册》§"业务服务目录划分"。
+
+- 任一业务子域目录下的文件数 **≤ 20**，**10 以内为最佳**
+- 超过 20 个即触发"再拆子域"信号：按二级业务语义拆分子包（如 `feature/` 下再分 `category/`、`design/`）
+- 审计（`convention-audit-be`）对单目录文件数计数，>20 记为提示项；>30 记为违规
+- 依据：避免单目录文件过多导致 AI 检索噪声、人工 review 困难、命名冲突
+
+```
+controller/feature/                    ← 8 个文件 ✅
+controller/feature/category/           ← 拆分后子域，再控制 ≤20
+controller/modelAttributeMap/          ← 8 个文件 ✅
+controller/某域/                       ← 35 个文件 ❌ 必须拆子域
+```
+
+---
+
 ## 包命名规范
 
 - 根包：全小写、无下划线（`com.jhict.mdm` / `com.xisc.industry`）
@@ -93,4 +144,6 @@ Controller → Service(impl) → Mapper → XML
 
 ## 变更记录
 
+- 2026-07-17 v0.0.5 新增"业务中心 × 工程包名映射"（对齐手册，闭环新建工程包名生成）
+- 2026-07-17 v0.0.4 补充"单目录文件 ≤20"粒度红线（对齐手册）
 - 2026-05-14 v0.0.1 初始化
