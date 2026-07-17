@@ -1,6 +1,6 @@
 # 02 · 项目包结构与分层（✅ 已落地）
 
-> 团队基线：参考 `mdm-service` (jh4j-cloud 体系)；共性结构与 `CLAUDE规范文档/后端` (HZERO) 一致。
+> 团队基线：jh4j-cloud 体系（Spring Boot + MyBatis-Plus）；共性结构参考官方/社区最佳实践。
 
 ---
 
@@ -131,14 +131,14 @@ controller/某域/                       ← 35 个文件 ❌ 必须拆子域
 
 ## 与外部参考的差异
 
-| 维度                | 团队基线（mdm-service）        | CLAUDE 规范（外部参考，不集成）              |
+| 维度                | 团队基线（jh4j-cloud 三层）    | CLAUDE 规范（外部参考，不集成）              |
 | ------------------- | ------------------------------ | -------------------------------------------- |
 | DDD 分层            | 不强调（`api/app/domain/infra` 不使用） | 严格 DDD：`api/app/domain/infra`             |
 | Repository 接口     | 不使用，直接 Mapper             | 必须有 `domain/repository/` + `infra/repository/impl/` |
 | 路径风格            | 驼峰（`mdmFeatureCategory`）    | kebab-case（`/v1/{orgId}/cy-contents`）      |
 | 租户字段            | `companyId` / `tenantId` 不强 | `tenantId` + `@PathVariable Long organizationId` |
 
-> **取舍**：本规范以 **mdm-service 三层结构** 为团队基线，不引入 DDD 四层。理由：(1) 工程已成型；(2) MyBatis-Plus 已经覆盖大多数 Repository 需求；(3) 引入 DDD 四层会大量增加样板代码。
+> **取舍**：本规范采用 **经典三层结构**（Controller/Service/Mapper），不引入 DDD 四层。理由：(1) 与 jh4j-cloud 体系一致；(2) MyBatis-Plus 已覆盖大多数 Repository 需求；(3) 引入 DDD 四层会大量增加样板代码。
 
 ---
 

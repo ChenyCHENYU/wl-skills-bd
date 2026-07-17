@@ -4,7 +4,7 @@
 >
 > 这是 bd 防"意大利面条代码"的核心物化层。对标 wl-skills-kit 的 `templates/`（45 个 Vue 模板）。
 >
-> **原则**：模板里的每一个写法都来自团队基线（mdm-service 真实代码）+ 官方/社区最佳实践。生成时只填业务字段，不动结构。
+> **原则**：模板里的每一个写法都遵循 **官方/社区最佳实践 + 团队 standards 规范**（CoreEntity/JhServiceImpl/@Validated/Swagger/审计字段）。生成时只填业务字段，不动结构。
 
 ## 模板清单（一文件一角色）
 

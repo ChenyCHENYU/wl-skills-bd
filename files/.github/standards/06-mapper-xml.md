@@ -1,4 +1,4 @@
-# 06 · Mapper XML 规范（✅ 已落地，基于 mdm-service 真实代码 + CLAUDE 共性）
+# 06 · Mapper XML 规范（✅ 已落地，依据 MyBatis/MyBatis-Plus 官方）
 
 ---
 
@@ -132,7 +132,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 2. **模糊查询用** `CONCAT(CONCAT('%', #{x}), '%')`，**禁止** `%${x}%`（SQL 注入）
 3. **XML 中 `<` `>` 转义** 为 `&lt;` / `&gt;`
 4. **分页语法需区分数据库**：
-   - **Oracle 项目**（mdm-service 等）：TopN 用 `ROWNUM` 子查询包裹，不用 `LIMIT`
+   - **Oracle 项目**（主数据类等）：TopN 用 `ROWNUM` 子查询包裹，不用 `LIMIT`
    - **MySQL 项目**（主流）：`LIMIT #{offset}, #{size}`（MyBatis-Plus 内置分页拦截器自动生成，常规分页查询无需手写）
 5. **JDBC Type 显式声明**：`#{x,jdbcType=VARCHAR}` / `#{id,jdbcType=BIGINT}`
 6. **分页查询默认不加 `ORDER BY`**：排序由 `JhPage` / 业务前端传递；仅 TopN / 时间线显式排序

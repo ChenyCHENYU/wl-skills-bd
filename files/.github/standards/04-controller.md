@@ -1,4 +1,4 @@
-# 04 · Controller 层规范（✅ 已落地，基于 mdm-service 真实代码）
+# 04 · Controller 层规范（✅ 已落地，依据 Spring MVC 官方 + 团队基线）
 
 > 团队基线模板。共性参考 `CLAUDE规范文档/后端` §六，但具体注解 / 返回值用本团队栈。
 

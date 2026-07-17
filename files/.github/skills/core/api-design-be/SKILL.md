@@ -53,7 +53,7 @@ stage: ② 设计阶段
 
 ## 约束（骨架）
 
-- 路径使用驼峰（与团队基线 `mdm-service` 对齐，**不**使用 kebab-case）
+- 路径使用驼峰（团队基线，**不**使用 kebab-case）
 - 权限码命名 `{module}_{resource}_{action}` 全小写下划线
 - 列表查询统一 POST + queryPage 路径
 - 所有写接口必带权限码与 `@ApiOperation`
@@ -70,4 +70,4 @@ stage: ② 设计阶段
    - 下一步建议: ③ entity-codegen
 ```
 
-> **当前 v0.0.1 骨架**：本 Skill 仅含框架，AI 触发时按 `mdm-service` 真实 Controller 风格生成契约。
+> **当前 v0.0.1 骨架**：本 Skill 仅含框架，AI 触发时按 Spring MVC 官方 RESTful 约定 + standards/04 生成契约。

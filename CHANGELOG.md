@@ -4,7 +4,38 @@
 
 ---
 
-## [0.4.1] - 2026-07-17 (5 条必遵规范骨架补厚 → 18 条全落地)
+## [0.4.2] - 2026-07-17 (规范方法论修正 · 官方/社区最佳实践为基线)
+
+### 重大修正：纠正"对齐存量代码"的方法论错误
+
+之前 v0.4/v0.4.1 把 mdm-service（AI 生成的存量代码）当"权威基线"对齐，是本末倒置——存量代码有多租户硬编码"1"、SQL 注入、上帝类(3373行)、漏事务+混Feign 等严重缺陷。规范应高于存量代码。本次改为以**官方/社区最佳实践**为唯一基线，mdm-service 的缺陷明确标注为**反面教材**。
+
+### Changed — 5 条规范依据权威来源重写
+- `11-security`：依据 **MyBatis-Plus 官方多租户(TenantLineHandler 插件)** 重写 COMPANY_ID 部分；**明确禁止硬编码**（mdm-service 硬编码"1"致多租户失效，标注为反面教材）
+- `10-transaction`：依据 **Spring 官方文档**（已核实 self-invocation/方法可见性/Propagation）；标注 mdm-service 漏事务+混Feign 反面
+- `08-exception`：依据 **Effective Java(异常章节) + Spring @ControllerAdvice**；标注 dingtalk 22 处 RuntimeException 反面
+- `09-logging`：依据 **SLF4J 官方(参数化日志) + OWASP 日志安全**
+- `01-toolchain`：改为团队 jh4j-cloud 技术栈要求（非对齐存量项目）
+
+### Changed — 清理"倒推/对齐存量代码"的错误指示（方法论）
+- `_registry.md` / `guides/usage.md` / `guides/architecture.md`：删"按 mdm-service 真实代码风格倒推/为准"
+- `templates/README.md`：模板来源改为"官方/社区最佳实践 + 团队 standards"
+- `04/05/06` 标题：去"基于 mdm-service 真实代码"，改"依据 Spring/MyBatis-Plus 官方"
+- `02/03`：基线措辞改 jh4j-cloud 体系 + Java 官方约定
+- `api-design-be/SKILL.md`：按 Spring MVC 官方 RESTful 约定生成（非存量风格）
+- `copilot-instructions.md`：新增方法论原则段——不对齐存量项目，存量偏离应整改
+
+### Changed
+- `verify-version.js`：README 徽章正则兼容新格式
+- 版本 0.4.1 → 0.4.2
+
+### Notes
+- 修正后规范层方法论：官方/社区最佳实践 > 团队 standards > 存量代码（存量仅作反面教材或整改对象）
+- 验证：`npm run verify` 全绿；危险措辞 grep 清零
+
+---
+
+## [0.4.1] - 2026-07-17 (5 条必遵规范骨架补厚)
 
 ### 重大改进：规范层从 11 落地/7 骨架 → 16 落地/2 骨架（建议级）
 
@@ -262,6 +293,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.4.2]: about:blank
 [0.4.1]: about:blank
 [0.4.0]: about:blank
 [0.3.1]: about:blank

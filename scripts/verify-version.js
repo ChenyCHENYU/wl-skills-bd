@@ -58,10 +58,10 @@ function checkVersionMatch(file, regex, label) {
 
 // bin/wl-skills-bd.js 注释里的版本
 checkVersionMatch("bin/wl-skills-bd.js", /v\d+\.\d+\.\d+/, "CLI header");
-// README 徽章
+// README 徽章（兼容多种格式：status-vX、status-skeleton%20vX）
 checkVersionMatch(
   "README.md",
-  /status-skeleton%20v\d+\.\d+\.\d+/,
+  /status(?:-skeleton)?[%-]v\d+\.\d+\.\d+/,
   "README 徽章",
 );
 // standards/index.md 版本声明

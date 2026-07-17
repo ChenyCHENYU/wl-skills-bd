@@ -5,6 +5,8 @@
 > 强制度：🔴 阻断。未就绪时 codegen / audit Skill 拒绝执行。
 >
 > 检测方式：静态读取项目文件（pom.xml / bootstrap.yml / application.yml），**无需执行命令**。
+>
+> **说明**：以下基线是团队 jh4j-cloud 技术栈要求（非对齐某个存量项目）。JDK 版本随团队框架升级演进，优先 Oracle 官方 LTS（当前基线 1.8，新项目建议评估 17 LTS）。
 
 ---
 

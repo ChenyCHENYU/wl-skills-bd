@@ -33,7 +33,7 @@ L4  unit-test-gen             ◄──┤   测试（JUnit 5 + Mockito + MockMv
 - **懒加载**：standards/SKILL 按需读取，避免 token 浪费
 - **Pre-flight 强制**：每个 Skill 触发先声明已加载哪些规则
 - **人工卡口**：DDL / 数据迁移 / 跨服务影响必须人工确认
-- **团队基线优先**：抽象通用规则，但具体代码风格以 `mdm-service` 为准
+- **官方/社区最佳实践优先**：抽象通用规则，代码风格遵循 Spring/MyBatis-Plus 官方 + 团队 standards 规范（**不**对齐某个存量项目）
 - **多 AI 编辑器适配**：内容统一来源，多入口由 CLI 派生（0.2.x）
 
 ## 模块边界

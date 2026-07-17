@@ -1,4 +1,4 @@
-# 05 · Service 层规范（✅ 已落地，基于 mdm-service 真实代码）
+# 05 · Service 层规范（✅ 已落地，依据 Spring 官方 + 团队基线）
 
 > 团队基线：Service 接口 + ServiceImpl，**继承 `JhServiceImpl<Mapper, Entity>` 获取 MyBatis-Plus 通用方法**；状态变更模板抽自 CLAUDE 共性最佳实践。
 
