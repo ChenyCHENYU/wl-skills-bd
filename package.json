@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.7.0",
-  "description": "AI Skill 模板包（后端方向）— Spring Boot + MyBatis(-Plus) + jh4j-cloud 后端工程的规范 / Skill / Java 检查工具集 / MCP / Pipeline 体系，与 wl-skills-kit（前端）对齐，组成完整全栈 AI 工作流。v0.7.0 OpenAPI 3+Knife4j 在线文档标配(J7)+Controller模板迁移 OpenAPI 3。",
+  "version": "0.7.1",
+  "description": "AI Skill 模板包（后端方向）— Spring Boot + MyBatis(-Plus) + jh4j-cloud 后端工程的规范 / Skill / Java 检查工具集 / MCP / Pipeline 体系，与 wl-skills-kit（前端）对齐，组成完整全栈 AI 工作流。v0.7.1 全 Skill 配 USAGE.md + README 重写反映 v0.7 真实能力 + 清理 docs 冗余。",
   "main": "bin/wl-skills-bd.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"

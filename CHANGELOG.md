@@ -4,6 +4,37 @@
 
 ---
 
+## [0.7.1] - 2026-07-18 (全 Skill USAGE + README 重写 + 冗余清理)
+
+### Fixed — README 严重滞后（停在 v0.5.0 描述）
+- `README.md`：从 276 行重写到 280+ 行，反映 v0.7.0 真实能力：
+  - 能力总览：18 条 → **19 条（含设计规约）**；B1~B8 → **B1~B12**；J1~J5 → **J1~J7**（加 P3C J6 + Knife4j J7）
+  - 补：在线接口文档（Knife4j）/ 设计规约 / codegen-workflow 闭环 / 方法论原则（官方最佳实践 > 团队 > 存量）
+  - 修正：npm 徽章 0.4.0 → 0.7.1；防胶水三层 → 四层保障
+
+### Added — 全 10 Skill 配 USAGE.md（之前仅 4/10）
+- 新增 6 个 USAGE.md：convention-audit-be / code-fix-be / api-design-be / business-doc-extract-be / db-migration / unit-test-gen
+- 每个 USAGE 含：触发词 + 3 典型场景 + FAQ
+- USAGE 覆盖率：4/10 → **10/10**
+
+### Changed — USAGE 校验范围扩大
+- `lint-skills.js`：USAGE 校验从 3 个 codegen 扩到**全部有 SKILL.md 的 Skill**（防未来遗漏）
+
+### Removed — 冗余文件清理
+- 删除 `docs/` 目录（3 文件 500+ 行）：analysis-report.md / env-standard-analysis.md / roadmap.md
+  - 全是 v0.0.x 骨架期历史报告，内容已被 CHANGELOG/guides 完全取代且严重过时（roadmap 停在"17 条"实际已 19 条）
+  - 不在 npm files（不发布但污染仓库）
+  - 同源职责已由 `kit-internal/`（仓库内部）+ `files/.github/guides/`（产出）覆盖
+
+### Changed
+- 版本 0.7.0 → 0.7.1
+
+### Notes
+- 解决用户反馈：USAGE 覆盖不全 + README 过时 + docs 冗余
+- 验证：`npm run verify` 全绿（含全部 10 Skill USAGE 校验）
+
+---
+
 ## [0.7.0] - 2026-07-18 (在线接口文档标配 · OpenAPI 3 + Knife4j)
 
 ### 重大改进：API 文档从可选骨架升级为必遵标配 + 现代技术栈
@@ -443,6 +474,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.7.1]: about:blank
 [0.7.0]: about:blank
 [0.6.0]: about:blank
 [0.5.1]: about:blank

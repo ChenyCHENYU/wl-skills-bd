@@ -127,16 +127,14 @@ if (fs.existsSync(JAVA_QUALITY)) {
   }
 }
 
-// 5.5 core codegen Skill 必须配 USAGE.md（执行细节）
-const CODEGEN_WITH_USAGE = [
-  "core/entity-codegen",
-  "core/service-codegen",
-  "core/mapper-xml-gen",
-];
-for (const dir of CODEGEN_WITH_USAGE) {
-  const usage = path.join(SKILLS, dir, "USAGE.md");
+// 5.5 所有有 SKILL.md 的目录必须配 USAGE.md（执行细节+典型场景+FAQ）
+const skillsWithSkMd = walk(SKILLS)
+  .filter((fp) => path.basename(fp) === "SKILL.md")
+  .map((fp) => path.dirname(fp));
+for (const dir of skillsWithSkMd) {
+  const usage = path.join(dir, "USAGE.md");
   if (!fs.existsSync(usage)) {
-    errors.push(`${dir}/: 落地级 Skill 必须配 USAGE.md（执行细节+典型场景+FAQ）`);
+    errors.push(`${path.relative(SKILLS, dir).replace(/\\/g, "/")}/: Skill 必须配 USAGE.md（典型场景+触发词+FAQ）`);
   }
 }
 
