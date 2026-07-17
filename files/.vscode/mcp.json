@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "wl-skills-bd": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["node_modules/@agile-team/wl-skills-bd/mcp/server.js"]
+    }
+  }
+}

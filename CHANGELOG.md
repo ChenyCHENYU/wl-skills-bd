@@ -4,6 +4,27 @@
 
 ---
 
+## [0.3.1] - 2026-07-17 (多编辑器适配)
+
+### Added — 全编辑器 MCP 接入（对标 wl-skills-kit）
+- `files/.cursor/mcp.json`：Cursor 编辑器 MCP 配置（mcpServers 格式）
+- `files/.vscode/mcp.json`：VS Code 编辑器 MCP 配置（servers + type:stdio 格式）
+- `files/.kiro/settings/mcp.json`：Kiro 编辑器 MCP 配置
+- init 后三套配置自动释放到业务工程根目录，各编辑器自动发现并启动 MCP server
+
+### Changed — 指令文件同步
+- `copilot-instructions.md`：第 6 节多编辑器适配从"待物化"改为"已物化"表格（6 编辑器）；补 MCP 3 工具说明；第 7 节阶段说明更新到 v0.3.1（18 标准/J1~J5/模板/复扫闭环全落地）
+- `CLAUDE.md`："17 条"→"18 条"
+- `AGENTS.md`：技术栈速查补 templates/validate/java-quality
+- `verify-version.js`：新增三套编辑器 mcp.json 存在性 + JSON 合法性 + server 路径校验
+- 版本 0.3.0 → 0.3.1
+
+### Notes
+- 编辑器覆盖：GitHub Copilot / Cursor / VS Code / Kiro / Claude Code / 通用 Agents 六端
+- 验证：`npm run verify` 含多编辑器配置校验
+
+---
+
 ## [0.3.0] - 2026-07-17 (P2 落地 · MCP 工具层 + Java 工具链补全 + 提交规范强制)
 
 ### 重大改进：Java 检查工具链完整 + AI 对话内可确定性调用
@@ -189,6 +210,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.3.1]: about:blank
 [0.3.0]: about:blank
 [0.2.0]: about:blank
 [0.1.0]: about:blank

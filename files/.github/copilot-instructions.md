@@ -2,7 +2,7 @@
 
 > 本文件是 GitHub Copilot / Cursor / Windsurf / Claude Code / Cline / Kiro / Trae / Qoder / 通用 Agents 在 **后端业务工程** 中的统一主入口（多编辑器适配器会从这里派生具体的 frontmatter）。
 > 维护者：CHENY（工号 409322）
-> 包：`@agile-team/wl-skills-bd` v0.0.1（骨架阶段）
+> 包：`@agile-team/wl-skills-bd` v0.3.1（MCP + Java 工具链 + 模板物化已落地）
 
 ---
 
@@ -14,7 +14,7 @@
 2. `.github/skills/_registry.md` — 触发词 → SKILL 路径单一数据源
 3. `.github/standards/index.md` — 规范门控（任务类型 → 必读 standards 映射）
 
-> **禁止** 一次性 `read_file` 全部 17 条 standards 与全部 10 个 SKILL.md。按需加载。
+> **禁止** 一次性 `read_file` 全部 18 条 standards 与全部 10 个 SKILL.md。按需加载。
 
 ---
 
@@ -91,26 +91,44 @@ api.md(前端产出) ──► api-design-be ──► entity-codegen ──► 
 
 ---
 
-## 6. 多 AI 编辑器适配（与 kit 同步策略）
+## 6. 多 AI 编辑器适配（已物化）
 
-业务工程根目录还可能存在以下平行入口（由各编辑器自动消费，AI 解析时取**任一**即可，不要重复推断）：
+业务工程 `init` 后，以下编辑器配置文件会被释放到工程根目录，各编辑器自动消费：
 
-- `CLAUDE.md`（Claude Code）
-- `AGENTS.md`（通用 Agents）
-- `.cursorrules` / `.cursor/rules/conventions.mdc`（Cursor）
-- `.windsurf/rules/conventions.md`（Windsurf）
-- `.clinerules`（Cline）
-- `.kiro/.../instructions.md`（Kiro）
-- `.trae/.../instructions.md`（Trae）
+| 编辑器 | 配置文件 | MCP 格式 | 内容 |
+|--------|---------|----------|------|
+| GitHub Copilot | `.github/copilot-instructions.md` | — | 本文件（指令主体） |
+| Cursor | `.cursor/mcp.json` | `mcpServers` | MCP server 接入 |
+| VS Code | `.vscode/mcp.json` | `servers`(type:stdio) | MCP server 接入 |
+| Kiro | `.kiro/settings/mcp.json` | `mcpServers` | MCP server 接入 |
+| Claude Code | `CLAUDE.md` | — | 派生入口 |
+| 通用 Agents | `AGENTS.md` | — | 派生入口 |
 
-它们的内容由本文件派生，**不要单独编辑**，统一回到本仓库 `files/.github/copilot-instructions.md` 修改。
+> 其他编辑器（Windsurf `.windsurf/rules/` / Cline `.clinerules` / Trae `.trae/`）可从本文件 symlink 或复制。
+>
+> 它们的内容由本文件派生，**不要单独编辑**，统一回到本仓库 `files/.github/copilot-instructions.md` 修改。
+
+### MCP 工具（已落地 3 个）
+
+接入 MCP 后，AI 在对话内可直接调用：
+
+| 工具 | 作用 |
+|------|------|
+| `wls_be_validate` | 扫描 Java 工程输出 B1~B8 偏差（error/warn） |
+| `wls_be_standards` | 查询 18 条规范清单或指定条款全文 |
+| `wls_be_templates` | 查 8 个 Java 代码模板（codegen 对齐用） |
 
 ---
 
-## 7. 当前阶段说明（v0.0.2）
+## 7. 当前阶段说明（v0.3.1）
 
-- 9 个代码生成主线 SKILL（②-⑨ + business-doc-extract）+ 1 个横切 ops SKILL（`standard-env-config-be`），共 10 个 SKILL.md 仅含 frontmatter + 流程纲要 + Pre-flight 占位，**模板细节待 0.1.x → 0.2.x 补齐**
-- **17 条 standards**：03 / 07 / 15 / 16 / 17 本次新增落地；02 / 04 / 05 / 06 / 12 已落地；01 / 08 / 09 / 10 / 11 / 13 / 14 仍为骨架
-- MCP / CLI / 单元测试体系尚未启动
+- **10 个 SKILL**：api-design-be / entity-codegen / service-codegen / mapper-xml-gen / convention-audit-be / business-doc-extract-be / db-migration / unit-test-gen / code-fix-be / standard-env-config-be
+- **18 条 standards**：全部已落地（01~18）
+- **Java 检查工具链 J1~J5**：ArchUnit(J1) + Checkstyle(J2) + PMD(J3) + SpotBugs(J4) + Spotless(J5)，见 `.github/java-quality/`
+- **确定性执行器 be-rules B1~B8**：`lib/be-rules.js`，CLI `wl-skills-bd validate` / MCP `wls_be_validate` 可调用
+- **代码模板 8 个**：`.github/templates/`（Entity/DTO/PageDTO/VO/Controller/Service/Mapper.java/Mapper.xml）
+- **MCP 工具 3 个**：validate / standards / templates
+- **复扫闭环**：convention-audit-be `--quick` + code-fix-be 强制复扫
+- **提交规范**：18-git-commit + commitlint + commit-msg hook
 
-> 触发 Skill 时若发现 SKILL.md 内容不足以指导落地，AI 应：**优先按 `mdm-service` 的真实代码风格倒推**，并把"建议补全的规则"作为下一步建议输出。
+> 触发 Skill 时优先读 `.github/templates/` 对应模板填空生成，生成后跑 `wl-skills-bd validate` 自检。

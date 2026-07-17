@@ -169,6 +169,28 @@ if (exists("mcp/registry.js")) {
   }
 }
 
+// ─── 多编辑器适配配置 ───────────────────────────────────────────────────
+// init 时复制到业务工程的三套 MCP 配置必须存在且合法
+const EDITOR_MCPS = [
+  { file: "files/.cursor/mcp.json", key: "mcpServers", name: "Cursor" },
+  { file: "files/.vscode/mcp.json", key: "servers", name: "VS Code" },
+  { file: "files/.kiro/settings/mcp.json", key: "mcpServers", name: "Kiro" },
+];
+for (const e of EDITOR_MCPS) {
+  if (!exists(e.file)) {
+    errors.push(`${e.file}: 多编辑器 ${e.name} MCP 配置缺失`);
+    continue;
+  }
+  try {
+    const cfg = JSON.parse(read(e.file));
+    if (!cfg[e.key] || !cfg[e.key]["wl-skills-bd"]) {
+      errors.push(`${e.file}: 缺少 ${e.key}.wl-skills-bd 配置`);
+    }
+  } catch (err) {
+    errors.push(`${e.file}: JSON 格式错误 - ${err.message}`);
+  }
+}
+
 // ─── Java 模板完整性 ────────────────────────────────────────────────────
 const TEMPLATES = [
   "Entity.java.tmpl",
