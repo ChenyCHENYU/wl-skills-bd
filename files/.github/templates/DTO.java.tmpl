@@ -1,0 +1,40 @@
+package {{rootPackage}}.api.dto.{{module}};
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+/**
+ * {{apiDesc}}({{Entity}})请求DTO
+ *
+ * @author wl-skills-bd codegen
+ */
+@Getter
+@Setter
+@ToString
+@ApiModel(value = "{{entity}}DTO", description = "{{apiDesc}}DTO")
+public class {{Entity}}DTO {
+
+    {{#fields}}
+    {{#required}}
+    @NotBlank(message = "{{fieldComment}}不能为空")
+    {{/required}}
+    {{^required}}
+    {{#notNull}}
+    @NotNull(message = "{{fieldComment}}不能为空")
+    {{/notNull}}
+    {{/required}}
+    {{#maxLength}}
+    @Size(max = {{maxLength}}, message = "{{fieldComment}}长度不能大于{{maxLength}}")
+    {{/maxLength}}
+    @ApiModelProperty(value = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/fields}}
+}

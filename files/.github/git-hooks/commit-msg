@@ -1,0 +1,15 @@
+npx --no-install commitlint --edit "$1" 2>/dev/null || \
+node -e "
+const fs = require('fs');
+const msg = fs.readFileSync(process.argv[1], 'utf8').trim();
+const header = msg.split('\n')[0];
+// 18-git-commit 格式校验：type(scope): subject 或 type：subject
+const re = /^(feat|fix|perf|docs|style|revert|chore|build|ci)(\([^)]+\))?!?[:：].+/;
+if (!re.test(header)) {
+  console.error('❌ 提交信息不符合 standards/18-git-commit 格式');
+  console.error('   期望: feat(md): 模型管理-新增CRUD');
+  console.error('   实际: ' + header);
+  console.error('   类型: feat|fix|perf|docs|style|revert|chore|build|ci');
+  process.exit(1);
+}
+" "$1"

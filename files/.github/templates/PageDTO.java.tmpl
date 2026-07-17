@@ -1,0 +1,26 @@
+package {{rootPackage}}.api.dto.{{module}};
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * {{apiDesc}}({{Entity}})分页查询DTO
+ * 查询字段全部可选（不加 @NotBlank），按需筛选
+ *
+ * @author wl-skills-bd codegen
+ */
+@Getter
+@Setter
+@ToString
+@ApiModel(value = "{{entity}}PageDTO", description = "{{apiDesc}}PageDTO")
+public class {{Entity}}PageDTO {
+
+    {{#queryFields}}
+    @ApiModelProperty(value = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/queryFields}}
+}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="{{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper">
+
+    <!-- 显式列出字段，禁止 SELECT *（standards/06）-->
+    <sql id="BaseColumns">
+        t.ID               AS id,
+        {{#columns}}
+        t.{{COLUMN}}            AS {{field}},
+        {{/columns}}
+        t.COMPANY_ID       AS companyId,
+        t.IS_DELETE        AS isDelete,
+        t.REVISION         AS revision,
+        t.CREATE_USER_NO   AS createUserNo,
+        t.CREATE_DATE_TIME AS createDateTime,
+        t.UPDATE_USER_NO   AS updateUserNo,
+        t.UPDATE_DATE_TIME AS updateDateTime
+    </sql>
+
+    <!-- 分页查询：动态条件 + 软删除常驻 -->
+    <select id="queryPage" resultType="{{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        <where>
+            <!-- 软删除条件常驻（standards/06：IS_DELETE = 1 有效）-->
+            AND t.IS_DELETE = 1
+            <if test="param != null">
+                {{#queryConditions}}
+                <if test="param.{{field}} != null and param.{{field}} != ''">
+                    AND t.{{COLUMN}} = #{param.{{field}}}
+                </if>
+                {{/queryConditions}}
+                {{#likeConditions}}
+                <if test="param.{{field}} != null and param.{{field}} != ''">
+                    <!-- Oracle CONCAT 仅支持2参数，三参数要嵌套（standards/06）-->
+                    AND t.{{COLUMN}} LIKE CONCAT(CONCAT('%', #{param.{{field}}}), '%')
+                </if>
+                {{/likeConditions}}
+            </if>
+        </where>
+        ORDER BY t.CREATE_DATE_TIME DESC
+    </select>
+
+</mapper>

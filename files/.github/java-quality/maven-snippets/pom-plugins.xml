@@ -1,0 +1,134 @@
+# Maven 插件接入片段（一键复制）
+
+> 把以下片段按需粘到目标工程的 **父 `pom.xml`**（`<build><plugins>` 或 `<reporting>` 段）。
+> 各工具详细规则见同目录 `../{tool}/README.md`。
+
+## 1. Checkstyle（J2，命名/风格）
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-checkstyle-plugin</artifactId>
+    <version>3.5.0</version>
+    <configuration>
+        <configLocation>build/checkstyle.xml</configLocation>
+        <consoleOutput>true</consoleOutput>
+        <failsOnError>true</failsOnError>
+        <failOnViolation>true</failOnViolation>
+        <violationSeverity>error</violationSeverity>
+        <includeTestSourceDirectory>false</includeTestSourceDirectory>
+    </configuration>
+    <executions>
+        <execution>
+            <id>validate</id>
+            <phase>validate</phase>
+            <goals><goal>check</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+> 存量项目先用 `<failOnViolation>false</failOnViolation>` 只报告，清零后再开。
+
+## 2. ArchUnit（J1，架构分层）— 无需插件，加 test 依赖即可
+
+```xml
+<dependency>
+    <groupId>com.tngtech.archunit</groupId>
+    <artifactId>archunit-junit5</artifactId>
+    <version>1.4.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+把 `java-quality/archunit/LayerRulesTest.java` 拷到 `src/test/java/com/{co}/{prod}/arch/`，改根包即可。`mvn test` 自动跑。
+
+## 3. PMD（J3，静态分析，P2）
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-pmd-plugin</artifactId>
+    <version>3.24.0</version>
+    <configuration>
+        <rulesets>
+            <ruleset>build/pmd-ruleset.xml</ruleset>
+        </rulesets>
+        <failOnViolation>true</failOnViolation>
+        <printFailingErrors>true</printFailingErrors>
+    </configuration>
+    <executions>
+        <execution>
+            <goals><goal>check</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+## 4. SpotBugs（J4，字节码，P2）
+
+```xml
+<plugin>
+    <groupId>com.github.spotbugs</groupId>
+    <artifactId>spotbugs-maven-plugin</artifactId>
+    <version>4.8.6.4</version>
+    <configuration>
+        <effort>Max</effort>
+        <threshold>Low</threshold>
+        <failOnError>true</failOnError>
+        <excludeFilterFile>build/spotbugs-exclude.xml</excludeFilterFile>
+    </configuration>
+    <executions>
+        <execution>
+            <goals><goal>check</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+## 5. Spotless（J5，格式统一，P3）
+
+```xml
+<plugin>
+    <groupId>com.diffplug.spotless</groupId>
+    <artifactId>spotless-maven-plugin</artifactId>
+    <version>2.43.0</version>
+    <configuration>
+        <java>
+            <googleJavaFormat>
+                <version>1.17.0</version>
+                <style>AOSP</style>
+            </googleJavaFormat>
+            <removeUnusedImports/>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+        </java>
+    </configuration>
+    <executions>
+        <execution>
+            <goals><goal>check</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+## 全量接入后的一次性校验
+
+```bash
+mvn clean verify
+# 依次跑：compiler → checkstyle → pmd → spotbugs → spotless → tests(含 ArchUnit) → package
+```
+
+任一环节违规 → build failure。这就是 CI 门的硬卡控。
+
+## 工具版本对齐表（2026-07 基线）
+
+| 工具 | 版本 | 说明 |
+|------|------|------|
+| Checkstyle | 3.5.0（插件）/ 10.x（引擎） | 命名/风格 |
+| ArchUnit | 1.4.2 | 架构分层 |
+| PMD | 3.24.0（插件）/ 7.x（引擎） | 静态分析 |
+| SpotBugs | 4.8.6.4 | 字节码 |
+| Spotless | 2.43.0 | 格式 |
+
+> 版本随社区更新；接入时跑一次 `mvn versions:display-plugin-updates` 确认最新。

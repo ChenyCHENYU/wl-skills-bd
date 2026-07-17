@@ -1,0 +1,79 @@
+package {{rootPackage}}.service.{{module}};
+
+import cn.hutool.core.bean.BeanUtil;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.jhict.common.auth.util.EntityUtil;
+import com.jhict.common.core.util.ServiceAssert;
+import com.jhict.common.data.mybatis.entity.JhPage;
+import com.jhict.common.data.service.JhServiceImpl;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}DTO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
+import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
+import {{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * {{apiDesc}}({{Entity}})表服务实现
+ *
+ * 继承 JhServiceImpl 获 baseMapper / lambdaQuery / saveBatch 等能力。
+ * 构造注入（@RequiredArgsConstructor），不写 @Autowired。
+ *
+ * @author wl-skills-bd codegen
+ */
+@RequiredArgsConstructor
+@Service("{{entity}}Service")
+public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}}> {
+
+    public JhPage<{{Entity}}PageVO> query{{Entity}}Page(JhPage page, {{Entity}}PageDTO params) {
+        return baseMapper.queryPage(page, params);
+    }
+
+    public {{Entity}}VO getById(String id) {
+        {{Entity}} entity = baseMapper.selectById(id);
+        ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
+        {{Entity}}VO vo = new {{Entity}}VO();
+        BeanUtil.copyProperties(entity, vo);
+        return vo;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public String save({{Entity}}DTO dto) {
+        {{Entity}} entity = new {{Entity}}();
+        BeanUtil.copyProperties(dto, entity, "id");
+        entity.setId(IdWorker.getIdStr());
+        EntityUtil.setCreateProp(entity);
+        baseMapper.insert(entity);
+        return entity.getId();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateById({{Entity}}DTO dto) {
+        ServiceAssert.isTrue(Objects.nonNull(dto.getId()), "主键不能为空");
+        {{Entity}} entity = baseMapper.selectById(dto.getId());
+        ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
+        BeanUtil.copyProperties(dto, entity);
+        EntityUtil.setUpdateProp(entity);
+        baseMapper.updateById(entity);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteById(String id) {
+        // 软删除（团队基线：IS_DELETE = 0）
+        {{Entity}} entity = baseMapper.selectById(id);
+        ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
+        entity.setIsDelete(0);
+        EntityUtil.setUpdateProp(entity);
+        baseMapper.updateById(entity);
+    }
+
+    public int deleteByIds(List<String> ids) {
+        return baseMapper.deleteBatchIds(ids);
+    }
+}

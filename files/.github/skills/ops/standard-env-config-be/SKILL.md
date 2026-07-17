@@ -74,6 +74,7 @@ scan（只读）
 
 ```
 🚀 已触发技能 standard-env-config-be/SKILL.md
+✅ 已读取 standards/01-toolchain.md     → 工具链/数据库类型检测基线
 ✅ 可部署模块（N）：{module1:port9101} / {module2:port9102} ...
 ✅ 目标 Profile：walsin / 自定义名称
 ✅ 四环境目标地址：sit=... / uat=... / pre=... / prod=...

@@ -1,0 +1,32 @@
+package {{rootPackage}}.api.entity.{{module}};
+
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.jhict.common.core.entity.CoreEntity;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+
+/**
+ * {{apiDesc}}({{Entity}})表实体类
+ *
+ * @author wl-skills-bd codegen
+ */
+@Getter
+@Setter
+@Accessors(chain = true)
+@TableName("{{table}}")
+@ApiModel(value = "{{entity}}", description = "{{apiDesc}}")
+public class {{Entity}} extends CoreEntity {
+
+    // ===== 业务字段（按表结构生成，勿手改结构）=====
+    {{#fields}}
+    @ApiModelProperty(value = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/fields}}
+}

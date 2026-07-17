@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  wl-skills-bd SpotBugs 排除规则（J4）
+  排除生成代码 / 框架样板，聚焦业务代码
+-->
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0">
+
+  <!-- MyBatis-Plus 生成代码 -->
+  <Match>
+    <Source name="~.*generated-sources.*"/>
+  </Match>
+
+  <!-- Lombok 生成的 getter/setter/equals/hashCode/toString -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,MS_EXPOSE_REP"/>
+  </Match>
+
+  <!-- DTO/VO/Entity 的字段直接访问（团队基线允许 Lombok） -->
+  <Match>
+    <Class name="~.*\.(DTO|VO|Entity|EO|Query)$"/>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+
+  <!-- 测试代码放宽（threshold 内的高危仍查） -->
+  <Match>
+    <Class name="~.*Test$"/>
+    <Bug pattern="SIC_INNER_SHOULD_BE_STATIC_ANONYMOUS"/>
+  </Match>
+
+</FindBugsFilter>

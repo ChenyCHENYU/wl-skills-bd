@@ -1,19 +1,16 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.0.5",
-  "description": "AI Skill 模板包（后端方向）— Spring Boot + MyBatis(-Plus) + jh4j-cloud 后端工程的规范 / Skill / MCP / Pipeline 体系，与 wl-skills-kit（前端）对齐，组成完整全栈 AI 工作流。",
+  "version": "0.3.0",
+  "description": "AI Skill 模板包（后端方向）— Spring Boot + MyBatis(-Plus) + jh4j-cloud 后端工程的规范 / Skill / Java 检查工具集 / MCP / Pipeline 体系，与 wl-skills-kit（前端）对齐，组成完整全栈 AI 工作流。v0.3.0 引入 MCP 工具层 + PMD/SpotBugs/Spotless + Git Hook 强制提交规范。",
   "main": "bin/wl-skills-bd.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
   },
-  "scripts": {
-    "lint:skills": "echo \"TODO: 复用 wl-skills-kit 的 lint-skills 脚本\"",
-    "version:verify": "echo \"TODO: 跨文件版本一致性自检\"",
-    "test": "echo \"TODO: 接入 vitest\""
-  },
   "files": [
     "bin",
     "files",
+    "lib",
+    "mcp",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -24,6 +21,12 @@
     "mybatis",
     "jh4j-cloud",
     "backend",
+    "checkstyle",
+    "archunit",
+    "pmd",
+    "spotbugs",
+    "spotless",
+    "mcp",
     "agent",
     "copilot",
     "wl-skills"
@@ -39,5 +42,13 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "version:verify": "node scripts/verify-version.js",
+    "lint:skills": "node scripts/lint-skills.js",
+    "test": "node tests/be-rules.test.js && node tests/verify-version.test.js && node tests/mcp-registry.test.js",
+    "verify": "npm run version:verify && npm run lint:skills && npm run test",
+    "release:check": "npm run verify && npm pack --dry-run --ignore-scripts",
+    "prepublishOnly": "npm run version:verify && npm run lint:skills && npm run test"
   }
 }

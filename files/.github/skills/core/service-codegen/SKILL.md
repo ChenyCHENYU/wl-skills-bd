@@ -29,6 +29,16 @@ stage: ④ 业务实现
 - [ ] `docs/api/{module}.md` 已存在
 - [ ] Mapper 接口存在或同步在 ⑤ 生成
 
+## ★ 生成方式：读模板填空（非自由发挥）
+
+**必须**先读 `templates/Controller.java.tmpl` + `templates/Service.java.tmpl`，按占位符替换：
+
+- `{{rootPackage}}`/`{{module}}`/`{{Entity}}`/`{{permissionPrefix}}` 按工程实际填
+- CRUD 方法（queryPage/getById/save/updateById/deleteById）**保持模板结构**，不增删
+- 权限码按 standards/04 命名：`{module}_{resource}_{action}`
+
+> 模板已固化 @PreAuthorize/@ApiOperation/@Transactional/JhServiceImpl/ServiceAssert，填空即合规。
+
 ## 产物
 
 ```
@@ -65,8 +75,9 @@ xxx-service/.../service/{module}/impl/{Entity}ServiceImpl.java
 
 ```
 ✅ service-codegen 完成
-   - 产出: Controller / Service / ServiceImpl 三个文件
+   - 产出: Controller / Service（基于 templates 填空）
    - 接口数: N
    - 权限码已对齐: ✓ / ✗
+   - ★ 生成后自检: 已跑 wl-skills-bd validate（查 B1/B2/B5）
    - 下一步建议: ⑤ mapper-xml-gen
 ```

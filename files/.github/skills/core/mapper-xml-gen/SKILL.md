@@ -25,6 +25,17 @@ stage: ⑤ 数据访问
 - [ ] 表结构 / DDL 可见
 - [ ] 字段类型对应清楚（VARCHAR2 → String，NUMBER → Integer/Long/BigDecimal）
 
+## ★ 生成方式：读模板填空（非自由发挥）
+
+**必须**先读 `templates/Mapper.java.tmpl` + `templates/Mapper.xml.tmpl`：
+
+- Mapper.java 继承 `JhBaseMapper<Entity>`，分页方法签名固定（@Param("param")）
+- Mapper.xml 的 `<sql id="BaseColumns">` 显式列字段（**禁 SELECT 星号**），按 Entity 字段循环展开
+- 动态条件用 `<where>` + `<if>`，软删除条件常驻 `AND IS_DELETE = 1`
+- 模糊查询 Oracle 用 `CONCAT(CONCAT('%', #{x}), '%')`
+
+> 模板已固化禁 SELECT 星号/禁美元符注入/软删常驻/BaseColumns，填空即合规。
+
 ## 产物
 
 ```
@@ -56,8 +67,9 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 
 ```
 ✅ mapper-xml-gen 完成
-   - 产出: 2 个文件
+   - 产出: Mapper.java + Mapper.xml（基于 templates 填空）
    - 自定义 SQL 数: N
    - BaseColumns 字段数: M
+   - ★ 生成后自检: 已跑 wl-skills-bd validate（查 B3 SELECT星号 / B4 美元符注入）
    - 下一步建议: ⑥ db-migration（如果新表）或 ⑦ unit-test-gen
 ```

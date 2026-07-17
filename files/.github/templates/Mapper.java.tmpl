@@ -1,0 +1,28 @@
+package {{rootPackage}}.mapper.{{module}};
+
+import com.jhict.common.data.mapper.JhBaseMapper;
+import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
+import com.jhict.common.data.mybatis.entity.JhPage;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * {{apiDesc}}({{Entity}})表数据库访问层
+ *
+ * 继承 JhBaseMapper 获得 selectById/insert/updateById/deleteBatchIds 等。
+ * 复杂查询/联表/动态条件写自定义方法 + XML。
+ *
+ * @author wl-skills-bd codegen
+ */
+@Mapper
+public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
+
+    String QUERY_PARAM_KEY = "param";
+
+    /**
+     * 分页查询（XML 实现，禁止 SELECT *）
+     */
+    JhPage<{{Entity}}PageVO> queryPage(JhPage<{{Entity}}PageVO> page, @Param(QUERY_PARAM_KEY) {{Entity}}PageDTO pageDTO);
+}

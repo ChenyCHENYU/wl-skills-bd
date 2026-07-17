@@ -2,7 +2,7 @@
 
 > **企业级后端 AI Skills 模板包** — 让 Spring Boot + MyBatis(-Plus) + jh4j-cloud 体系的后端业务工程获得一致的分层规范、可被 AI 精确识别和生成的代码骨架，以及可演进的 Agent Pipeline。
 
-[![Status](https://img.shields.io/badge/status-skeleton%20v0.0.5-orange.svg)]()
+[![Status](https://img.shields.io/badge/status-skeleton%20v0.3.0-orange.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8%2B-blue.svg)]()
 

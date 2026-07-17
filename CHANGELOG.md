@@ -4,6 +4,118 @@
 
 ---
 
+## [0.3.0] - 2026-07-17 (P2 落地 · MCP 工具层 + Java 工具链补全 + 提交规范强制)
+
+### 重大改进：Java 检查工具链完整 + AI 对话内可确定性调用
+
+补齐 J3/J4/J5（PMD/SpotBugs/Spotless），Java 检查工具从 2 个到 5 个全覆盖；MCP 让 AI 在对话内直接调 validate/standards/templates；git hook 强制提交规范。
+
+### Added — P2-A MCP 工具层（对标 kit/mcp）
+- `mcp/server.js`：MCP 协议实现（stdio + JSON-RPC 2.0），3 个工具注册
+- `mcp/registry.js`：工具注册中心（单一数据源）
+- `mcp/tools/beRulesTools.js`：包装 lib/be-rules，暴露 wls_be_validate
+- `mcp/schema-validator.js`：工具入参 JSON Schema 校验
+- `.mcp.json`：编辑器接入配置
+- 3 工具：`wls_be_validate`（扫 B1~B8）/ `wls_be_standards`（查 18 条规范）/ `wls_be_templates`（查 8 个代码模板）
+
+### Added — P2-B Git Hook 强制提交规范
+- `commitlint.config.js`：commitlint 配置（type-enum 9 种 + 格式校验）
+- `files/.github/git-hooks/`：commit-msg hook + README，业务工程可一键接入
+- 18-git-commit 从"文字规范"升级为"hook 强制卡控"
+
+### Added — P2-C PMD/SpotBugs/Spotless（J3/J4/J5 补全）
+- `java-quality/pmd/pmd-ruleset.xml`：性能+漏洞+质量规则集（J3）
+- `java-quality/spotbugs/spotbugs-exclude.xml`：字节码分析 + 排除生成代码（J4）
+- `java-quality/spotless/`：格式统一（google-java-format AOSP）（J5）
+- 各含 README 接入指引；Java 检查工具链 J1~J5 全覆盖
+
+### Changed
+- verify-version.js 增 MCP 工具数 + 模板完整性 + mcp/ 纳入 files 校验
+- test script 纳入 mcp-registry.test.js
+- rule-coverage.md：J3/J4/J5 状态从"待落地"→"已落地"
+- package.json 0.2.0 → 0.3.0；files 加 mcp；keywords 加 pmd/spotbugs/spotless/mcp
+
+### Notes
+- 验证：`npm run verify` 全绿（version + lint + test 含 MCP 用例）
+- Java 检查工具链完整度：ArchUnit(J1) + Checkstyle(J2) + PMD(J3) + SpotBugs(J4) + Spotless(J5) + be-rules(regex B1~B8)，对标 kit 的 ESLint，但体现 Java 多元工具链
+- 提交规范双保险：18-git-commit.md（人读）+ commit-msg hook（机强制）
+
+---
+
+## [0.2.0] - 2026-07-17 (P1 落地 · 引擎可用 + 闭环可验证)
+
+### 重大改进：从"引擎孤岛"到"业务工程可用 + 闭环可验证"
+
+解决三个根本缺陷：① be-rules 引擎无入口（孤岛）② codegen 无标准答案（自由发挥→胶水代码）③ 修复无复扫（改完不知对不对）。
+
+### Added — P1-A Java 代码模板（堵胶水代码源头）
+- `files/.github/templates/` 8 个标准骨架：Entity/DTO/PageDTO/VO/Controller/Service/Mapper.java/Mapper.xml + README
+- 对标 kit 的 templates/(45个)，物化团队基线(CoreEntity/JhServiceImpl/@PreAuthorize/@Transactional/软删/BaseColumns)
+- 占位符填空机制：codegen Skill 读模板替换，非从零发挥
+
+### Added — P1-B CLI validate（引擎对业务工程可用）
+- `bin/wl-skills-bd.js` 新增 validate 命令：接 lib/be-rules.js，B1~B8 全跑，按规则分组输出，有 error 非零退出（CI 可阻断）
+- 新增 doctor 命令：工具链 + java-quality 接入体检
+- ★ 实测对 mdm-service 跑出 195 项（162 error + 33 warn），精准定位文件:行号，证明引擎非孤岛
+
+### Added — P1-C/D 复扫闭环（对标 kit/code-fix）
+- `convention-audit-be` 加 --quick 复扫模式 + 前后对比矩阵（仅查上次偏差，省 90% token）
+- `code-fix-be` 落地强制复扫闭环（"不可跳过"硬约束）：修复后必须跑 validate，输出 error:0/变化矩阵
+- 审计→修复→复扫 链条闭合
+
+### Changed — codegen 三 SKILL 引用 templates
+- entity-codegen / service-codegen / mapper-xml-gen：生成方式从"自由发挥"改为"读模板填空"
+- 完成摘要加"生成后自检 wl-skills-bd validate"约束
+
+### Changed
+- package.json/README/bin/index 版本 0.1.0 → 0.2.0
+- convention-audit-be / code-fix-be status 🟡骨架 → 🟡落地
+
+### Notes
+- 验证：`npm run verify` 全绿；validate 对真实 mdm-service 跑出 195 项
+- 防"意大利面条代码"三层保障：① codegen 读模板填空 ② validate 生成后自检 ③ Checkstyle+ArchUnit CI 卡控
+- 待续 P2：MCP wrapper / PMD+SpotBugs / SKILL.md 补厚
+
+---
+
+## [0.1.0] - 2026-07-17 (架构完善 · 自检闭环 + Java 质量执行器)
+
+### 重大改进：从"纯骨架"升级为"可自检、可机器卡控"
+
+解决两个根本缺陷：① 发版靠人眼（脚本全 echo）② 审计非确定性（文字清单无执行器）。对标 `wl-skills-kit` v2.12.6 的成熟架构，适配 Java 后端工具生态。
+
+### Added — L0 自检层（对标 kit/scripts）
+- `scripts/verify-version.js`：版本 + standards 计数(18) + skills 计数(10) + npm files 数组交叉校验（对标 kit/verify-version.js）
+- `scripts/lint-skills.js`：SKILL.md Pre-flight/standards 引用/路径存在/行数/规则覆盖矩阵校验（对标 kit/lint-skills.js）
+- `tests/be-rules.test.js` + `tests/verify-version.test.js`：执行器回归测试（对标 kit/tests）
+- `package.json` 补 `verify`/`release:check`/`prepublishOnly` —— 发版前强制全量自检，杜绝漂移
+
+### Added — L1 执行器层（防胶水代码核心）
+- `lib/be-rules.js`：后端确定性规则引擎 B1~B8（正则/行级），对标 kit/ast-rules.js。覆盖：Controller 缺 @PreAuthorize(B1)、缺 @ApiOperation(B2)、SELECT *(B3)、${}注入(B4)、缺 @Transactional(B5)、目录文件数(B6)、缺 COMPANY_ID(B7)、裸 RuntimeException(B8)
+
+### Added — L2 Java 质量规则集（机器确定性卡控，Java 生态）
+- `files/.github/java-quality/archunit/`：ArchUnit 分层规则测试模板（J1）—— 把 standards/02"禁止跨层"从文字变成 CI 硬卡控
+- `files/.github/java-quality/checkstyle/`：Checkstyle 规则集 checkstyle.xml（J2）—— standards/03/15 物化
+- `files/.github/java-quality/maven-snippets/`：5 工具一键接入 pom 片段
+- `files/.github/java-quality/README.md`：工具映射 + 三场景分工（IDE/CI/AI）
+
+### Added — 治理基线
+- `kit-internal/architecture.md`：三层职责 ADR（对标 kit/architecture.md）
+- `kit-internal/rule-coverage.md`：规则覆盖矩阵（对标 kit/rule-coverage.md）—— 治理规则：阻断约定必须有 J*/regex 执行器兜底，lint-skills 自动校验
+
+### Changed
+- `package.json`：0.0.5 → 0.1.0；补 scripts；files 数组加 `lib`；keywords 加 checkstyle/archunit
+- `bin/wl-skills-bd.js` / `README.md` / `standards/index.md`：版本同步 0.1.0
+- `standard-env-config-be/SKILL.md`：Pre-flight 补 standards/01 引用
+
+### Notes
+- 工具映射：Checkstyle(命名/风格) + PMD(静态分析,P2) + SpotBugs(字节码,P2) + ArchUnit(架构分层) + Spotless(格式,P3)。对标 kit 的 ESLint，但体现 Java 多元工具链
+- 三场景分工：IDE(实时) / Maven CI(build failure) / AI 审计(be-rules 即时跑)
+- P0(自检) + P1(ArchUnit/Checkstyle/be-rules) 已闭环；P2(PMD/SpotBugs) + P3(Spotless) + SKILL.md 补厚 留后续逐个细化
+- 验证：`npm run verify` 全绿（version + lint + test 三关）
+
+---
+
 ## [0.0.5] - 2026-07-17 (团队开发要求闭环)
 
 ### Added
@@ -77,6 +189,9 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.3.0]: about:blank
+[0.2.0]: about:blank
+[0.1.0]: about:blank
 [0.0.5]: about:blank
 [0.0.4]: about:blank
 [0.0.3]: about:blank

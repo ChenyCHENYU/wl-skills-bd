@@ -1,0 +1,26 @@
+package {{rootPackage}}.api.vo.{{module}};
+
+import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import io.swagger.annotations.ApiModel;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * {{apiDesc}}({{Entity}})VO类
+ * 出参：常 extends Entity 复用字段，再补展示字段（如外键名称）
+ *
+ * @author wl-skills-bd codegen
+ */
+@Getter
+@Setter
+@ToString
+@ApiModel(value = "{{entity}}VO", description = "{{apiDesc}}VO")
+public class {{Entity}}VO extends {{Entity}} {
+
+    {{#displayFields}}
+    @io.swagger.annotations.ApiModelProperty(value = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/displayFields}}
+}

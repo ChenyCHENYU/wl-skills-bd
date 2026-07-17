@@ -26,6 +26,19 @@ stage: ③ 数据模型
 - [ ] 是否存在 `docs/api/{module}.md`？若无，回退到 `api-design-be`
 - [ ] 是否存在 DDL 脚本或表结构 dump？字段类型必须有依据
 
+## ★ 生成方式：读模板填空（非自由发挥）
+
+**必须**先读对应模板骨架，按占位符替换生成，禁止凭记忆从零写：
+
+| 产物 | 模板 | 填空变量 |
+|------|------|---------|
+| Entity | `templates/Entity.java.tmpl` | rootPackage/module/Entity/table/fields |
+| DTO | `templates/DTO.java.tmpl` | + required/notNull/maxLength（按字段约束）|
+| PageDTO | `templates/PageDTO.java.tmpl` | queryFields（全可选）|
+| VO | `templates/VO.java.tmpl` | displayFields（外键名等展示字段）|
+
+> 模板路径见 `.github/templates/README.md`。模板固化了团队基线（CoreEntity/@Validated/Swagger/审计字段），改模板即改基线。
+
 ## 产物
 
 ```
@@ -50,8 +63,9 @@ xxx-entity/src/main/java/com/{co}/{prod}/api/vo/{module}/{Entity}PageVO.java
 
 ```
 ✅ entity-codegen 完成
-   - 产出: 5 个文件
+   - 产出: 5 个文件（基于 templates 填空）
    - 字段数: Entity={n}, DTO={n}, VO={n}
    - 必填校验: {n} 个
+   - ★ 生成后自检: 已跑 wl-skills-bd validate（或建议用户跑）
    - 下一步建议: ④ service-codegen
 ```
