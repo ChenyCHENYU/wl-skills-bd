@@ -4,6 +4,28 @@
 
 ---
 
+## [0.5.1] - 2026-07-17 (一致性修正 + codegen 闭环权威文档)
+
+### Fixed — registry/pipeline 状态滞后（v0.4~v0.5 补厚后状态未同步）
+- `_registry.md`：6 个 Skill 状态 🟡骨架 → ✅落地（entity/service/mapper-codegen + convention-audit-be + code-fix-be + standard-env-config-be）；补落地度统计行
+- `_pipeline.md`：标题 v0.0.1 → v0.1；阶段总览补 api.md 唯一输入 + ⑧⑨ 计数同步 19 条；④ 团队基线无独立接口澄清；③④⑤ 加 templates/self_check 机制；⑧ 执行器清单补全（J1~J6）；⑨ 复扫闭环细化
+
+### Added — codegen 闭环权威文档
+- 新增 `guides/codegen-workflow.md`：定义三个闭环
+  - **闭环一·生成顺序**：api.md → ②~⑦（8 阶段严格不跳级）+ 一个菜单 14 文件清单 + 每阶段防胶水机制
+  - **闭环二·验证**：三层兜底（生成后 validate B1~B11 → 全量审计 19 条+J1~J6 → CI mvn verify）+ 19 规范×7 执行器覆盖矩阵
+  - **闭环三·修复**：code-fix-be 强制复扫流程 + 复扫报告格式 + 修复对照表 + 修复禁区
+- copilot-instructions 主入口加"生成代码必读"段，引用闭环文档
+
+### Changed
+- 版本 0.5.0 → 0.5.1
+
+### Notes
+- 解决用户反馈：明确"生成顺序/如何验证/如何修复"三闭环，让 codegen 不再是零散动作而是确定流程
+- 一致性：registry 状态与各 SKILL.md frontmatter 严格对齐（lint-skills 已校验，未来保持）
+
+---
+
 ## [0.5.0] - 2026-07-17 (设计规约 + 社区最佳实践闭环)
 
 ### 重大改进：从"语法级"升级到"设计级"代码质量管控
@@ -344,6 +366,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.5.1]: about:blank
 [0.5.0]: about:blank
 [0.4.2]: about:blank
 [0.4.1]: about:blank
