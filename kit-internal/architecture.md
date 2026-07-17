@@ -167,4 +167,7 @@ class LayerRulesTest {
 ---
 
 ## 变更记录
+- 2026-07-17 v0.4 codegen SKILL 补厚落地（执行步骤+边界用例+正反例）+ 3 个 USAGE.md；README 重写反映真实能力
+- 2026-07-17 v0.3 MCP 工具层（3 工具）+ PMD/SpotBugs/Spotless（J3~J5）+ 多编辑器适配 + commitlint
+- 2026-07-17 v0.2 Java 模板物化（8 个）+ CLI validate + 复扫闭环
 - 2026-07-17 v0.1 ADR 初始化（对标 kit v2.12.6）
