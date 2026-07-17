@@ -1,6 +1,6 @@
 # Backend Standards 规范门控（懒加载入口）
 
-> **版本**：v0.4.0  **维护者**：CHENY（工号 409322）
+> **版本**：v0.4.1  **维护者**：CHENY（工号 409322）
 > **加载策略**：AI 按当前任务类型，**只读取相关条目**，不全量加载。
 
 ---
@@ -9,20 +9,20 @@
 
 | 编号 | 文件                          | 主题                          | 强制度        | 状态     |
 | ---- | ----------------------------- | ----------------------------- | ------------- | -------- |
-| 01   | `01-toolchain.md`             | JDK / Maven / Lombok 前置检测 | 🔴 阻断       | 🟡 骨架   |
+| 01   | `01-toolchain.md`             | JDK / Maven / Lombok 前置检测 + 数据库类型探测 | 🔴 阻断       | ✅ 已落地 |
 | 02   | `02-project-structure.md`     | 包结构 + 分层 + 禁止跨层 + 单目录粒度 + 业务中心包名映射 | 🔴 必遵 | ✅ 已落地 |
 | 03   | `03-naming.md`                | 类 / 方法 / 字段 / 路径命名   | 🔴 必遵       | ✅ 已落地 |
 | 04   | `04-controller.md`            | Controller 模板 + 权限 + 返回 | 🔴 必遵       | ✅ 已落地 |
 | 05   | `05-service.md`               | Service 接口 + 实现 + 状态变更 | 🔴 必遵      | ✅ 已落地 |
 | 06   | `06-mapper-xml.md`            | 禁 SELECT \* + 动态 + 分页    | 🔴 必遵       | ✅ 已落地 |
 | 07   | `07-entity-dto-vo.md`         | Entity / DTO / VO / Query     | 🔴 必遵       | ✅ 已落地 |
-| 08   | `08-exception.md`             | 全局异常 + Assert + 业务码    | 🔴 必遵       | 🟡 骨架   |
-| 09   | `09-logging.md`               | SLF4J 占位符 + 级别 + 敏感    | 🔴 必遵       | 🟡 骨架   |
-| 10   | `10-transaction.md`           | @Transactional 粒度 + 禁止    | 🔴 必遵       | 🟡 骨架   |
-| 11   | `11-security-permission.md`   | 权限码 + 租户隔离             | 🔴 必遵       | 🟡 骨架   |
+| 08   | `08-exception.md`             | ServiceAssert + ServiceException + 业务码字典 + 全局Advice | 🔴 必遵 | ✅ 已落地 |
+| 09   | `09-logging.md`               | SLF4J 占位符 + 脱敏正则 + traceId + 级别决策 | 🔴 必遵 | ✅ 已落地 |
+| 10   | `10-transaction.md`           | @Transactional + 回滚矩阵 + 传播场景 + self-injection | 🔴 必遵 | ✅ 已落地 |
+| 11   | `11-security-permission.md`   | 权限码 + 同步流程 + COMPANY_ID 租户过滤 + 越权清单 | 🔴 必遵 | ✅ 已落地 |
 | 12   | `12-database-ddl.md`          | 建表 + 索引 + 序列 + 命名 + 物理库归属 | 🔴 必遵 + 阻断 | ✅ 已落地 |
-| 13   | `13-api-doc-swagger.md`       | @Api / @ApiOperation / @ApiModelProperty | 🟡 建议 | 🟡 骨架   |
-| 14   | `14-test-coverage.md`         | 单测覆盖红线 + Mock 规范      | 🟡 建议       | 🟡 骨架   |
+| 13   | `13-api-doc-swagger.md`       | @Api / @ApiOperation / @ApiModelProperty | 🟡 建议 | 🟡 骨架 |
+| 14   | `14-test-coverage.md`         | 单测覆盖红线 + Mock 规范      | 🟡 建议       | 🟡 骨架 |
 | 15   | `15-code-quality.md`          | 编程质量（过时方法/常量/枚举注释/大括号/字符串常量/switch-break 等 14 条） | 🔴 必遵 | ✅ 已落地 |
 | 16   | `16-performance.md`           | 性能优化（BeanUtils/集合容量/正则预编译/StringBuilder 等 5 条） | 🔴 必遵 | ✅ 已落地 |
 | 17   | `17-bug-prevention.md`        | 漏洞防护（BigDecimal/equals/float精度/NPE/ThreadLocal/SimpleDateFormat 等 16 条） | 🔴 必遵 | ✅ 已落地 |

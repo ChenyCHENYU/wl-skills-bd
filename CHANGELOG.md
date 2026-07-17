@@ -4,6 +4,31 @@
 
 ---
 
+## [0.4.1] - 2026-07-17 (5 条必遵规范骨架补厚 → 18 条全落地)
+
+### 重大改进：规范层从 11 落地/7 骨架 → 16 落地/2 骨架（建议级）
+
+解决"🔴 必遵却只有 40-60 行骨架"的自相矛盾。5 条必遵规范全部补厚到落地深度，每条含决策表/模板/正反例，并对齐 mdm-service 真实代码。
+
+### Changed — 5 条必遵规范补厚
+- `01-toolchain`：35→70 行。补数据库类型探测决策表(Oracle/MySQL) + 7 项检测清单 + doctor 联动
+- `08-exception`：47→130 行。补 ServiceAssert 全方法(isNotNull/isNull/isTrue/hasText，对齐 mdm-service 233 处用法) + 业务码字典分段 + ServiceException 模板 + 全局 Advice 完整版 + 正反例
+- `09-logging`：40→110 行。补脱敏正则表(手机/身份证/银行卡) + traceId/MDC 复制 + 级别决策表 + 大字段截断
+- `10-transaction`：60→140 行。补回滚矩阵(checked/RuntimeException) + 传播行为场景表(REQUIRED/REQUIRES_NEW) + self-injection 三方案 + 5 个禁止陷阱(Feign/MQ/自调用/吞异常/长事务) + 对齐 mdm-service 76 处真实写法
+- `11-security`：43→130 行。补权限码同步流程 + COMPANY_ID 完整模板(对齐 29 处真实 BaseColumns) + 越权检查清单 + 公开接口规范 + 正反例
+
+### Changed — 治理同步
+- `standards/index.md`：01/08/09/10/11 状态 🟡骨架 → ✅已落地；主题描述更新
+- `copilot-instructions.md`：版本同步 v0.4.1
+- 版本 0.4.0 → 0.4.1
+
+### Notes
+- 规范层成熟度：18 条中 16 条已落地（仅 13 Swagger / 14 单测为🟡建议级骨架）
+- 核心链路"架构→命名→各层→DDL→质量→性能→漏洞→异常→日志→事务→安全→提交"全部落地
+- 验证：`npm run verify` 全绿
+
+---
+
 ## [0.4.0] - 2026-07-17 (codegen SKILL 补厚落地)
 
 ### 重大改进：3 个 codegen Skill 从骨架升级到落地深度
@@ -237,6 +262,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.4.1]: about:blank
 [0.4.0]: about:blank
 [0.3.1]: about:blank
 [0.3.0]: about:blank
