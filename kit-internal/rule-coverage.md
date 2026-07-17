@@ -18,6 +18,7 @@
 | `J4` | SpotBugs 字节码 | `files/.github/java-quality/spotbugs/` | ✅ 确定性（mvn verify） |
 | `J5` | Spotless 格式 | `files/.github/java-quality/spotless/` | ✅ 确定性（mvn verify） |
 | `J6` | **P3C 阿里黄山版 + 设计级** | `files/.github/java-quality/pmd/ali-p3c-ruleset.xml` | ✅ 确定性（mvn verify） |
+| `J7` | **Knife4j + OpenAPI 3 在线文档** | `files/.github/java-quality/knife4j/` | ✅ 确定性（启动访问 /doc.html） |
 | `regex` | 正则/行级扫描 | `lib/be-rules.js`（B1~B12） | ✅ 确定性（AI 审计/CLI/MCP 即时跑） |
 | `AI` | 仅 SKILL.md 约定 | 各 `SKILL.md` | ⚠️ 非确定性（靠 AI 自觉） |
 
@@ -45,6 +46,7 @@
 | **standards/19** | **方法长度 >80（长方法）** | **regex B10 / J6** | warn | 否 |
 | **standards/19** | **圈复杂度 >10** | **regex B11 / J6** | warn | 否 |
 | **standards/19** | **设计规约（SOLID/封装/反模式）** | **J6 P3C GodClass + AI 判断** | warn | 否 |
+| **standards/13** | **@Tag/@Operation/@Schema 注解（OpenAPI 3）** | **J7 + B2** | warn | 否 |
 
 ---
 

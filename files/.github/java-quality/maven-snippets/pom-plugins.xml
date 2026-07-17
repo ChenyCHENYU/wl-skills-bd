@@ -130,6 +130,18 @@
 </plugin>
 ```
 
+## 6. Knife4j + OpenAPI 3（J7，在线接口文档）
+
+```xml
+<dependency>
+    <groupId>com.github.xiaoymin</groupId>
+    <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
+    <version>4.4.0</version>
+</dependency>
+```
+
+> 一站式带入 springdoc-openapi + Knife4j 中文 UI。配合 yml 配置（见 `../knife4j/knife4j-config.yml.tmpl`）按模块分组。启动后访问 `/doc.html`。
+
 ## 全量接入后的一次性校验
 
 ```bash
@@ -149,5 +161,6 @@ mvn clean verify
 | **P3C** | **2.1.1（黄山版）** | **阿里 Java 开发手册 PMD 实现（54 条社区规则）** |
 | SpotBugs | 4.8.6.4 | 字节码 |
 | Spotless | 2.43.0 | 格式 |
+| **Knife4j** | **4.4.0** | **OpenAPI 3 在线文档（中文 UI，按模块分组）** |
 
 > 版本随社区更新；接入时跑一次 `mvn versions:display-plugin-updates` 确认最新。

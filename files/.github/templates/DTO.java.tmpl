@@ -1,7 +1,6 @@
 package {{rootPackage}}.api.dto.{{module}};
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -20,7 +19,7 @@ import javax.validation.constraints.Size;
 @Getter
 @Setter
 @ToString
-@ApiModel(value = "{{entity}}DTO", description = "{{apiDesc}}DTO")
+@Schema(description = "{{apiDesc}}DTO")
 public class {{Entity}}DTO {
 
     {{#fields}}
@@ -35,7 +34,7 @@ public class {{Entity}}DTO {
     {{#maxLength}}
     @Size(max = {{maxLength}}, message = "{{fieldComment}}长度不能大于{{maxLength}}")
     {{/maxLength}}
-    @ApiModelProperty(value = "{{fieldComment}}")
+    @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 
     {{/fields}}

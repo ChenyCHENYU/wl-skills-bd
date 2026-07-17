@@ -13,7 +13,7 @@ const { runBeRules } = require("../../lib/be-rules");
 
 const RULE_DESC = {
   B1: "Controller 接口缺 @PreAuthorize（越权风险）",
-  B2: "Controller 缺 @ApiOperation（文档缺失）",
+  B2: "Controller 缺 @Operation/@ApiOperation（文档缺失）",
   B3: "Mapper XML SELECT 星号",
   B4: "Mapper XML 美元花括号注入",
   B5: "写操作缺 @Transactional",

@@ -7,14 +7,13 @@ import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
 import {{rootPackage}}.service.{{module}}.{{Entity}}Service;
 import com.jhict.common.core.entity.ApiResult;
 import com.jhict.common.data.mybatis.entity.JhPage;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -26,7 +25,7 @@ import java.util.List;
  * @author wl-skills-bd codegen
  * @since 1.0.0
  */
-@Api(value = "{{apiPath}}/{{apiDesc}}")
+@Tag(name = "{{apiDesc}}")
 @RestController
 @RequestMapping("{{requestPath}}")
 public class {{Entity}}Controller {
@@ -34,33 +33,33 @@ public class {{Entity}}Controller {
     @Resource
     private {{Entity}}Service {{entity}}Service;
 
-    @ApiOperation(value = "查询{{apiDesc}}分页")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "current", value = "当前页码", dataType = "long", paramType = "query", example = "1"),
-            @ApiImplicitParam(name = "size", value = "每页记录条数", dataType = "long", paramType = "query", example = "10")
+    @Operation(summary = "查询{{apiDesc}}分页")
+    @Parameters({
+            @Parameter(name = "current", description = "当前页码", example = "1"),
+            @Parameter(name = "size", description = "每页记录条数", example = "10")
     })
     @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_query_page')")
     @PostMapping("queryPage")
     public ApiResult<JhPage<List<{{Entity}}PageVO>>> query{{Entity}}Page(
-            @ApiIgnore JhPage page, @RequestBody @Validated {{Entity}}PageDTO params) {
+            @Parameter(hidden = true) JhPage page, @RequestBody @Validated {{Entity}}PageDTO params) {
         return ApiResult.success("查询成功", {{entity}}Service.query{{Entity}}Page(page, params));
     }
 
-    @ApiOperation(value = "主键查询{{apiDesc}}")
+    @Operation(summary = "主键查询{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_get_by_id')")
     @GetMapping("getById/{id}")
-    public ApiResult<{{Entity}}VO> getById(@PathVariable("id") String id) {
+    public ApiResult<{{Entity}}VO> getById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
         return ApiResult.success("查询成功", {{entity}}Service.getById(id));
     }
 
-    @ApiOperation(value = "新增{{apiDesc}}")
+    @Operation(summary = "新增{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_save')")
     @PostMapping("save")
     public ApiResult<String> insert(@RequestBody @Validated {{Entity}}DTO dto) {
         return ApiResult.success("新增成功", {{entity}}Service.save(dto));
     }
 
-    @ApiOperation(value = "修改{{apiDesc}}")
+    @Operation(summary = "修改{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_update_by_id')")
     @PutMapping("updateById")
     public ApiResult<Void> updateById(@RequestBody @Validated {{Entity}}DTO dto) {
@@ -68,10 +67,10 @@ public class {{Entity}}Controller {
         return ApiResult.success("更新成功", null);
     }
 
-    @ApiOperation(value = "删除{{apiDesc}}")
+    @Operation(summary = "删除{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_delete_by_id')")
     @DeleteMapping("deleteById/{id}")
-    public ApiResult<Void> deleteById(@PathVariable("id") String id) {
+    public ApiResult<Void> deleteById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
         {{entity}}Service.deleteById(id);
         return ApiResult.success("删除成功", null);
     }

@@ -2,7 +2,7 @@
 
 > 本文件是 GitHub Copilot / Cursor / Windsurf / Claude Code / Cline / Kiro / Trae / Qoder / 通用 Agents 在 **后端业务工程** 中的统一主入口（多编辑器适配器会从这里派生具体的 frontmatter）。
 > 维护者：CHENY（工号 409322）
-> 包：`@agile-team/wl-skills-bd` v0.6.0（注释闭环 + 19 条规范 + 设计规约 + P3C + be-rules B1~B12）
+> 包：`@agile-team/wl-skills-bd` v0.7.0（OpenAPI 3+Knife4j 标配 + 注释闭环 + 19 条规范 + 设计规约 + P3C + be-rules B1~B12）
 
 ---
 
@@ -120,7 +120,7 @@ api.md(前端产出) ──► api-design-be ──► entity-codegen ──► 
 
 ---
 
-## 7. 当前阶段说明（v0.6.0）
+## 7. 当前阶段说明（v0.7.0）
 
 - **10 个 SKILL**：entity-codegen / service-codegen / mapper-xml-gen / convention-audit-be / code-fix-be / standard-env-config-be 已落地（含 USAGE.md）；api-design-be / business-doc-extract-be / db-migration / unit-test-gen 仍骨架
 - **18 条 standards**：全部已落地（01~18）

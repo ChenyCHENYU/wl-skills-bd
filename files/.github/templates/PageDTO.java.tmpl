@@ -1,7 +1,6 @@
 package {{rootPackage}}.api.dto.{{module}};
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -16,11 +15,11 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-@ApiModel(value = "{{entity}}PageDTO", description = "{{apiDesc}}PageDTO")
+@Schema(description = "{{apiDesc}}分页查询DTO")
 public class {{Entity}}PageDTO {
 
     {{#queryFields}}
-    @ApiModelProperty(value = "{{fieldComment}}")
+    @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 
     {{/queryFields}}

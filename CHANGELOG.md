@@ -4,6 +4,48 @@
 
 ---
 
+## [0.7.0] - 2026-07-18 (在线接口文档标配 · OpenAPI 3 + Knife4j)
+
+### 重大改进：API 文档从可选骨架升级为必遵标配 + 现代技术栈
+
+参考生产项目（Knife4j+OpenAPI3 方案选型优雅），把 bd 的 13 从 47 行骨架 + Springfox 2 升级为落地 + OpenAPI 3 + Knife4j。启动后访问 /doc.html 按模块分组的中文接口文档。Springfox 2 已停更（2022 起），OpenAPI 3 是业界/官方现代标准。
+
+### Changed — 13 规范重写（落地，技术栈升级）
+- `13-api-doc-swagger.md`：47 行骨架 → 200+ 行落地
+  - 技术栈：Springfox 2 → **OpenAPI 3 + Knife4j 4.4.0**（依据 Knife4j/springdoc 官方）
+  - 强制度：🟡 建议 → **🔴 必遵**（接口文档是前后端契约载体）
+  - 注解迁移对照表（@Api→@Tag / @ApiOperation→@Operation / @ApiModelProperty→@Schema）
+  - Knife4j yml 声明式配置 + ★ 按模块分组（group-configs）+ 生产环境关闭
+  - 反面教材：参考项目乱码/@Parameter 缺失/Controller 直连 Mapper
+
+### Changed — 5 个模板迁移 OpenAPI 3（breaking change，用户确认）
+- `Controller.java.tmpl`：@Api/@ApiOperation/@ApiImplicitParams/@ApiIgnore → @Tag/@Operation/@Parameters/@Parameter(hidden)
+- `Entity.java.tmpl`：@ApiModel/@ApiModelProperty → @Schema
+- `DTO.java.tmpl` / `PageDTO.java.tmpl` / `VO.java.tmpl`：同上
+- 存量项目由 code-fix-be 辅助批量迁移
+
+### Added — Knife4j 接入模板（J7）
+- 新增 `java-quality/knife4j/`：README（接入指南）+ `knife4j-config.yml.tmpl`（按模块分组配置）
+- `pom-plugins.xml` 加 Knife4j 依赖段 + 工具版本表
+- `maven-snippets/README.md` 速查表加 Knife4j
+
+### Changed — be-rules B2 兼容双注解
+- B2 现在同时认 `@Operation`（OpenAPI 3 新）+ `@ApiOperation`（Springfox 2 存量兼容）
+- 存量项目用旧注解不告警，新项目用新注解不告警
+
+### Changed
+- `rule-coverage.md`：加 J7 + standards/13 执行器映射
+- `index.md`：13 状态 🟡骨架 → ✅落地；强制度 建议 → 必遵
+- `lint-skills.js`：J7 → knife4j 目录映射
+- 版本 0.6.0 → 0.7.0
+
+### Notes
+- 参考项目评估：方案选型优雅（Knife4j+OpenAPI3+yml），代码实现不健壮（跨层/乱码/参数缺），bd 学方案不照抄代码
+- Apifox 同步：本轮留 roadmap（OpenAPI 3 JSON 导出能力已具备，团队 Apifox 平台就绪后做 CLI 自动同步）
+- 验证：`npm run verify` 全绿
+
+---
+
 ## [0.6.0] - 2026-07-17 (注释闭环 · 修复"规范要求 vs 模板实现"自相矛盾)
 
 ### Fixed — 🔴 核心 bug：模板零方法注释 vs 规范要求 Javadoc
@@ -401,6 +443,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.7.0]: about:blank
 [0.6.0]: about:blank
 [0.5.1]: about:blank
 [0.5.0]: about:blank

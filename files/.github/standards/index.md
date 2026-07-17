@@ -1,6 +1,6 @@
 # Backend Standards 规范门控（懒加载入口）
 
-> **版本**：v0.6.0  **维护者**：CHENY（工号 409322）
+> **版本**：v0.7.0  **维护者**：CHENY（工号 409322）
 > **加载策略**：AI 按当前任务类型，**只读取相关条目**，不全量加载。
 
 ---
@@ -21,7 +21,7 @@
 | 10   | `10-transaction.md`           | @Transactional + 回滚矩阵 + 传播场景 + self-injection | 🔴 必遵 | ✅ 已落地 |
 | 11   | `11-security-permission.md`   | 权限码 + 同步流程 + COMPANY_ID 租户过滤 + 越权清单 | 🔴 必遵 | ✅ 已落地 |
 | 12   | `12-database-ddl.md`          | 建表 + 索引 + 序列 + 命名 + 物理库归属 | 🔴 必遵 + 阻断 | ✅ 已落地 |
-| 13   | `13-api-doc-swagger.md`       | @Api / @ApiOperation / @ApiModelProperty | 🟡 建议 | 🟡 骨架 |
+| 13   | `13-api-doc-swagger.md`       | OpenAPI 3 + Knife4j（@Tag/@Operation/@Schema，按模块分组） | 🔴 必遵 | ✅ 已落地 |
 | 14   | `14-test-coverage.md`         | 单测覆盖红线 + Mock 规范      | 🟡 建议       | 🟡 骨架 |
 | 15   | `15-code-quality.md`          | 编程质量（过时方法/常量/枚举注释/大括号/字符串常量/switch-break 等 14 条） | 🔴 必遵 | ✅ 已落地 |
 | 16   | `16-performance.md`           | 性能优化（BeanUtils/集合容量/正则预编译/StringBuilder 等 5 条） | 🔴 必遵 | ✅ 已落地 |

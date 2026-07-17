@@ -191,6 +191,7 @@ function blockingRulesInCoverage(text) {
     J4: "spotbugs",
     J5: "spotless",
     J6: "pmd", // J6 是 P3C，在 pmd/ 目录下的 ali-p3c-ruleset.xml
+    J7: "knife4j",
   };
   const beRules = readOptional("lib/be-rules.js");
   for (const line of coverage.split("\n")) {

@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 /**
- * wl-skills-bd CLI（v0.6.0）
+ * wl-skills-bd CLI（v0.7.0）
  *
  * 命令：
  *   init      全量安装（释放 .github 到后端工程）
@@ -17,7 +17,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const VERSION = "0.6.0";
+const VERSION = "0.7.0";
 const PKG_ROOT = path.join(__dirname, "..");
 const SRC_DIR = path.join(PKG_ROOT, "files");
 

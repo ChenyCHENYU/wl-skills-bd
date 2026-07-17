@@ -1,0 +1,60 @@
+# ====================================================================
+# Knife4j + OpenAPI 3 配置模板（复制到 application.yml 合并）
+# 依据：standards/13-api-doc-swagger.md
+# 版本：Knife4j 4.4.0（spring-boot-starter 一站式带入 springdoc）
+# ====================================================================
+
+springdoc:
+  # API 文档 JSON 端点（默认 /v3/api-docs，Apifox/Postman 导入用）
+  api-docs:
+    path: /v3/api-docs
+  # Knife4j 增强 UI 入口
+  swagger-ui:
+    path: /doc.html
+    tags-sorter: alpha           # 控制器(@Tag) 按字母排序
+    operations-sorter: alpha     # 接口(@Operation) 按字母排序
+  # ★ 按业务模块分组（解决"按模块列举接口"诉求）
+  # 每个 group 扫描一个业务子域的 controller 包，左侧菜单按模块展示
+  group-configs:
+    - group: 模型管理
+      packages-to-scan: com.jhict.mdm.controller.modelAttributeMap
+    - group: 数据集成
+      packages-to-scan: com.jhict.mdm.controller.sourceData
+    - group: 系统授权
+      packages-to-scan: com.jhict.mdm.controller.systemAuthorization
+    - group: 特征管理
+      packages-to-scan: com.jhict.mdm.controller.feature
+    # 新增模块按此格式追加：
+    # - group: {模块中文名}
+    #   packages-to-scan: {rootPackage}.controller.{module}
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn              # 中文界面
+    enable-footer: false
+    enable-document-manage: true # 启用文档管理增强
+
+# ====================================================================
+# 生产环境（application-prod.yml，关闭文档入口防泄露）
+# ====================================================================
+# springdoc:
+#   api-docs:
+#     enabled: false
+# knife4j:
+#   production: true
+
+# ====================================================================
+# 可选：项目级 OpenAPI 信息（Java 极简配置，按需加）
+# ====================================================================
+# @Configuration
+# public class OpenApiConfig {
+#     @Bean
+#     public OpenAPI customOpenAPI() {
+#         return new OpenAPI()
+#             .info(new Info()
+#                 .title("{项目名} API")
+#                 .description("{项目描述}")
+#                 .version("v1"));
+#     }
+# }

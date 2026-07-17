@@ -15,8 +15,9 @@
 |------|----------|----------|
 | Checkstyle | 命名/风格（J2） | `../checkstyle/README.md` |
 | ArchUnit | 架构分层（J1） | `../archunit/README.md` |
-| PMD | 静态分析（J3，P2） | `../pmd/`（待） |
-| SpotBugs | 字节码（J4，P2） | `../spotbugs/`（待） |
-| Spotless | 格式（J5，P3） | `../spotless/`（待） |
+| PMD | 静态分析（J3） | `../pmd/README.md` |
+| SpotBugs | 字节码（J4） | `../spotbugs/README.md` |
+| Spotless | 格式（J5） | `../spotless/README.md` |
+| **Knife4j** | **在线文档（J7）** | `../knife4j/README.md` |
 
 具体配置见 `pom-plugins.xml`。
