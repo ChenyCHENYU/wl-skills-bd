@@ -64,6 +64,21 @@
     <!-- 禁 import 通配符 * -->
     <module name="AvoidStarImport"/>
 
+    <!-- 类 Javadoc 强制（standards/15 R23，含 @author）-->
+    <module name="JavadocType">
+      <property name="authorFormat" value="\S"/>
+      <property name="scope" value="public"/>
+    </module>
+
+    <!-- public 方法 Javadoc 强制（standards/15 R24）-->
+    <module name="JavadocMethod">
+      <property name="scope" value="public"/>
+      <property name="allowMissingParamTags" value="false"/>
+      <property name="allowMissingReturnTag" value="false"/>
+      <!-- 豁免 getter/setter -->
+      <property name="allowMissingThrowsTags" value="false"/>
+    </module>
+
     <!-- 大括号强制（if/else/for/while 都要大括号，standards/15）-->
     <module name="NeedBraces"/>
 

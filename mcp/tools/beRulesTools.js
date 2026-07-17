@@ -20,6 +20,9 @@ const RULE_DESC = {
   B6: "单目录文件 >20",
   B7: "SELECT 缺 COMPANY_ID",
   B8: "裸 RuntimeException",
+  B9: "类长度 >500 行（上帝类）",
+  B10: "方法长度 >80 行（长方法）",
+  B11: "圈复杂度 >10",
 };
 
 function resolveProjectRoot() {

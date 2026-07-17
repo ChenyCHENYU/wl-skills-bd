@@ -2,7 +2,7 @@
 
 > 本文件是 GitHub Copilot / Cursor / Windsurf / Claude Code / Cline / Kiro / Trae / Qoder / 通用 Agents 在 **后端业务工程** 中的统一主入口（多编辑器适配器会从这里派生具体的 frontmatter）。
 > 维护者：CHENY（工号 409322）
-> 包：`@agile-team/wl-skills-bd` v0.4.2（18 条规范全落地 + 依据官方/社区最佳实践 + codegen SKILL + USAGE + MCP + Java 工具链）
+> 包：`@agile-team/wl-skills-bd` v0.5.0（19 条规范 + 设计规约 + 阿里 P3C + be-rules B1~B11）
 
 ---
 
@@ -14,7 +14,7 @@
 2. `.github/skills/_registry.md` — 触发词 → SKILL 路径单一数据源
 3. `.github/standards/index.md` — 规范门控（任务类型 → 必读 standards 映射）
 
-> **禁止** 一次性 `read_file` 全部 18 条 standards 与全部 10 个 SKILL.md。按需加载。
+> **禁止** 一次性 `read_file` 全部 19 条 standards 与全部 10 个 SKILL.md。按需加载。
 
 ---
 
@@ -120,7 +120,7 @@ api.md(前端产出) ──► api-design-be ──► entity-codegen ──► 
 
 ---
 
-## 7. 当前阶段说明（v0.4.2）
+## 7. 当前阶段说明（v0.5.0）
 
 - **10 个 SKILL**：entity-codegen / service-codegen / mapper-xml-gen / convention-audit-be / code-fix-be / standard-env-config-be 已落地（含 USAGE.md）；api-design-be / business-doc-extract-be / db-migration / unit-test-gen 仍骨架
 - **18 条 standards**：全部已落地（01~18）

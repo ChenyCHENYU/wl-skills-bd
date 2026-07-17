@@ -4,6 +4,57 @@
 
 ---
 
+## [0.5.0] - 2026-07-17 (设计规约 + 社区最佳实践闭环)
+
+### 重大改进：从"语法级"升级到"设计级"代码质量管控
+
+补齐代码质量第二根支柱——社区最佳实践 + 设计原则。解决 bd 只能查出语法问题（SELECT *、缺注解），查不出设计问题（上帝类、长方法、过度设计）的洼地。这是"生成代码能维护 vs 能用"的分水岭。
+
+### Added — P0-A 设计规约（新章节，依据黄山版第七章 + SOLID + Clean Code + Refactoring）
+- 新增 `standards/19-design.md`（260 行）：
+  - 三大设计总则：YAGNI / KISS / DRY（黄山版第七章）
+  - SOLID 五原则（含生成代码应用示例 + mdm-service 3373 行上帝类反面）
+  - 长度红线：方法≤50行 / 类≤500行 / 圈复杂度≤10 / 参数≤5（be-rules B9/B10/B11 兜底）
+  - 何时抽象/封装：三次法则 + 封装决策表（解决"该不该封装"高频疑问）
+  - 设计模式适用清单：策略/模板方法/建造者等"何时用"（非罗列 23 种）
+  - 反模式清单：上帝类/长方法/霰弹式修改/Feature Envy/过度设计
+  - 方法/类设计规范 + 注释设计（与 15 联动）
+  - AI 生成代码检查清单（10 项）
+
+### Added — P0-B 阿里 P3C 规则集（J6 · 社区最佳实践机器卡控）
+- 新增 `pmd/ali-p3c-ruleset.xml`：引用 `com.alibaba.p3c:p3c-pmd:2.1.1`（黄山版 54 条规则）
+  - 覆盖 10 个规则集：ali-naming/ali-constant/ali-oop/ali-set/ali-concurrent/ali-flowcontrol/ali-exception/ali-comment/ali-other/ali-orm
+  - 设计级补充：ExcessiveMethodLength(80) / ExcessiveParameterList(5) / CyclomaticComplexity(10) / ExcessiveClassLength(500) / GodClass
+- 更新 `pmd/README.md`：两套规则集并存（PMD 官方 + P3C）+ 54 条分类速查
+- 更新 `maven-snippets/pom-plugins.xml`：PMD 段加 p3c-pmd 依赖 + 双 ruleset 配置
+
+### Added — P1 be-rules 扩 B9/B10/B11（设计级机器兜底，19 §3）
+- `lib/be-rules.js` 新增 3 条规则（对所有 .java 触发）：
+  - B9 类长度 >500 行（error，上帝类检测）
+  - B10 方法长度 >80 行（warn/error）
+  - B11 圈复杂度 >10（warn/error）
+- 测试覆盖：4 个新用例（B9 检出+不误报 / B10 / B11）全过
+- ★ 实战验证：对 mdm-service 跑出 B9 命中 2 个上帝类 + B10 命中 11 个长方法 + B11 命中 25 个高复杂度方法（含 MdmModelService 3373 行、saveModel 129 行/复杂度 17）
+
+### Added — P1 Javadoc 规范（15 R23/R24 + Checkstyle）
+- `15-code-quality.md` 新增 R23（类 Javadoc @author）/ R24（public 方法 Javadoc @param/@return/@throws）
+- `checkstyle.xml` 加 JavadocType + JavadocMethod 检查
+
+### Changed
+- `rule-coverage.md`：新增 J6（P3C）+ B9/B10/B11 + 19 设计规约映射
+- `index.md`：18→19 条；任务类型 E 审计必读含 19
+- `copilot-instructions.md`：版本同步 v0.5.0 + 19 条
+- `lint-skills.js`：J6→pmd 目录映射
+- 版本 0.4.2 → 0.5.0
+
+### Notes
+- 代码质量双支柱完整：① 团队规范（02~18 语法/分层）② 社区最佳实践 + 设计（19 + P3C）
+- 执行器覆盖：be-rules B9/B10/B11（regex 即时）+ Checkstyle Javadoc + P3C J6（CI 硬卡）
+- 验证：`npm run verify` 全绿；11 个 be-rules 测试全过；mdm-service 实战命中上帝类/长方法/高复杂度
+- 后续可选：14 单测骨架补厚 / SKILL.md 全部补厚 / MCP 扩 db-migration 工具
+
+---
+
 ## [0.4.2] - 2026-07-17 (规范方法论修正 · 官方/社区最佳实践为基线)
 
 ### 重大修正：纠正"对齐存量代码"的方法论错误
@@ -293,6 +344,7 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.5.0]: about:blank
 [0.4.2]: about:blank
 [0.4.1]: about:blank
 [0.4.0]: about:blank
