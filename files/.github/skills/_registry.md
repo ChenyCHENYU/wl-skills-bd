@@ -23,6 +23,32 @@
 
 **落地度**：11 个 Skill 中 **8 已落地**（api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **2 骨架**（business-doc / unit-test）。
 
+## v0.13 任务驱动精准路由
+
+| 任务类型 | 模式 | 触发词 | 规则子集 | 工具 |
+|---|---|---|---|---|
+| new-service | full | 新开发/全套CRUD | B1-B23 + J | codegen |
+| add-api | 路由 | 加接口/加方法 | B1/B2/B5/B8/B12/B20 | codegen 增量 |
+| add-field | 路由 | 加字段/落库 | B3/B4/B7/B18 | codegen + db |
+| add-business-cmd | 路由 | 状态机/审批 | B5/B8/B17/B20 | codegen 增量 |
+| fix-bug | 路由 | 改bug/修复 | B3/B5/B7/B8/B17/B18 | safe-fix + troubleshoot |
+| refactor | 路由 | 重构/优化 | B5-B12/B23 | validate |
+| audit | readonly | 审计/体检 | B1-B23 | doctor + validate |
+| config-op | config | 配置/连不上 | config-doctor L0~L8 | config + troubleshoot |
+
+`task` 是只读指挥层：识别意图→给 Skill/规则/步骤，不直接写代码；写操作统一走 codegen plan/apply（planHash+确认）或 safe-fix/config。
+
+## v0.12 配置分层矩阵
+
+| 检查/工具 | 作用 | 写入 |
+|---|---|:---:|
+| config init | 生成骨架（bootstrap+app+logback+env×5+matrix） | 条件 |
+| config migrate | 客户迁移（.env+K8s×15+报告） | 条件 |
+| config doctor | L0~L8 配置体检（骨架/明文密码/占位符/矩阵/K8s/端口/一致性/生产护栏） | 否 |
+| config doctor --probe | DB/Redis/Nacos TCP 连通性探测 | 否 |
+| config fix | 明文密码→${VAR} 占位符 + 复扫 | 条件 |
+| troubleshoot | 10 类故障诊断树（DB/Redis/Nacos/K8s/端口/Bean/Profile/Flyway/Feign/MQ）| 否 |
+
 ## v0.11 稳定性与多环境矩阵
 
 | B 规则 | 标准 | 检测 | severity | data-safety 兜底 |
