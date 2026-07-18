@@ -1,0 +1,32 @@
+package {{rootPackage}}.api.vo.{{module}};
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+{{#pageVoImports}}
+import {{.}};
+{{/pageVoImports}}
+
+/**
+ * {{apiDesc}}({{Entity}})分页列表 VO。
+ * <p>只包含列表展示需要的字段，禁止继承 Entity。
+ *
+ * @author wl-skills-bd codegen
+ * @since 1.0.0
+ */
+@Getter
+@Setter
+@ToString
+@Schema(description = "{{apiDesc}}分页列表VO")
+public class {{Entity}}PageVO {
+
+    @Schema(description = "主键ID")
+    private String id;
+
+    {{#pageFields}}
+    @Schema(description = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/pageFields}}
+}

@@ -30,6 +30,8 @@
         <where>
             <!-- 软删除条件常驻（standards/06：IS_DELETE = 1 有效）-->
             AND t.IS_DELETE = 1
+            <!-- 租户值只能由 Service 从 AuthUtil 注入，禁止从请求 DTO 获取 -->
+            AND t.COMPANY_ID = #{companyId}
             <if test="param != null">
                 {{#queryConditions}}
                 <if test="param.{{field}} != null and param.{{field}} != ''">
@@ -45,6 +47,16 @@
             </if>
         </where>
         ORDER BY t.CREATE_DATE_TIME DESC
+    </select>
+
+    <!-- 按 ID + 租户查询详情（用于复杂详情联表场景的起点；默认 getById 由 Service.lambdaQuery 兜底） -->
+    <select id="queryById" resultType="{{rootPackage}}.api.vo.{{module}}.{{Entity}}VO">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.IS_DELETE = 1
+          AND t.COMPANY_ID = #{companyId}
+          AND t.ID = #{id}
     </select>
 
 </mapper>

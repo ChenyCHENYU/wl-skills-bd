@@ -1,148 +1,84 @@
-# Copilot Instructions — wl-skills-bd (后端 AI 主入口)
+# Copilot Instructions — wl-skills-bd 后端主入口
 
-> 本文件是 GitHub Copilot / Cursor / Windsurf / Claude Code / Cline / Kiro / Trae / Qoder / 通用 Agents 在 **后端业务工程** 中的统一主入口（多编辑器适配器会从这里派生具体的 frontmatter）。
-> 维护者：CHENY（工号 409322）
-> 包：`@agile-team/wl-skills-bd` v0.7.1（全 Skill USAGE + OpenAPI 3+Knife4j + 19 规范 + 设计规约 + P3C + be-rules B1~B12）
+本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 24 条。
 
----
+## 技术基线
 
-## 0. AI 必须先读的三件套（懒加载入口）
+- Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus；
+- OpenAPI 3：`@Tag/@Operation/@Schema`；
+- 返回：`ApiResult.success(message, data)`，业务成功码 2000；
+- 分页：`JhPage<T>`，响应 `data.records/data.total`；
+- Controller → 直接 Service → Mapper，禁止 Controller 直调 Mapper；
+- 租户从 `AuthUtil` 获取，SQL 显式 `COMPANY_ID`；软删 1=有效、0=删除；
+- UpdateDTO 必须 id/revision，详情 VO 必须返回 revision。
 
-每次会话首轮、或用户意图明显切换时，AI 必须按需读取以下文件中的相关章节：
+数据库类型不能猜。Oracle/MySQL、物理库归属与目标 Profile 必须从工程配置和用户上下文确认。
 
-1. `.github/skills/_best-practices.md` — 场景索引（语义级路由，不依赖关键词命中）
-2. `.github/skills/_registry.md` — 触发词 → SKILL 路径单一数据源
-3. `.github/standards/index.md` — 规范门控（任务类型 → 必读 standards 映射）
+## 生成主流程
 
-> **禁止** 一次性 `read_file` 全部 19 条 standards 与全部 10 个 SKILL.md。按需加载。
-
----
-
-## 1. 项目定位（团队基线）
-
-- 技术栈：**Spring Boot + jh4j-cloud 3.x + MyBatis-Plus**，JDK 8
-- 数据库：**主流业务项目 → MySQL**；**mdm-service 等主数据项目 → Oracle**（`${DATASOURCE:oracle}`）
-  > ⚠️ 触发 `db-migration` / `mapper-xml-gen` / `entity-codegen` 等涉及 SQL 方言的 Skill 前，**必须先确认目标工程的数据库类型**。可通过检查 `pom.xml` 引入的 starter 或 `bootstrap.yml` 中 `DATASOURCE` 变量来判断。
-- 包结构样板：参见 [`mdm-service`](../../mdm-service/) 的 `com.jhict.mdm.{controller,service,mapper,...}`
-- 返回包装：`ApiResult.success(message, data)`
-- 分页：`JhPage<T>`
-- 权限：`@PreAuthorize("@pms.hasPermission('xxx_yyy_zzz')")`
-- 写库前置：**所有 DDL / 数据回填动作必须人工确认 diff**
-
----
-
-## 2. 后端 Pipeline（建议性串联，不强制）
-
-```
-api.md(前端产出) ──► api-design-be ──► entity-codegen ──► service-codegen
-                                                                │
-                                                                ▼
-                                                      mapper-xml-gen
-                                                                │
-                                                                ▼
-                                                      db-migration (人工确认)
-                                                                │
-                                                                ▼
-                                                      unit-test-gen
-                                                                │
-                                                                ▼
-                                                      convention-audit-be
-                                                                │
-                                                                ▼
-                                                      code-fix-be (可选) ─► 复扫
+```text
+已评审需求 / 可选 design-model 或前端契约 / 数据模型
+  → wl-contract.json（唯一 codegen 输入）
+  → codegen plan（16 产物，零写入）
+  → planHash + 人工确认 → apply
+  → contract diff（前端/OpenAPI/权限）
+  → contract diff --strict（wl-api-contract/OpenAPI/权限/completion）
+  → validate B1~B23
+  → Maven verify -Pwl-quality（J1~J5/J8）
+  → DDL/权限/发布人工卡口
 ```
 
-详见 `.github/skills/_pipeline.md`。
+生成前必须读 `.github/guides/codegen-workflow.md`。前后端协作读 `frontend-backend-contract.md`；MCP 写入规则读 `mcp-workflow.md`。
 
----
+## Pre-flight
 
-## 3. 强制约定式输出（Pre-flight 声明）
+触发 Skill 时先声明：
 
-任何 SKILL 被触发后，**必须先输出**：
-
+```text
+🚀 已触发 {skill}
+✅ 已读取 standards/index.md → 任务类型
+✅ 已读取本次必需规范 → 文件列表
+✅ 已确认工程 Profile/JDK/Maven/数据库
+⚠️ 本次写入、DDL、权限或破坏性 API 风险与确认点
 ```
-🚀 已触发技能 {skill-name}/SKILL.md           → {一句话定位}
-✅ 已读取 standards/index.md                  → 匹配任务类型 {A|B|C|...}
-✅ 已读取 standards/{需要的条目}              → {条目说明}
-✅ 工具链检测：JDK {x} ✓ Maven {x} ✓ Lombok {x} [全部就绪 | 待修复]
+
+## 高风险边界
+
+- DDL 只生成正向 Flyway、只读验证 SQL 和人工恢复说明；不得由 AI/MCP 执行数据库写入；
+- 数据回填、批量 UPDATE/DELETE、权限发布、角色授权必须走对应审批；
+- Controller 路径/字段/权限变更必须更新后端契约并执行 contract diff；
+- `companyId` 不得来自请求；租户拦截器豁免必须有可验证证据；
+- 不允许把 `${}` 机械替换为 `#{}`，也不允许猜权限码、租户谓词、业务异常或 Javadoc。
+
+## 检查与修复
+
+```bash
+wl-skills-bd doctor
+wl-skills-bd validate . --strict
+wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```
 
-工具链失败时必须显式暂停，引导用户修复。
+`code-fix-be`/`fix` 只自动处理满足严格前置条件的 B3/B5。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过。其他规则转人工或结构重构。
 
----
-
-## 4. 高风险动作明细（必须人工确认）
-
-| 动作                          | 风险等级 | 必经流程                                |
-| ----------------------------- | -------- | --------------------------------------- |
-| DDL 变更（CREATE/ALTER/DROP） | 🔴 红    | 先生成 + 回滚脚本，diff 后人工确认      |
-| 删除数据 / 批量 UPDATE        | 🔴 红    | 必须显示 WHERE 条件 + 受影响行数估算    |
-| 写菜单 / 字典 / 权限 / 角色   | 🟡 黄    | 走 `wl-skills-kit` 的 sync Skill + 确认 |
-| 修改 application.yml 生产配置 | 🟡 黄    | diff + 影响面说明                       |
-| 删除 / 重命名 Controller 路径 | 🟡 黄    | 影响前端 api.md，必须同步通知前端       |
-
----
-
-## 5. 与前端 wl-skills-kit 的协作契约
-
-- **共消费 `api.md`**：前端 `api-contract` Skill 产出 `src/views/**/api.md`，后端 `api-design-be` 读它做契约审查
-- **共消费 `docs/business/`**：前端的业务理解文档，后端 `api-design-be` / `service-codegen` 可作业务背景
-- **权限码同步**：后端代码里使用 `@pms.hasPermission('xxx')` 的字符串必须出现在前端 `SYS_PERMISSION_INFO.md` 中
-
----
-
-## 6. 多 AI 编辑器适配（已物化）
-
-业务工程 `init` 后，以下编辑器配置文件会被释放到工程根目录，各编辑器自动消费：
-
-| 编辑器 | 配置文件 | MCP 格式 | 内容 |
-|--------|---------|----------|------|
-| GitHub Copilot | `.github/copilot-instructions.md` | — | 本文件（指令主体） |
-| Cursor | `.cursor/mcp.json` | `mcpServers` | MCP server 接入 |
-| VS Code | `.vscode/mcp.json` | `servers`(type:stdio) | MCP server 接入 |
-| Kiro | `.kiro/settings/mcp.json` | `mcpServers` | MCP server 接入 |
-| Claude Code | `CLAUDE.md` | — | 派生入口 |
-| 通用 Agents | `AGENTS.md` | — | 派生入口 |
-
-> 其他编辑器（Windsurf `.windsurf/rules/` / Cline `.clinerules` / Trae `.trae/`）可从本文件 symlink 或复制。
->
-> 它们的内容由本文件派生，**不要单独编辑**，统一回到本仓库 `files/.github/copilot-instructions.md` 修改。
-
-### MCP 工具（已落地 3 个）
-
-接入 MCP 后，AI 在对话内可直接调用：
+## MCP（12 个工具）
 
 | 工具 | 作用 |
-|------|------|
-| `wls_be_validate` | 扫描 Java 工程输出 B1~B8 偏差（error/warn） |
-| `wls_be_standards` | 查询 18 条规范清单或指定条款全文 |
-| `wls_be_templates` | 查 8 个 Java 代码模板（codegen 对齐用） |
+|---|---|
+| `wls_be_validate` | B1~B23 只读扫描 |
+| `wls_be_doctor` | 环境与门禁诊断 |
+| `wls_be_codegen` | validate/plan/受控 apply |
+| `wls_be_contract` | show/diff 前端、OpenAPI、权限 |
+| `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
+| `wls_be_standards` | 查询 26 条规范 |
+| `wls_be_templates` | 查询 14 个模板 |
+| `wls_be_db_preview` | 只读 DDL/Expand-Contract 预览 |
+| `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |
+| `wls_be_config` | 配置 doctor/init/migrate/fix；写入需确认 |
+| `wls_be_troubleshoot` | 常见后端故障只读诊断 |
+| `wls_be_task` | 只读任务路由；不得绕过 codegen/safe-fix/config 写链 |
 
----
+写工具默认只预览。Agent 不得自行把 `confirmApply` 设为 true 来绕过用户评审。
 
-## 7. 当前阶段说明（v0.7.1）
+## 方法论
 
-- **10 个 SKILL**：entity-codegen / service-codegen / mapper-xml-gen / convention-audit-be / code-fix-be / standard-env-config-be 已落地（含 USAGE.md）；api-design-be / business-doc-extract-be / db-migration / unit-test-gen 仍骨架
-- **18 条 standards**：全部已落地（01~18）
-- **Java 检查工具链 J1~J5**：ArchUnit(J1) + Checkstyle(J2) + PMD(J3) + SpotBugs(J4) + Spotless(J5)，见 `.github/java-quality/`
-- **确定性执行器 be-rules B1~B8**：`lib/be-rules.js`，CLI `wl-skills-bd validate` / MCP `wls_be_validate` 可调用
-- **代码模板 8 个**：`.github/templates/`（Entity/DTO/PageDTO/VO/Controller/Service/Mapper.java/Mapper.xml）
-- **MCP 工具 3 个**：validate / standards / templates
-- **复扫闭环**：convention-audit-be `--quick` + code-fix-be 强制复扫
-- **提交规范**：18-git-commit + commitlint + commit-msg hook
-
-> 触发 Skill 时优先读 `.github/templates/` 对应模板填空生成，生成后跑 `wl-skills-bd validate` 自检。
->
-> **方法论原则**：规范遵循 **官方/社区最佳实践（Spring/MyBatis-Plus/Effective Java/OWASP）+ 团队 standards**。**不**对齐任何存量项目代码；存量项目若有偏离（如硬编码租户、SQL 注入、上帝类），应作为待整改项而非基准。
-
----
-
-## ★ 生成代码必读：完整闭环
-
-触发任何 codegen（②~⑦）前，**必须先读** [`guides/codegen-workflow.md`](guides/codegen-workflow.md)，它定义了：
-
-1. **生成顺序**：api.md → ②→③→④→⑤→⑥→⑦（严格不跳级，无 api.md 不生成）
-2. **验证闭环**：生成后 validate（B1~B11）→ 审计（19 条 + J1~J6）→ CI 硬卡（mvn verify）
-3. **修复闭环**：code-fix-be → ★强制复扫（error=0 才可提交）
-
-一个菜单的标准产出 = 14 文件（5 entity + 2 service + 2 mapper + 3 db + 2 test）。详见闭环文档。
+规范以官方/社区最佳实践、团队 standards、机器 Profile 和本次契约为准；存量代码只作为待审计事实，不自动晋升为标准答案。Skill 文档不能承诺执行器未实现的能力。

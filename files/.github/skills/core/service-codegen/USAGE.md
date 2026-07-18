@@ -1,6 +1,6 @@
 # 使用指南：生成业务服务（service-codegen）
 
-生成 Controller + Service 两层完整代码（团队基线 Service 直继 JhServiceImpl，无独立接口）。含标准 CRUD + 业务状态变更四段式。
+生成 Controller + Service 两层代码（当前 Profile 的 Service 直继 JhServiceImpl，无空接口层）。确定性生成覆盖标准 CRUD；额外业务动作必须有已确认规则。
 
 ## 触发词
 
@@ -12,7 +12,7 @@
 
 ### 场景 A：标准 CRUD 接口（最常见）
 
-输入：Entity/DTO/VO 已存在 + api.md 权限码
+输入：已通过 Schema/语义校验的 `wl-contract.json`
 产出：Controller（5 方法）+ Service（5 方法）
 
 ```
@@ -24,14 +24,29 @@ AI：  → 读 templates/Controller.java.tmpl 填空（5 方法 + 权限码）
 
 ### 场景 B：含状态变更（审核流）
 
-api.md 定义状态：DRAFT → PENDING → APPROVED → REJECTED
+**v0.9 起优先用契约 `customOperations` 自动生成**（推荐），无需手写：
 
-追加业务方法（四段式）：
+```json
+{
+  "customOperations": [{
+    "name": "submitForReview",
+    "method": "POST", "path": "submitForReview/{id}",
+    "permission": "mdm_feature_category_submit",
+    "kind": "stateTransition",
+    "preconditions": [{ "field": "status", "operator": "equals", "value": "DRAFT", "message": "仅待提交可操作" }],
+    "patch": [{ "field": "status", "value": "PENDING" }]
+  }]
+}
+```
+
+codegen 自动生成 Controller 方法 + Service 四段式（校验存在→校验前置→构造 patch→updateById）。
+
+**无契约驱动时手写四段式**：
 ```java
 @Transactional(rollbackFor = Exception.class)
 public void submitForReview(String id) {
     // ① 校验存在
-    MdmFeatureCategory entity = baseMapper.selectById(id);
+    MdmFeatureCategory entity = lambdaQuery().eq(...).one();
     ServiceAssert.isNotNull(entity, "分类不存在");
     // ② 校验状态
     ServiceAssert.isTrue("DRAFT".equals(entity.getStatus()), "仅待提交可操作");
@@ -39,20 +54,12 @@ public void submitForReview(String id) {
     entity.setStatus("PENDING");
     EntityUtil.setUpdateProp(entity);
     // ④ 持久化
-    baseMapper.updateById(entity);
+    int affected = baseMapper.updateById(entity);
+    ServiceAssert.isTrue(affected == 1, "更新失败");
 }
 ```
 
-Controller 追加：
-```java
-@ApiOperation(value = "提交审核")
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_submit')")
-@PutMapping("submitForReview/{id}")
-public ApiResult<Void> submitForReview(@PathVariable("id") String id) {
-    service.submitForReview(id);
-    return ApiResult.success("提交成功", null);
-}
-```
+> ⚠️ **B20**：业务方法内禁止发 MQ/HTTP（事务回滚后消息已发）；用事务消息 + afterCommit。
 
 ### 场景 C：批量导入
 
@@ -62,7 +69,6 @@ public void batchImport(List<MdmFeatureCategoryDTO> list) {
     List<MdmFeatureCategory> entities = list.stream().map(dto -> {
         MdmFeatureCategory e = new MdmFeatureCategory();
         BeanUtil.copyProperties(dto, e, "id");
-        e.setId(IdWorker.getIdStr());
         EntityUtil.setCreateProp(e);
         return e;
     }).collect(Collectors.toList());
@@ -109,14 +115,14 @@ mdm_feature_category_submit         业务动作（如提交审核）
 | 规则 | 查什么 | 修复 |
 |------|--------|------|
 | B1 | Controller 方法缺 @PreAuthorize | 补权限码注解 |
-| B2 | Controller 方法缺 @ApiOperation | 补 Swagger 注解 |
+| B2 | Controller 方法缺 @Operation | 补 OpenAPI 3 注解 |
 | B5 | 写操作方法缺 @Transactional | 加 @Transactional(rollbackFor=Exception.class) |
 | B8 | throw new RuntimeException | 改 ServiceAssert / ServiceException |
 
 ## FAQ
 
 **Q：为什么没有 Service 接口 + Impl 两层？**
-A：团队基线（mdm-service）Service 直继 `JhServiceImpl<Mapper, Entity>`，省掉独立接口层。如项目有接口需求，按 kit 模式加 `{Entity}Service` 接口 + `impl/{Entity}ServiceImpl`。
+A：当前 `jh4j3-openapi3` Profile 使用直接 Service，避免只有单实现时的空接口层。只有存在多实现、明确模块端口或替换策略时才增加接口，并应通过新的兼容性 Profile 固化，不能按单个资源临时漂移。
 
 **Q：Controller 能不能直接调 Mapper？**
 A：**禁止**。ArchUnit（J1）会卡：`controller.. ✗→ mapper..`。必须经 Service。

@@ -1,0 +1,43 @@
+package {{rootPackage}}.api.dto.{{module}};
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+{{#updateImports}}
+import {{.}};
+{{/updateImports}}
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+
+/**
+ * 修改{{apiDesc}}请求 DTO。
+ * <p>id/revision 强制提供，业务字段按 Patch 语义忽略 null。
+ *
+ * @author wl-skills-bd codegen
+ * @since 1.0.0
+ */
+@Getter
+@Setter
+@ToString
+@Schema(description = "修改{{apiDesc}}请求")
+public class {{Entity}}UpdateDTO {
+
+    @NotBlank(message = "主键不能为空")
+    @Schema(description = "主键ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String id;
+
+    @NotNull(message = "版本号不能为空")
+    @Schema(description = "乐观锁版本号", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Integer revision;
+
+    {{#updateFields}}
+    {{#validationAnnotations}}
+    {{.}}
+    {{/validationAnnotations}}
+    @Schema(description = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/updateFields}}
+}

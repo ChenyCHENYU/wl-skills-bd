@@ -1,103 +1,38 @@
 ---
 name: unit-test-gen
 description: |
-  基于 ServiceImpl / Controller 生成 JUnit 5 + Mockito 单元测试，命名 should_{result}_when_{condition}。
-  Service 测试覆盖正常流 + 业务校验失败 + 状态机异常分支；Controller 测试用 MockMvc。
-  典型触发：「生成单测」「写测试」「Mock 测试」「单元测试」
+  根据已确认的业务行为补齐 JUnit 5、Mockito、MockMvc 测试，并通过 JaCoCo J8 覆盖率门禁。
+  典型触发：「生成单测」「补覆盖率」「Controller 测试」「Mock 测试」
 status: 🟡 骨架
 stage: ⑦ 测试
 ---
 
 # unit-test-gen
 
-## Pre-flight 声明（必填）
+> 当前没有独立 CLI/MCP 测试生成器。codegen 只提供可编译 smoke 模板；业务断言必须由开发者/AI 基于已确认行为补齐。
 
-```
+## Pre-flight 声明
+
+```text
 🚀 已触发技能 unit-test-gen/SKILL.md
-✅ 已读取 standards/index.md             → 任务类型 G
-✅ 已读取 standards/14-test-coverage.md  → 覆盖率红线 + 命名
-✅ 已读取 standards/05-service.md        → 业务方法签名
+✅ 已读取 standards/14-test-coverage.md
+✅ 已读取目标 Service/Controller 与对应契约
+✅ 已列出正常、边界、异常、租户与 revision 行为
 ```
 
-## 前置检查
+## 流程
 
-- [ ] 目标 ServiceImpl / Controller 已存在
-- [ ] 测试目录结构 `src/test/java/...` 与主代码包对齐
-
-## 产物
-
-```
-xxx-service/src/test/java/.../{Entity}ServiceImplTest.java
-xxx-service/src/test/java/.../{Entity}ControllerTest.java
-```
-
-## Service 测试模板
-
-```java
-@ExtendWith(MockitoExtension.class)
-class {Entity}ServiceImplTest {
-
-    @InjectMocks
-    private {Entity}ServiceImpl service;
-
-    @Mock
-    private {Entity}Mapper mapper;
-
-    @Test
-    void should_return_id_when_save_success() { ... }
-
-    @Test
-    void should_throw_when_business_unique_key_duplicated() { ... }
-
-    @Test
-    void should_throw_when_status_not_allowed() { ... }
-}
-```
-
-## Controller 测试模板
-
-```java
-@WebMvcTest({Entity}Controller.class)
-class {Entity}ControllerTest {
-
-    @Autowired private MockMvc mockMvc;
-    @MockBean private {Entity}Service service;
-
-    @Test
-    @WithMockUser(authorities = "mdm_feature_category_save")
-    void should_201_when_save_success() throws Exception {
-        mockMvc.perform(post("/mdmFeatureCategory/save")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"categoryCode\":\"C1\",\"categoryName\":\"N1\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.code").value(200));
-    }
-}
-```
-
-## 用例覆盖建议（按场景）
-
-| 场景             | 必测                              |
-| ---------------- | --------------------------------- |
-| save             | 正常 / 业务唯一冲突 / 必填字段缺失 |
-| updateById       | 正常 / 记录不存在 / 状态不允许    |
-| deleteById       | 正常 / 记录不存在                 |
-| 状态变更         | 每个状态转换的允许与拒绝          |
-| 分页查询          | 空结果 / 关键字过滤                |
+1. 读取公共方法、契约和业务校验，不测试私有实现；
+2. Service 用 Mockito 隔离直接依赖，覆盖成功、业务异常、租户和乐观锁；
+3. Controller 用 `@WebMvcTest`/MockMvc 覆盖权限、Bean Validation、路径和响应包装；
+4. 方言相关 Mapper 使用对应数据库的集成测试；
+5. 执行 `mvn verify -Pwl-quality`，以 JaCoCo 实测补齐分支；
+6. 再执行 B1~B23 与完整质量门，确认测试代码本身也合规。
 
 ## 约束
 
-- 用 `should_xxx_when_yyy` 命名
-- 使用 AssertJ（`assertThatThrownBy(...)`），不用 JUnit 原生 `assertThrows` 字符串断言
-- **不依赖** 真实 DB / 网络
-- `@Disabled` 必须含原因 + 责任人 + 跟踪 ID
-
-## 完成摘要
-
-```
-✅ unit-test-gen 完成
-   - 产出: ServiceImplTest / ControllerTest
-   - 用例数: N
-   - 预估覆盖率: Service ≈ x%, Controller ≈ y%
-   - 下一步建议: ⑧ convention-audit-be
-```
+- Java 8、JUnit 5、Mockito、AssertJ；
+- 测试类 `{被测类}Test`，方法 `should_{result}_when_{condition}`；
+- 不依赖真实外网、生产数据、共享状态或执行顺序；
+- 不用 `skipTests`、扩大 excludes 或降低阈值规避 J8；
+- 完成摘要只报告实际测试结果和 JaCoCo 数值，不写“预估覆盖率”。

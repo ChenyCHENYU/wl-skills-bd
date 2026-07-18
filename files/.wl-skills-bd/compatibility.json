@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "verified": [
+    {
+      "profile": "jh4j3-openapi3",
+      "jh4jCloud": "3.1.0",
+      "java": "8",
+      "springBootMajor": "2",
+      "coreEntityFields": [
+        "id",
+        "companyId",
+        "createUserNo",
+        "updateUserNo",
+        "createDateTime",
+        "updateDateTime"
+      ],
+      "apiResultCodes": {
+        "success": 2000,
+        "badRequest": 4000,
+        "serverError": 5000
+      },
+      "entityUtilMethods": [
+        "setCreateProp",
+        "setCreatePropWithoutCo",
+        "setUpdateProp"
+      ],
+      "tenantProvider": "com.jhict.common.auth.util.AuthUtil#getLoginCompanyId",
+      "pagination": "com.jhict.common.data.mybatis.entity.JhPage<T>"
+    }
+  ]
+}

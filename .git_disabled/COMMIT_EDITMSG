@@ -1,0 +1,9 @@
+feat(docs): 全Skill配USAGE.md(10/10)+README重写反映v0.7+清理docs冗余
+
+- 新增6个USAGE.md(convention-audit/code-fix/api-design/business-doc/db-migration/unit-test)
+- USAGE覆盖4/10→10/10,每个含触发词+3场景+FAQ
+- lint-skills USAGE校验从3个codegen扩到全部Skill
+- README重写:18条→19条/B1~B8→B1~B12/J1~J5→J1~J7/补Knife4j+设计规约+codegen-workflow+方法论原则
+- npm徽章0.4.0→0.7.1,防胶水三层→四层保障
+- 删除docs/目录3文件(500+行历史报告,内容被CHANGELOG/guides取代且过时)
+- 版本0.7.0→0.7.1

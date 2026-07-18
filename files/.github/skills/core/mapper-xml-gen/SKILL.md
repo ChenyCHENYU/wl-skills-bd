@@ -44,7 +44,7 @@ public interface {Entity}Mapper extends JhBaseMapper<{Entity}> {
 }
 ```
 
-- 继承 `JhBaseMapper<Entity>` 获 selectById/insert/updateById/deleteBatchIds（MP 内置，无需写 XML）
+- 继承 `JhBaseMapper<Entity>` 获基础 CRUD；默认业务模板只生成租户安全查询和软删除流程，不暴露物理删除
 - 分页方法签名固定（`@Param("param")` 配合 XML `param.xxx`）
 - 简单查询用 default 方法 + lambdaQuery，不写 XML：
 

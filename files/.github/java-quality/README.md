@@ -1,47 +1,44 @@
-# Java Quality — 检查工具规则集
+# Java 质量门
 
-> **作用**：把 `standards/`（人读规范）物化为 **Java 官方/社区检查工具的规则配置**，让约定从"靠自觉"变成"CI 硬卡控"。
->
-> 这是 wl-skills-bd 对标 wl-skills-kit(ESLint) 的 Java 后端等价方案。
-> 前端只有 ESLint 一个标准；Java 后端有 Checkstyle/PMD/SpotBugs/ArchUnit/Spotless 多元工具链。
+本目录把团队规范物化为可执行检查。默认 `wl-quality` profile 在 Java 8 上真实验证，阻断项由 Maven `verify` 执行。
 
-## 目录与工具映射
+| 编号 | 工具 | 职责 | 默认硬门 |
+|---|---|---|:---:|
+| J1 | ArchUnit 1.4.2 | Controller/Service/Mapper/Entity 依赖方向 | 是 |
+| J2 | Checkstyle Maven Plugin 3.6.0 | 命名、Javadoc、规模、基础风格 | 是 |
+| J3 | Maven PMD Plugin 3.28.0 / PMD 7.17 | 缺陷、资源、复杂度、性能 | 是 |
+| J4 | SpotBugs Maven Plugin 4.8.6.8 | Java 8 可运行的字节码缺陷分析 | 是 |
+| J5 | Spotless Maven Plugin 2.30.0 | Java 8 可运行的 AOSP 格式和 UNIX 换行 | 是 |
+| J6 | P3C 2.1.1 / PMD 6 | 存量规约审计 | 否，隔离运行 |
+| J7 | Knife4j/OpenAPI 导出 | 运行时接口文档能力 | 否，不属于静态质量门 |
+| J8 | JaCoCo 0.8.15 | Service/Controller 类级测试覆盖率 | 是 |
 
-| 目录 | 工具 | 对应 standards | 执行器编号 | 优先级 | 状态 |
-|------|------|----------------|-----------|--------|------|
-| `archunit/` | ArchUnit | 02 跨层禁止 | J1 | 🔴 P1 | ✅ 已落地 |
-| `checkstyle/` | Checkstyle | 03 命名 / 15 质量 | J2 | 🔴 P1 | ✅ 已落地 |
-| `maven-snippets/` | Maven 插件配置 | 全部（接入入口） | — | 🔴 P1 | ✅ 已落地 |
-| `pmd/` | PMD | 16 性能 / 17 防护 | J3 | 🟡 P2 | ✅ 已落地 |
-| `spotbugs/` | SpotBugs | 17 防护 | J4 | 🟡 P2 | ✅ 已落地 |
-| `spotless/` | Spotless | 15 格式 | J5 | 🟢 P3 | ✅ 已落地 |
+## 接入
 
-## 三种审计场景分工
+1. 执行 `wl-skills-bd init`，保留 `.github/java-quality/` 的目录结构。
+2. 将 `maven-snippets/quality-profile.xml` 中的 `<profile>` 复制到父 POM 的 `<profiles>`。
+3. 将 `archunit/LayerRulesTest.java` 复制到测试源码并替换 `{{rootPackage}}`。
+4. 执行：
 
-| 场景 | 主力 | 何时触发 | 特点 |
-|------|------|----------|------|
-| 本地开发 | IDE 插件（IDEA Checkstyle/SpotBugs） | 写代码时 | 实时提示，体验好 |
-| CI/CD 门禁 | Maven 插件（本目录） | push/PR | build failure 硬卡 |
-| AI 审计 | `lib/be-rules.js`（正则） | convention-audit-be Skill | 无需插件，对话内即时 |
+```bash
+mvn verify -Pwl-quality
+```
 
-**原则**：能被 Maven 插件确定的（J*）→ 不写进 be-rules；regex 只做插件查不了的（注解缺失/SELECT \*/目录密度）。
+配置使用 `${project.basedir}/.github/java-quality/...` 的稳定路径，避免手工复制到另一个 `build/` 目录形成双份规则。
 
-## 接入新工程（3 步）
+## PMD 7 与 P3C 隔离
 
-1. `npx @agile-team/wl-skills-bd init`（释放 standards + skills + 本目录）
-2. 按需复制 `checkstyle/`、`archunit/` 到工程，改根包（见 standards/02 包名映射）
-3. 粘 `maven-snippets/pom-plugins.xml` 到 pom.xml，`mvn clean verify` 验证
+`p3c-pmd:2.1.1` 的发布 POM声明它编译于 PMD 6.15；默认 PMD 插件 3.28.0 使用 PMD 7.17。两者混装会产生类/API 冲突，因此：
 
-## 治理
+- `wl-quality` 只运行 PMD 7 原生规则；
+- `wl-p3c-legacy` 使用 PMD 插件 3.21.2 的 PMD 6 分支，且 `failOnViolation=false`；
+- 两个 profile 不得在同一次 Maven 调用中激活。
 
-- 规则与 standards 的对应关系登记在 `kit-internal/rule-coverage.md`
-- `scripts/lint-skills.js` 校验"阻断项必须有 J*/regex 执行器"，防止约定漂移成纯文档
-- 新增 Java 规则：先写 standards（人读）→ 物化到本目录（机器）→ 更新 rule-coverage.md 矩阵
+## 包自身验证
 
-## 参考链接
+```bash
+npm run verify:quality-config   # 离线检查 XML、版本和隔离关系
+npm run verify:quality-maven    # 创建临时 Java 8 工程，真实运行 J1~J5/J8
+```
 
-- Checkstyle：https://checkstyle.org/
-- ArchUnit：https://www.archunit.org/
-- PMD：https://pmd.github.io/
-- SpotBugs：https://spotbugs.github.io/
-- Spotless：https://github.com/diffplug/spotless
+真实夹具会编译源码、执行测试与 5 条 ArchUnit 断言，并依次通过 Checkstyle、PMD 7、SpotBugs、Spotless 和 JaCoCo。CI 在 Ubuntu/Node 22/Java 8 组合上执行此轮验证。

@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "contractId": "sale-order-master",
+  "profile": "jh4j3-openapi3",
+  "rootPackage": "com.jhict.sale",
+  "module": "order",
+  "externalId": "SALE_ORDER_MASTER",
+  "entity": {
+    "name": "SaleOrderMaster",
+    "table": "SALE_ORDER_MASTER",
+    "description": "销售订单主表"
+  },
+  "api": {
+    "requestPath": "saleOrderMaster",
+    "externalBasePath": "/sale/saleOrderMaster",
+    "permissionPrefix": "sale_order_master",
+    "permissions": {
+      "page": "sale_order_master_query_page",
+      "detail": "sale_order_master_get_by_id",
+      "create": "sale_order_master_save",
+      "update": "sale_order_master_update_by_id",
+      "remove": "sale_order_master_delete_by_id",
+      "export": "sale_order_master_export"
+    }
+  },
+  "database": "oracle",
+  "migration": {
+    "version": "20260718_120000",
+    "rollbackStrategy": "应用保持向后兼容；失败时先回滚应用。若表尚无业务数据，经 DBA 确认后人工删除新表；已有数据时只允许 roll-forward。",
+    "verificationSql": [
+      "SELECT COUNT(1) FROM SALE_ORDER_MASTER",
+      "SELECT COUNT(1) FROM SALE_ORDER_MASTER WHERE COMPANY_ID IS NULL"
+    ]
+  },
+  "fields": [
+    {
+      "name": "orderNo",
+      "column": "ORDER_NO",
+      "javaType": "String",
+      "dbType": "VARCHAR2(64 CHAR)",
+      "comment": "订单编号",
+      "requiredOnCreate": true,
+      "queryMode": "eq",
+      "maxLength": 64,
+      "externalId": "FIELD_ORDER_NO"
+    },
+    {
+      "name": "customerName",
+      "column": "CUSTOMER_NAME",
+      "javaType": "String",
+      "dbType": "VARCHAR2(200 CHAR)",
+      "comment": "客户名称",
+      "requiredOnCreate": true,
+      "queryMode": "like",
+      "maxLength": 200
+    },
+    {
+      "name": "status",
+      "column": "STATUS",
+      "javaType": "String",
+      "dbType": "VARCHAR2(32 CHAR)",
+      "comment": "订单状态",
+      "queryMode": "eq",
+      "maxLength": 32
+    },
+    {
+      "name": "totalAmount",
+      "column": "TOTAL_AMOUNT",
+      "javaType": "BigDecimal",
+      "dbType": "NUMBER(18,2)",
+      "comment": "订单总金额"
+    }
+  ],
+  "indexes": [
+    { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "IS_DELETE", "ORDER_NO"], "unique": true },
+    { "name": "IDX_ORDER_STATUS", "columns": ["COMPANY_ID", "IS_DELETE", "STATUS"] }
+  ],
+  "customOperations": [
+    {
+      "name": "submit",
+      "summary": "提交审批",
+      "method": "POST",
+      "path": "submit/{id}",
+      "permission": "sale_order_master_submit",
+      "kind": "stateTransition",
+      "preconditions": [
+        { "field": "status", "operator": "equals", "value": "DRAFT", "message": "仅草稿状态可提交" }
+      ],
+      "patch": [{ "field": "status", "value": "SUBMITTED" }],
+      "externalId": "OP_SUBMIT"
+    },
+    {
+      "name": "approve",
+      "summary": "审批通过",
+      "method": "POST",
+      "path": "approve/{id}",
+      "permission": "sale_order_master_approve",
+      "kind": "stateTransition",
+      "requestFields": [
+        { "name": "opinion", "javaType": "String", "comment": "审批意见", "required": false, "maxLength": 500 }
+      ],
+      "preconditions": [
+        { "field": "status", "operator": "equals", "value": "SUBMITTED", "message": "仅已提交可审批" }
+      ],
+      "patch": [{ "field": "status", "value": "APPROVED" }],
+      "externalId": "OP_APPROVE"
+    },
+    {
+      "name": "batchCancel",
+      "summary": "批量作废",
+      "method": "POST",
+      "path": "batchCancel",
+      "permission": "sale_order_master_batch_cancel",
+      "kind": "batch",
+      "preconditions": [
+        { "field": "status", "operator": "in", "value": ["DRAFT", "SUBMITTED"], "message": "仅草稿/已提交可作废" }
+      ],
+      "patch": [{ "field": "status", "value": "CANCELLED" }],
+      "externalId": "OP_BATCH_CANCEL"
+    }
+  ],
+  "relations": [
+    {
+      "name": "items",
+      "type": "one-to-many",
+      "detailEntity": "SaleOrderItem",
+      "detailContractId": "sale-order-item",
+      "joinColumn": "ORDER_ID",
+      "cascadeSoftDelete": true,
+      "exposeQuery": true,
+      "externalId": "REL_ORDER_ITEMS"
+    }
+  ]
+}

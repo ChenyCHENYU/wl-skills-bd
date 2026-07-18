@@ -74,7 +74,7 @@ public interface DiscountStrategy { BigDecimal calc(Order o); }
 
 > **依赖抽象，不依赖具体。** 高层模块不应依赖低层模块，二者都依赖抽象。
 >
-> 团队落地：Service 注入用接口类型（非 Impl）；跨服务调 Feign 接口；Configuration 注入接口。
+> 团队落地：单实现 CRUD 允许注入直接 Service；多实现、策略、跨模块与远程边界依赖 Port/Feign 接口，禁止依赖具体 Impl。
 
 ---
 
@@ -82,7 +82,7 @@ public interface DiscountStrategy { BigDecimal calc(Order o); }
 
 | 维度 | 红线 | 超出处理 | 执行器 |
 |------|:---:|---------|:---:|
-| **方法行数** | ≤ 50 行（Clean Code：15 行更佳，80 行硬上限）| 提取 private 辅助方法 | **B10** regex |
+| **方法行数** | ≤ 50 行建议，80 行硬上限 | 51~80 提示；>80 阻断并拆分 | **B10** 结构扫描 |
 | **类行数** | ≤ 500 行（含注释）| 按职责拆分 | **B9** regex |
 | **方法圈复杂度** | ≤ 10（if/for/&&/|| 计 1）| 拆方法 / 用多态替代 switch | **B11** regex（近似）|
 | **参数个数** | ≤ 5 | 封装为 DTO/对象 | Checkstyle ParameterNumber |
@@ -96,7 +96,7 @@ public interface DiscountStrategy { BigDecimal calc(Order o); }
 |------|---------|
 | 注释 "// 这里做 XX" | 提取方法，注释转方法名（`doXx()`）|
 | 方法 > 50 行 | 提取按逻辑分段 |
-| 重复代码 ≥ 2 段 | 提取，但先看 §4 三次法则 |
+| 重复代码 ≥ 3 段 | 按 §4 三次法则评估提取 |
 | 参数 > 5 | 引入参数对象 |
 | 嵌套 if > 2 层 | 卫语句提前 return（Guard Clause）|
 
@@ -118,7 +118,8 @@ public void save(DTO dto) {
 
 // ✅ 卫语句提前 return，扁平清晰
 public void save(DTO dto) {
-    if (dto == null || dto.getId() == null) return;
+    ServiceAssert.isNotNull(dto, "请求参数不能为空");
+    ServiceAssert.hasText(dto.getId(), "主键不能为空");
     if (checkExist(dto.getId())) update(dto);
     else insert(dto);
 }
@@ -251,9 +252,9 @@ public void save(DTO dto) {
 | 接口/抽象方法 Javadoc（@param/@return/@throws）| 🔴 强制 | 黄山版明确：接口方法必须注释，Checkstyle JavadocMethod 兜底 |
 | 复杂业务方法 Javadoc（业务规则/@throws 场景）| 🔴 强制 | 状态变更、多步业务、有副作用的写方法 |
 | 普通 public 方法（查询/简单转换）| 🟡 建议 | 签名自解释时可豁免，但建议加一句话业务意图 |
-| Controller 方法（已有 @ApiOperation）| 🟡 建议 | @ApiOperation 给 Swagger UI，Javadoc 给读代码者；简短并存不算重复 |
+| Controller 方法（已有 @Operation）| 🟡 建议 | @Operation 给 OpenAPI，复杂业务再补 Javadoc |
 | getter/setter/toString/equals/hashCode | ⚪ 豁免 | IDE 生成，加注释是噪音 |
-| 纯数据类字段（Entity/DTO/VO）| ⚪ 用 @ApiModelProperty | 字段已有 Swagger 注解，不重复 Javadoc |
+| 纯数据类字段（Entity/DTO/VO）| ⚪ 用 @Schema | 字段已有 OpenAPI 注解，不重复 Javadoc |
 | 行内注释（解释"为什么"）| 🟡 建议 | 业务/陷阱/历史，写在做决策的代码上方 |
 
 ### 9.2 该写 vs 不该写（Clean Code 核心边界）
@@ -269,7 +270,7 @@ public void save(DTO dto) {
 ```java
 // ✅ 解释为什么（业务决策/陷阱）
 // Oracle 11g 不支持 LIMIT，用 ROWNUM 子查询（已在 12c+ 弃用）
-String sql = "SELECT * FROM (SELECT t.*, ROWNUM rn FROM ...) WHERE rn <= ?";
+String sql = "SELECT id, name FROM (SELECT t.id, t.name, ROWNUM rn FROM demo t) WHERE rn <= ?";
 
 // ❌ 解释做什么（代码已说明，是噪音）
 // 查询数据库
@@ -278,9 +279,9 @@ List<User> users = mapper.selectList(null);
 
 ### 9.3 代码模板已内置合规注释
 
-8 个 templates 已按本节规范内置注释（类 Javadoc + 接口方法 @param/@return + 业务方法 @throws）。codegen 读模板填空即满足 R23/R24，无需 AI 自由发挥注释风格。详见 `templates/README.md`。
+9 个基础 templates 已按本节规范内置注释（类 Javadoc + 接口方法 @param/@return + 复杂业务说明）。codegen 读模板填空并经编译 fixture 验证。详见 `templates/README.md`。
 
-> Checkstyle `JavadocType` + `JavadocMethod` 兜底机器卡控（见 `java-quality/checkstyle/`）。
+> Checkstyle 对公共类型和接口/抽象边界做 Javadoc 卡控；普通 Controller 方法由 `@Operation` 和 B12 分工，避免重复注释。
 
 ---
 

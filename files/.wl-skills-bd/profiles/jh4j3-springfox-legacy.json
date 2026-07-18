@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "jh4j3-springfox-legacy",
+  "status": "audit-only",
+  "codegenEnabled": false,
+  "java": 8,
+  "springBootMajor": 2,
+  "jh4jCloud": "3.1.0",
+  "serviceStyle": "direct",
+  "apiDocumentation": "springfox3",
+  "migrationTarget": "jh4j3-openapi3",
+  "notes": "只用于识别和审计存量 Springfox 注解；新代码生成必须切换到 jh4j3-openapi3。"
+}

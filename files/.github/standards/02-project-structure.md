@@ -6,18 +6,32 @@
 
 ## 业务中心 × 工程包名映射（团队开发要求）
 
-> 依据《项目开发手册》§"工程及包名称约定" / §"工程目录具体划分"。新建工程或新模块时（service-codegen / entity-codegen），**根包与工程名必须按下表对齐**，不得套用单一样例。
+> 依据《项目开发手册》§"工程及包名称约定" / §"工程目录具体划分" / §"业务模块端口划分" / §"数据库划分"。新建工程或新模块时（service-codegen / entity-codegen），**根包、端口、数据库归属必须按下表对齐**，不得套用单一样例。
 
-| 业务中心   | 后端工程      | 后端包名            | 前端工程        |
-| ---------- | ------------- | ------------------- | --------------- |
-| 销售管理   | `wl-sale`     | `com.jhict.sale`    | `wl-ui-sale`    |
-| 质量管理   | `wl-quality`  | `com.jhict.quality` | `wl-ui-quality` |
-| 生产订单   | `wl-produce`  | `com.jhict.produce` | `wl-ui-produce` |
-| 成本管理   | `wl-cost`     | `com.jhict.cost`    | `wl-ui-cost`    |
-| 安全       | `wl-safe`     | `com.jhict.safe`    | `wl-ui-safe`    |
-| 主数据(MDM)| `mdm-service` | `com.jhict.mdm`     | —               |
+| 业务中心   | 后端工程      | 后端包名            | 前端工程        | 端口范围 | 数据库集群 |
+| ---------- | ------------- | ------------------- | --------------- | -------- | ---------- |
+| 销售管理   | `wl-sale`     | `com.jhict.sale`    | `wl-ui-sale`    | 10000~10099 | cx（产销）|
+| 质量管理   | `wl-quality`  | `com.jhict.quality` | `wl-ui-quality` | 10100~10199 | cx（产销）|
+| 生产订单   | `wl-produce`  | `com.jhict.produce` | `wl-ui-produce` | 10200~10299 | cx（产销）|
+| 成本管理   | `wl-cost`     | `com.jhict.cost`    | `wl-ui-cost`    | 10300~10339 | cx（产销）|
+| 安全       | `wl-safe`     | `com.jhict.safe`    | `wl-ui-safe`    | 10400~10499 | non_cx（非产销）|
+| 设备管理   | `wl-equipment`| `com.jhict.equipment`| `wl-ui-equipment`| 10500~10599 | iot |
+| 环保管理   | `wl-env`      | `com.jhict.env`     | `wl-ui-env`     | 10600~10699 | non_cx |
+| 计量物流   | `wl-logistics`| `com.jhict.logistics`| `wl-ui-logistics`| 10700~10799 | non_cx |
+| 能源管理   | `wl-energy`   | `com.jhict.energy`  | `wl-ui-energy`  | 10800~10899 | non_cx |
+| 主数据(MDM)| `mdm-service` | `com.jhict.mdm`     | —               | 专用 | pt（平台）|
 
-> 手册标注"待定/作业计划/物料实绩/仓储管理"的业务中心，按定稿后补登本表，编号顺序预留。
+### 数据库集群归属（与 standards/24 §3.3 联动）
+
+| 集群 | 库 | 用户 | 业务中心 |
+|---|---|---|---|
+| **cx**（产销）| `hx_cxdb1` | `cxuser` | sale/quality/produce/cost |
+| **non_cx**（非产销）| `hx_non_cxdb2` | `nonuser` | safe/env/logistics/energy |
+| **pt**（平台）| `hx_ptdb` | `ptuser` | mdm/平台基础 |
+
+> 手册标注"待定/作业计划/物料实绩/仓储管理/冷精管理/废钢闭环"的业务中心，按定稿后补登本表，编号顺序预留。冷精属 cx，废钢属 non_cx。
+
+> **AI 约束**：service-codegen 在新工程生成代码前，**先核对工程根包 + 端口 + 数据库归属**（读父 `pom.xml` 的 `groupId`、bootstrap.yml 的 `server.port`、datasource profile），按本表确认业务域，发现不一致记违规并提示修正。
 
 ### 工程目录角色（团队全局）
 
@@ -66,7 +80,7 @@ xxx-service/                           父 POM
         ├── feign/                     OpenFeign 客户端
         ├── listener/                  消息 / 事件监听
         ├── mapper/                    MyBatis Mapper 接口（按业务子域分包）
-        ├── service/                   业务 Service 接口 + impl
+        ├── service/                   应用 Service；单实现默认直接类，可选 port/impl
         ├── task/                      定时任务
         └── utils/                     工具类
     └── src/main/resources/
@@ -81,14 +95,15 @@ xxx-service/                           父 POM
 ## 分层职责（严格禁止跨层）
 
 ```
-Controller → Service(impl) → Mapper → XML
+Controller → Application Service → Mapper → XML
 ```
 
 | 层                    | 职责                                                      | 禁止事项                                |
 | --------------------- | --------------------------------------------------------- | --------------------------------------- |
 | `controller/`         | 接收请求、参数预处理、调用 Service、返回 `ApiResult`      | 禁止写业务逻辑、禁止直接调用 Mapper     |
-| `service/`            | 业务编排、事务控制、调用 Mapper                            | 禁止直接写 SQL 字符串                   |
-| `service/*ServiceImpl` | 实现业务方法；可继承 `JhServiceImpl<Mapper, Entity>`     | 禁止跨服务直接 new 调用，必须 @Autowired |
+| `service/`            | 业务编排、事务边界；默认 `XxxService extends JhServiceImpl` | 禁止直接写 SQL、禁止跨模块注入 Mapper |
+| `service/port/`       | 多实现、策略、远程或跨模块边界的可替换接口（按需）         | 单实现 CRUD 不得为了形式强制建接口 |
+| `service/impl/`       | 仅在存在 port/多实现时使用                                 | 禁止同一子域混用直接类与 interface/impl |
 | `mapper/*Mapper.java` | MyBatis 接口（继承 `JhBaseMapper<T>`），含 `@Param`        | 禁止写业务逻辑                          |
 | `mapper/*.xml`        | SQL 语句                                                   | 禁止 `SELECT *`、禁止业务判断           |
 | `api/entity/`         | 数据模型，含 MyBatis-Plus 注解 `@TableName / @TableField` | 禁止业务逻辑、禁止 Spring 注解          |
@@ -124,7 +139,7 @@ controller/某域/                       ← 35 个文件 ❌ 必须拆子域
 
 - 根包：全小写、无下划线（`com.jhict.mdm` / `com.xisc.industry`）
 - 业务子域：小写单词（`feature` / `modelAttributeMap` / `qualityRules`）
-- **业务子域命名允许驼峰子包**（如 `modelAttributeMap`）但要避免下划线
+- **业务子域命名允许 lowerCamelCase 子包**（如 `modelAttributeMap`）但要避免下划线；Checkstyle 与此口径一致
 - 禁止使用 `common2` / `util2` / `test`（测试除外）
 
 ---
@@ -134,7 +149,7 @@ controller/某域/                       ← 35 个文件 ❌ 必须拆子域
 | 维度                | 团队基线（jh4j-cloud 三层）    | CLAUDE 规范（外部参考，不集成）              |
 | ------------------- | ------------------------------ | -------------------------------------------- |
 | DDD 分层            | 不强调（`api/app/domain/infra` 不使用） | 严格 DDD：`api/app/domain/infra`             |
-| Repository 接口     | 不使用，直接 Mapper             | 必须有 `domain/repository/` + `infra/repository/impl/` |
+| Repository 接口     | 简单 CRUD 直接 Mapper；跨模块/多实现才抽 port | 必须有 `domain/repository/` + `infra/repository/impl/` |
 | 路径风格            | 驼峰（`mdmFeatureCategory`）    | kebab-case（`/v1/{orgId}/cy-contents`）      |
 | 租户字段            | `companyId` / `tenantId` 不强 | `tenantId` + `@PathVariable Long organizationId` |
 

@@ -24,7 +24,8 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
     /** 分页查询 */
     JhPage<MdmFeatureCategoryPageVO> queryPage(
             JhPage<MdmFeatureCategoryPageVO> page,
-            @Param(QUERY_PARAM_KEY) MdmFeatureCategoryPageDTO pageDTO);
+            @Param(QUERY_PARAM_KEY) MdmFeatureCategoryPageDTO pageDTO,
+            @Param("companyId") String companyId);
 
     /** 含 Lambda 表达式的便捷查询 */
     default MdmFeatureCategory getByFeatureKey(String featureKey) {
@@ -38,7 +39,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
 - `@Mapper` 注解必加
 - 继承 `JhBaseMapper<T>` 获得 MyBatis-Plus 通用 CRUD（`selectById` / `selectList` / `insert` / `updateById` / `deleteById` 等）
-- 多参数方法用 `@Param`；DTO/Query 单参数也建议用 `@Param("param")` + XML 用 `param.xxx`
+- 多参数方法用 `@Param`；租户参数必须由 Service 从 `AuthUtil` 获取，禁止从 DTO 透传
 - 简单条件查询用 `Wrappers.lambdaQuery()`，复杂查询走 XML
 
 ---
@@ -69,12 +70,13 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
         UPDATE_DATE_TIME AS updateDateTime
     </sql>
 
-    <!-- ============ 分页查询：默认不加 ORDER BY，由 JhPage 控制 ============ -->
+    <!-- ============ 分页查询：租户/软删条件常驻，排序来自契约白名单 ============ -->
     <select id="queryPage" resultType="com.jhict.mdm.api.vo.feature.MdmFeatureCategoryPageVO">
         SELECT <include refid="BaseColumns"/>
         FROM MDM_FEATURE_CATEGORY
         <where>
             AND IS_DELETE = 1
+            AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
             <if test="param != null">
                 <if test="param.categoryCode != null and param.categoryCode != ''">
                     AND CATEGORY_CODE LIKE CONCAT(CONCAT('%', #{param.categoryCode}), '%')
@@ -87,6 +89,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
                 </if>
             </if>
         </where>
+        ORDER BY CREATE_DATE_TIME DESC, ID DESC
     </select>
 
     <!-- ============ IN 查询 ============ -->
@@ -94,6 +97,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
         SELECT <include refid="BaseColumns"/>
         FROM MDM_FEATURE_CATEGORY
         WHERE IS_DELETE = 1
+          AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
           AND ID IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id,jdbcType=VARCHAR}
@@ -102,10 +106,14 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
     <!-- ============ Oracle 环境：TopN 用 ROWNUM 包裹，不用 LIMIT ============ -->
     <select id="selectTopN" resultType="com.jhict.mdm.api.entity.feature.MdmFeatureCategory">
-        SELECT * FROM (
+        SELECT id, categoryCode, categoryName, parentId, featureKey, featureTable,
+               featureField, companyId, revision, isDelete, createUserNo,
+               createDateTime, updateUserNo, updateDateTime
+        FROM (
             SELECT <include refid="BaseColumns"/>
             FROM MDM_FEATURE_CATEGORY
             WHERE IS_DELETE = 1
+              AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
             ORDER BY UPDATE_DATE_TIME DESC NULLS LAST
         ) WHERE ROWNUM &lt;= #{limit,jdbcType=INTEGER}
     </select>
@@ -135,12 +143,12 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
    - **Oracle 项目**（主数据类等）：TopN 用 `ROWNUM` 子查询包裹，不用 `LIMIT`
    - **MySQL 项目**（主流）：`LIMIT #{offset}, #{size}`（MyBatis-Plus 内置分页拦截器自动生成，常规分页查询无需手写）
 5. **JDBC Type 显式声明**：`#{x,jdbcType=VARCHAR}` / `#{id,jdbcType=BIGINT}`
-6. **分页查询默认不加 `ORDER BY`**：排序由 `JhPage` / 业务前端传递；仅 TopN / 时间线显式排序
+6. **分页必须稳定排序**：默认使用契约声明的固定列并追加 ID；前端排序字段只能映射到服务端白名单，禁止 `${sortField}` 直拼
    - **Oracle**：`ORDER BY xxx DESC NULLS LAST`（`NULLS LAST` 为 Oracle 专有语法）
    - **MySQL**：`ORDER BY xxx IS NULL, xxx DESC`（用 IS NULL 表达将 NULL 排到末尾）
-7. **软删除条件常驻**：所有 SELECT 必须含 `AND IS_DELETE = 1`
+7. **软删除与租户条件常驻**：所有业务 SELECT/UPDATE/DELETE 必须含 `IS_DELETE = 1` 和 `COMPANY_ID = #{companyId}`，或由 doctor 验证的统一插件注入
 8. **IN 查询**用 `<foreach>`，不用字符串拼接
-9. **批量 UPDATE / INSERT** 直接写 SQL，**手动维护** `UPDATE_DATE_TIME` / `UPDATE_USER_NO`
+9. **批量 UPDATE / INSERT** 必须限定租户、检查影响行数，并维护 `REVISION/UPDATE_*`；物理删除不进入默认模板
 
 ---
 
@@ -150,7 +158,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 | ----------- | --------------------------------------- | ----------------------------------------- |
 | 通用 CRUD   | `JhBaseMapper` (MP `BaseMapper`) 自带   | `BaseMapper<T>` (HZERO)，需要 selectByPrimaryKey 等手写 |
 | 主键        | 雪花 ID（String）                       | Oracle 序列 + 触发器                      |
-| 乐观锁       | 不强制（通过 `REVISION` 字段，业务维护）| `OBJECT_VERSION_NUMBER` + `@VersionAudit` |
+| 乐观锁       | `REVISION` + `@Version`，写操作强制检查影响行数 | `OBJECT_VERSION_NUMBER` + `@VersionAudit` |
 | 审计字段     | 自定义 `CREATE_DATE_TIME` 等            | `AuditDomain` 标配 `CREATION_DATE` 等     |
 | 软删除       | `IS_DELETE = 1/0`                       | 不强制（业务自定）                        |
 
@@ -158,4 +166,5 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
 ## 变更记录
 
+- 2026-07-18 v0.8 租户谓词、稳定排序、乐观锁和显式列闭环
 - 2026-05-14 v0.0.1 落地（基于 `MdmFeatureCategoryMapper.xml/.java` + CLAUDE 共性 §八）

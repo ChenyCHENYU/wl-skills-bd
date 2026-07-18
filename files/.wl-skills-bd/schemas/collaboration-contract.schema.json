@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-api-contract-v1.json",
+  "title": "WL API Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "protocolVersion",
+    "source",
+    "resource",
+    "transport",
+    "operations",
+    "models",
+    "frontend",
+    "completion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "wl-api-contract" },
+    "protocolVersion": { "const": "1.0" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": { "const": "jh4j3-openapi3" },
+        "mode": { "type": "string", "minLength": 1 },
+        "contractHash": { "$ref": "#/$defs/hash" },
+        "apiHash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractId", "module", "entity", "description", "permissionPrefix"],
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1 },
+        "module": { "type": "string", "minLength": 1 },
+        "entity": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "permissionPrefix": { "type": "string", "minLength": 1 },
+        "externalId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["successCode", "envelope", "pagination", "controllerBasePath", "externalBasePath"],
+      "properties": {
+        "successCode": { "const": 2000 },
+        "envelope": { "const": ["code", "message", "data"] },
+        "pagination": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["recordsPath", "totalPath"],
+          "properties": {
+            "recordsPath": { "const": "data.records" },
+            "totalPath": { "const": "data.total" }
+          }
+        },
+        "controllerBasePath": { "$ref": "#/$defs/path" },
+        "externalBasePath": { "$ref": "#/$defs/path" }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "required": ["page", "detail", "create", "update", "remove"],
+      "properties": {
+        "page": { "$ref": "#/$defs/operation" },
+        "detail": { "$ref": "#/$defs/operation" },
+        "create": { "$ref": "#/$defs/operation" },
+        "update": { "$ref": "#/$defs/operation" },
+        "remove": { "$ref": "#/$defs/operation" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/operation" }
+    },
+    "extensionOperations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "relations": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "models": {
+      "type": "object",
+      "required": ["pageRequest", "createRequest", "updateRequest", "detailResponse", "pageResponse"],
+      "properties": {
+        "pageRequest": { "$ref": "#/$defs/model" },
+        "createRequest": { "$ref": "#/$defs/model" },
+        "updateRequest": { "$ref": "#/$defs/model" },
+        "detailResponse": { "$ref": "#/$defs/model" },
+        "pageResponse": { "$ref": "#/$defs/model" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/model" }
+    },
+    "frontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiConfig", "pathParameterSyntax", "notes"],
+      "properties": {
+        "apiConfig": {
+          "type": "object",
+          "required": ["list", "getById", "save", "update", "remove"],
+          "properties": {
+            "list": { "$ref": "#/$defs/path" },
+            "getById": { "$ref": "#/$defs/path" },
+            "save": { "$ref": "#/$defs/path" },
+            "update": { "$ref": "#/$defs/path" },
+            "remove": { "$ref": "#/$defs/path" }
+          },
+          "additionalProperties": { "$ref": "#/$defs/path" }
+        },
+        "pathParameterSyntax": { "const": "RFC6570-simple" },
+        "notes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractStatus", "openQuestions", "deviations", "skeletonOperations"],
+      "properties": {
+        "contractStatus": { "enum": ["draft", "confirmed"] },
+        "openQuestions": { "type": "array", "items": { "type": "string" } },
+        "deviations": { "type": "array", "items": { "type": ["string", "object"] } },
+        "skeletonOperations": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "path": { "type": "string", "pattern": "^/" },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "controllerPath", "externalPath", "permission", "requestModel", "responseModel"],
+      "properties": {
+        "method": { "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        "controllerPath": { "$ref": "#/$defs/path" },
+        "externalPath": { "$ref": "#/$defs/path" },
+        "permission": { "type": "string", "minLength": 1 },
+        "requestModel": { "type": "string", "minLength": 1 },
+        "responseModel": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string" },
+        "idFrom": { "enum": ["path", "body", "none"] },
+        "summary": { "type": "string" }
+      }
+    },
+    "model": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "required", "type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" },
+        "type": { "enum": ["string", "integer", "number", "boolean", "array", "object"] },
+        "format": { "type": "string" },
+        "maxLength": { "type": "integer", "minimum": 1 },
+        "items": {
+          "type": "object",
+          "required": ["type"],
+          "properties": { "type": { "type": "string" }, "format": { "type": "string" } },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

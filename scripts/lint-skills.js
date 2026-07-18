@@ -188,8 +188,9 @@ function blockingRulesInCoverage(text) {
     J3: "pmd",
     J4: "spotbugs",
     J5: "spotless",
-    J6: "pmd", // J6 是 P3C，在 pmd/ 目录下的 ali-p3c-ruleset.xml
+    J6: "pmd", // J6 是隔离的 P3C/PMD6 存量审计，profile 位于 maven-snippets
     J7: "knife4j",
+    J8: "jacoco",
   };
   const beRules = readOptional("lib/be-rules.js");
   for (const line of coverage.split("\n")) {

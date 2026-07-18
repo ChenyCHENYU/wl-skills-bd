@@ -5,7 +5,7 @@
  * wl-skills-bd MCP Server
  *
  * 实现 MCP 协议（stdio transport，JSON-RPC 2.0），对标 wl-skills-kit/mcp/server.js。
- * 后端精简版：无需网关/token（无菜单字典同步），核心是暴露 be-rules / audit 工具。
+ * 暴露只读审计/契约工具，以及带 planHash/确认门/备份/复扫的受控本地写工具。
  *
  * 启动（由 .cursor/mcp.json 等编辑器配置注入）：
  *   node node_modules/@agile-team/wl-skills-bd/mcp/server.js
@@ -98,7 +98,7 @@ function initialize(id, params) {
     capabilities: { tools: {} },
     serverInfo: { name: "wl-skills-bd", version: PKG.version },
     instructions:
-      "后端规范检查工具。wls_be_validate 扫描 Java 工程输出 B1~B8 偏差；wls_be_standards 查询规范条款；wls_be_templates 查代码模板占位符。",
+      "后端工程闭环工具。只读工具可直接调用；codegen/safe-fix 默认只预览，正式写入必须携带同一 planHash 与 confirmApply=true，状态漂移时零写入。",
   });
 }
 
@@ -119,11 +119,16 @@ function startServer() {
     input: process.stdin,
     terminal: false,
   });
-  rl.on("line", async (line) => {
-    const msg = parseMessage(line);
-    if (msg) await handleMessage(msg);
+  let queue = Promise.resolve();
+  rl.on("line", (line) => {
+    queue = queue.then(async () => {
+      const msg = parseMessage(line);
+      if (msg) await handleMessage(msg);
+    });
   });
-  rl.on("close", () => process.exit(0));
+  rl.on("close", () => {
+    queue.catch((error) => process.stderr.write(`MCP queue error: ${error.message}\n`));
+  });
 }
 
 if (require.main === module) {

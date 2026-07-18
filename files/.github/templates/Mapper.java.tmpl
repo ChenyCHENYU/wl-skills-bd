@@ -2,6 +2,7 @@ package {{rootPackage}}.mapper.{{module}};
 
 import com.jhict.common.data.mapper.JhBaseMapper;
 import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
 import com.jhict.common.data.mybatis.entity.JhPage;
@@ -10,7 +11,7 @@ import org.apache.ibatis.annotations.Param;
 
 /**
  * {{apiDesc}}({{Entity}})表数据库访问层。
- * <p>继承 JhBaseMapper 获得 selectById/insert/updateById/deleteBatchIds 等。
+ * <p>继承 JhBaseMapper 获得基础读写能力；默认业务模板只暴露租户安全的查询与软删除流程。
  * <p>复杂查询/联表/动态条件写自定义方法 + XML。
  *
  * @author wl-skills-bd codegen
@@ -22,13 +23,32 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
     /** XML 中引用查询参数的 key 名 */
     String QUERY_PARAM_KEY = "param";
 
+    /** XML 中引用登录租户的 key 名 */
+    String COMPANY_ID_KEY = "companyId";
+
     /**
      * 分页查询{{apiDesc}}。
      * <p>实现见同名 Mapper.xml（禁止 SELECT 星号，软删除条件常驻）。
      *
      * @param page    分页参数（current/size，由 MP 拦截器自动包裹）
      * @param pageDTO 查询条件（@Param("param")，XML 用 param.xxx 引用）
+     * @param companyId 当前登录公司，由 Service 从 AuthUtil 获取，禁止接受前端传值
      * @return 分页结果，元素为 {{Entity}}PageVO
      */
-    JhPage<{{Entity}}PageVO> queryPage(JhPage<{{Entity}}PageVO> page, @Param(QUERY_PARAM_KEY) {{Entity}}PageDTO pageDTO);
+    JhPage<{{Entity}}PageVO> queryPage(
+            JhPage<{{Entity}}PageVO> page,
+            @Param(QUERY_PARAM_KEY) {{Entity}}PageDTO pageDTO,
+            @Param(COMPANY_ID_KEY) String companyId);
+
+    /**
+     * 按 ID + 租户查询详情（复杂详情/联表场景的 SQL 起点）。
+     * <p>默认 getById 由 Service.lambdaQuery 兜底；需要联表或裁剪大字段时改用本方法。
+     *
+     * @param id        主键
+     * @param companyId 当前登录公司
+     * @return 详情 VO，无匹配返回 null
+     */
+    {{Entity}}VO queryById(
+            @Param("id") String id,
+            @Param(COMPANY_ID_KEY) String companyId);
 }

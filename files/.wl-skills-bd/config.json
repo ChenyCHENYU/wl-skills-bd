@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "jh4j3-openapi3",
+  "contractFile": "wl-contract.json",
+  "ruleCatalog": ".wl-skills-bd/rules/catalog.json",
+  "profileDirectory": ".wl-skills-bd/profiles",
+  "localOverride": ".wl-skills-bd/config.local.json"
+}

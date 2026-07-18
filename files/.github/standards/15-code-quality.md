@@ -191,8 +191,8 @@ if (status != expected) { ... }
 > - **类 Javadoc 强制**（@author @since + 职责说明）— Checkstyle `JavadocType` 兜底
 > - **接口/抽象方法 Javadoc 强制**（@param/@return/@throws）— Checkstyle `JavadocMethod` 兜底
 > - **复杂业务方法 Javadoc 强制**（业务规则、@throws 场景、状态变更说明）
-> - **纯数据类字段**：用 `@ApiModelProperty` 即可（不重复 Javadoc）
-> - **Controller 方法**：`@ApiOperation`（给 Swagger UI）+ 简短 Javadoc（给读代码者）并存，受众不同不算重复
+> - **纯数据类字段**：用 `@Schema` 即可（不重复 Javadoc）
+> - **Controller 方法**：`@Operation` 给 OpenAPI；只有复杂业务再补 Javadoc
 >
 > 完整边界、正反例、Clean Code 原则详见 **[`standards/19-design.md` §9](19-design.md#9-注释设计黄山版第一章注释与-15-联动)**。
 > 代码模板已内置合规注释，codegen 读模板填空即满足本规范。

@@ -7,8 +7,9 @@
 | 类型            | 格式                       | 示例                          |
 | --------------- | -------------------------- | ----------------------------- |
 | Controller      | `XxxController`            | `MdmFeatureCategoryController` |
-| Service 接口    | `XxxService`               | `MdmFeatureCategoryService`    |
-| Service 实现    | `XxxServiceImpl`           | `MdmFeatureCategoryServiceImpl` |
+| 默认 Service 类 | `XxxService`               | `MdmFeatureCategoryService`    |
+| 可替换边界接口  | `XxxServicePort`           | `PricingServicePort`           |
+| 边界实现        | `XxxServiceImpl`           | `PricingServiceImpl`           |
 | Mapper          | `XxxMapper`                | `MdmFeatureCategoryMapper`     |
 | Entity          | 业务名无后缀                | `MdmFeatureCategory`           |
 | 请求 DTO        | `XxxRequestDTO` / `XxxDTO` | `MdmFeatureCategoryPageDTO`    |
@@ -40,7 +41,7 @@
 
 - Java 字段：camelCase（`categoryCode` / `createDateTime`）
 - 数据库字段：UPPER_SNAKE_CASE（`CATEGORY_CODE` / `CREATE_DATE_TIME`）
-- Mapper XML 字段映射：`SELECT CATEGORY_CODE as categoryCode`（建议使用 MyBatis-Plus 自动映射，禁止用别名维护）
+- Mapper XML 联表/VO 查询必须显式 `AS camelCase`；简单 Entity 查询可使用 MyBatis-Plus 驼峰映射
 
 ## 常量命名
 
@@ -108,10 +109,10 @@ public class OrderStatus { }
 |------|--------|------|
 | 查询 | `getByXxx` / `list` / `queryPage` | `select*` / `find*` |
 | 新增 | `save` | `add*` / `insert*` / `create*` |
-| 修改 | `update` / `updateXxx` | `edit*` / `modify*` |
-| 删除 | `remove` / `removeXxx` | `delete*`（Service 层可用）|
+| 修改 | `updateById` / `updateXxx` | `edit*` / `modify*` |
+| 删除 | `deleteById` / `removeBatch` | 无业务语义的 `doDelete*` |
 
-URL 层级最多 3 层：`@GetMapping("mdmFeatureCategory/queryPage")`
+Controller 类级路径声明资源名，方法级路径声明动作；最终 URL 层级不超过 3 层。
 
 ---
 

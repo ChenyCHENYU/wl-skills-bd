@@ -1,146 +1,71 @@
-# 04 · Controller 层规范（✅ 已落地，依据 Spring MVC 官方 + 团队基线）
+# 04 · Controller 与 HTTP 接口规范（✅ 已落地）
 
-> 团队基线模板。共性参考 `CLAUDE规范文档/后端` §六，但具体注解 / 返回值用本团队栈。
+> 适用：Spring Boot 2 + jh4j-cloud 3.x。接口文档统一使用 OpenAPI 3；存量 Springfox 代码只允许在 `legacy-springfox` Profile 中维护，不进入新模板。
 
----
+## 1. 职责与依赖
 
-## 类级别声明
+Controller 只负责协议适配：接收参数、Bean Validation、权限校验、调用 Service、包装 `ApiResult`。禁止直接调用 Mapper、拼 SQL、开启事务或实现业务状态机。
+
+默认依赖同子域的直接 Service 类；存在多实现/跨模块边界时依赖 `ServicePort`，禁止依赖 `ServiceImpl`。
+
+## 2. 类级标准
 
 ```java
-@Api(value = "主数据模型管理/特征量模型管理/特征量分类")  // tags 用斜杠表达层级
-@RestController
+@Tag(name = "特征量分类")
 @Validated
-@RequestMapping("mdmFeatureCategory")                  // 驼峰资源名，不带版本前缀
+@RestController
+@RequestMapping("mdmFeatureCategory")
 public class MdmFeatureCategoryController {
     @Resource
-    private MdmFeatureCategoryService mdmFeatureCategoryService;
+    private MdmFeatureCategoryService service;
 }
 ```
 
-**要点**：
+- 类必须有 `@RestController`、`@RequestMapping`、`@Validated`、`@Tag`。
+- import 禁止通配符。
+- 资源路径保持团队 lowerCamelCase 基线；网关服务前缀不在 Controller 重复声明。
 
-- `@Api(value = ...)` 必填，描述层级用斜杠分隔
-- `@RestController` + `@Validated`（开启方法级 `@Validated` 校验）
-- `@RequestMapping` **不带 `/v1/...` 前缀**（与 HZERO 体系区分），由网关统一加版本
-- 注入方式优先 `@Resource`（与团队代码风格一致）
-- **不强制继承 BaseController**（与 HZERO 不同）
+## 3. 默认 CRUD 契约
 
----
+| 场景 | HTTP | 方法路径 | Java 方法 | 返回类型 |
+|---|---|---|---|---|
+| 分页 | POST | `queryPage` | `queryXxxPage` | `ApiResult<JhPage<XxxPageVO>>` |
+| 详情 | GET | `getById/{id}` | `getById` | `ApiResult<XxxVO>` |
+| 新增 | POST | `save` | `save` | `ApiResult<String>` |
+| 修改 | PUT | `updateById` | `updateById` | `ApiResult<Void>` |
+| 删除 | DELETE | `deleteById/{id}` | `deleteById` | `ApiResult<Void>` |
 
-## 标准 CRUD 模板
+该表是当前 `jh4j3-openapi3` Profile，不是跨系统硬编码。若前端或网关约定 `/list`、`/update`、`/remove`，必须先新增并验证独立兼容性 Profile，再由 codegen 同时生成前后端契约；当前 Profile 禁止资源级随意覆盖 method/path，避免同一服务风格漂移。
 
-### 分页
+## 4. 权限与公开接口
 
-```java
-@ApiOperation(value = "查询特征量分类分页")
-@ApiImplicitParams({
-    @ApiImplicitParam(name = "current", value = "当前页码", dataType = "long", paramType = "query", example = "1"),
-    @ApiImplicitParam(name = "size", value = "每页记录条数", dataType = "long", paramType = "query", example = "10")
-})
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_query_page')")
-@PostMapping("queryPage")
-public ApiResult<JhPage<List<MdmFeatureCategoryPageVO>>> queryMdmFeatureCategoryPage(
-        @ApiIgnore JhPage page,
-        @RequestBody @Validated MdmFeatureCategoryPageDTO params) {
-    return ApiResult.success("查询成功", mdmFeatureCategoryService.queryMdmFeatureCategoryPage(page, params));
-}
-```
+- 每个非公开接口必须有 `@PreAuthorize("@pms.hasPermission('...')")`。
+- 公开接口必须用 `@Anonymous`，同时添加 `@WlPublicApi(reason = "...")` 或等价的项目登记；B1 对已登记公开接口豁免。
+- 权限码由契约字段 `permissionCode` 生成，格式由 Profile 决定，不在模板中二次推导。
 
-### 主键查询
+## 5. 参数与响应
 
-```java
-@ApiOperation(value = "主键查询数据")
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_get_by_id')")
-@GetMapping("getById/{id}")
-public ApiResult<MdmFeatureCategoryVO> getById(@PathVariable("id") String id) {
-    return ApiResult.success("查询成功", mdmFeatureCategoryService.getById(id));
-}
-```
+- 请求体使用 DTO，禁止直接接收 Entity。
+- 新增、修改 DTO 在确定性 codegen 中分离；存量共享 DTO 仅为兼容模式。
+- 长 ID 始终以 String 对外，避免 JavaScript 精度丢失。
+- 业务响应成功码由 `ApiResult` 统一产生，当前 jh4j-cloud 3.1.0 为 `2000`。
+- 分页泛型必须是 `JhPage<XxxPageVO>`，不得写成 `JhPage<List<XxxPageVO>>`。
+- Controller 不捕获通用 Exception，由全局异常处理器统一转换。
 
-### 新增
+## 6. OpenAPI 3
 
-```java
-@ApiOperation(value = "新增数据")
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_save')")
-@PostMapping("save")
-public ApiResult<String> insert(@RequestBody @Validated MdmFeatureCategoryDTO dto) {
-    return ApiResult.success("新增成功", mdmFeatureCategoryService.save(dto));
-}
-```
+- 类使用 `@Tag`，方法使用 `@Operation`，字段使用 `@Schema`。
+- 路径变量显式写 `@PathVariable("id")`。
+- 新代码禁止 `@Api/@ApiOperation/@ApiModelProperty`。
 
-### 修改
+## 7. 机器门禁
 
-```java
-@ApiOperation(value = "修改数据")
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_update_by_id')")
-@PutMapping("updateById")
-public ApiResult<Void> updateById(@RequestBody @Validated MdmFeatureCategoryDTO dto) {
-    mdmFeatureCategoryService.updateById(dto);
-    return ApiResult.success("更新成功", null);
-}
-```
-
-### 删除
-
-```java
-@ApiOperation(value = "删除数据")
-@PreAuthorize("@pms.hasPermission('mdm_feature_category_delete_by_id')")
-@DeleteMapping("deleteById/{id}")
-public ApiResult<Void> deleteById(@PathVariable("id") String id) {
-    mdmFeatureCategoryService.deleteById(id);
-    return ApiResult.success("删除成功", null);
-}
-```
-
----
-
-## 操作日志注解
-
-写操作（save / update / delete / 状态变更）**建议**加 `@MdmOperationLog`（团队自定义注解，aspect 切面采集）：
-
-```java
-@MdmOperationLog(module = "特征量分类", operation = "新增")
-@PostMapping("save")
-public ApiResult<String> insert(...) { ... }
-```
-
-> 该注解定义在 `xxx-service/annotation/MdmOperationLog.java`，切面在 `aspect/`。
-
----
-
-## 返回值规范
-
-| 场景       | 写法                                                        |
-| ---------- | ----------------------------------------------------------- |
-| 有数据     | `ApiResult.success("xxx成功", data)`                        |
-| 无数据     | `ApiResult.success("xxx成功", null)` 或 `ApiResult.success()` |
-| 分页       | `ApiResult<JhPage<List<XxxVO>>>`                            |
-| 业务错误   | `throw new ServiceException("xxx")` (走全局异常)            |
-
----
-
-## 权限码规范
-
-`@PreAuthorize("@pms.hasPermission('xxx')")` 中字符串：
-
-- 格式：`{module}_{resource}_{action}`，全小写下划线
-- 示例：`mdm_feature_category_query_page` / `mdm_feature_category_save`
-- 必须出现在前端 `SYS_PERMISSION_INFO.md` 或同步到权限中心
-
-> 与外部参考的 `@Permission(level = ResourceLevel.ORGANIZATION)` 不同。
-
----
-
-## 禁止事项
-
-- 禁止在 Controller 写业务逻辑（状态判断、DB 操作、循环计算）
-- 禁止直接注入 Mapper（必须经 Service）
-- 禁止返回裸对象，必须 `ApiResult` 包装
-- 禁止省略 `@PreAuthorize`（公开接口除外，并在类上加 `@Anonymous` 或注释说明）
-- 禁止省略 `@ApiOperation` / `@ApiModelProperty`
-
----
+- B1：非公开映射缺 `@PreAuthorize`，error。
+- B2：接口缺 `@Operation`，warn；modern Profile 可升级为 error。
+- J1：Controller 依赖 Mapper，error。
+- contract-diff：HTTP 方法、路径、请求、响应、权限码与契约不一致，error。
+- 外部网关路径由契约 `api.externalBasePath` 显式声明；Controller 仍只声明 `requestPath`。
 
 ## 变更记录
 
-- 2026-05-14 v0.0.1 落地（基于 `mdm-service/MdmFeatureCategoryController.java`）
+- 2026-07-18 v0.8：统一 OpenAPI 3、分页泛型、直接 Service 默认模式和契约驱动路径。

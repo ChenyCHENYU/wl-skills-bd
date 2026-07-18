@@ -1,22 +1,29 @@
 package {{rootPackage}}.service.{{module}};
 
 import cn.hutool.core.bean.BeanUtil;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import cn.hutool.core.bean.copier.CopyOptions;
+import com.jhict.common.auth.util.AuthUtil;
 import com.jhict.common.auth.util.EntityUtil;
 import com.jhict.common.core.util.ServiceAssert;
 import com.jhict.common.data.mybatis.entity.JhPage;
 import com.jhict.common.data.service.JhServiceImpl;
-import {{rootPackage}}.api.dto.{{module}}.{{Entity}}DTO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}UpdateDTO;
 import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
 import {{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper;
+{{#relationVoImports}}
+import {{.}};
+{{/relationVoImports}}
+{{#exportPresent}}
+import javax.servlet.http.HttpServletResponse;
+{{/exportPresent}}
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -38,8 +45,9 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @param params 查询条件（全可选）
      * @return 分页结果列表
      */
-    public JhPage<{{Entity}}PageVO> query{{Entity}}Page(JhPage page, {{Entity}}PageDTO params) {
-        return baseMapper.queryPage(page, params);
+    public JhPage<{{Entity}}PageVO> query{{Entity}}Page(
+            JhPage<{{Entity}}PageVO> page, {{Entity}}PageDTO params) {
+        return baseMapper.queryPage(page, params, AuthUtil.getLoginCompanyId());
     }
 
     /**
@@ -50,7 +58,10 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @throws ServiceException 当 id 对应记录不存在
      */
     public {{Entity}}VO getById(String id) {
-        {{Entity}} entity = baseMapper.selectById(id);
+        {{Entity}} entity = lambdaQuery()
+                .eq({{Entity}}::getId, id)
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .one();
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
         {{Entity}}VO vo = new {{Entity}}VO();
         BeanUtil.copyProperties(entity, vo);
@@ -65,12 +76,14 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @return 新生成的主键 id
      */
     @Transactional(rollbackFor = Exception.class)
-    public String save({{Entity}}DTO dto) {
+    public String save({{Entity}}CreateDTO dto) {
         {{Entity}} entity = new {{Entity}}();
-        BeanUtil.copyProperties(dto, entity, "id");
-        entity.setId(IdWorker.getIdStr());
+        BeanUtil.copyProperties(dto, entity, "id", "revision");
         EntityUtil.setCreateProp(entity);
-        baseMapper.insert(entity);
+        entity.setIsDelete(1);
+        entity.setRevision(0);
+        int inserted = baseMapper.insert(entity);
+        ServiceAssert.isTrue(inserted == 1, "新增{{apiDesc}}失败");
         return entity.getId();
     }
 
@@ -82,13 +95,20 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @throws ServiceException 当 id 为空 或 记录不存在
      */
     @Transactional(rollbackFor = Exception.class)
-    public void updateById({{Entity}}DTO dto) {
+    public void updateById({{Entity}}UpdateDTO dto) {
         ServiceAssert.isTrue(Objects.nonNull(dto.getId()), "主键不能为空");
-        {{Entity}} entity = baseMapper.selectById(dto.getId());
+        ServiceAssert.isTrue(Objects.nonNull(dto.getRevision()), "版本号不能为空");
+        {{Entity}} entity = lambdaQuery()
+                .eq({{Entity}}::getId, dto.getId())
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .one();
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
-        BeanUtil.copyProperties(dto, entity);
+        BeanUtil.copyProperties(dto, entity, CopyOptions.create()
+                .setIgnoreNullValue(true)
+                .setIgnoreProperties("id", "companyId", "isDelete", "createUserNo", "createDateTime"));
         EntityUtil.setUpdateProp(entity);
-        baseMapper.updateById(entity);
+        int updated = baseMapper.updateById(entity);
+        ServiceAssert.isTrue(updated == 1, "修改失败，数据可能已被其他用户更新");
     }
 
     /**
@@ -100,20 +120,141 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(String id) {
-        {{Entity}} entity = baseMapper.selectById(id);
+        {{Entity}} entity = lambdaQuery()
+                .eq({{Entity}}::getId, id)
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .one();
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
         entity.setIsDelete(0);
         EntityUtil.setUpdateProp(entity);
-        baseMapper.updateById(entity);
+        int deleted = baseMapper.updateById(entity);
+        ServiceAssert.isTrue(deleted == 1, "删除失败，数据可能已被其他用户更新");
     }
+{{#exportPresent}}
 
     /**
-     * 批量删除{{apiDesc}}（物理删除，谨慎使用）。
+     * 导出{{apiDesc}}。
+     * <p>按当前租户和查询条件导出；具体序列化格式由业务实现补齐。
      *
-     * @param ids 主键列表
-     * @return 实际删除条数
+     * @param params   查询条件
+     * @param response HTTP 响应（业务实现设置 Content-Type 与输出流）
      */
-    public int deleteByIds(List<String> ids) {
-        return baseMapper.deleteBatchIds(ids);
+    public void export({{Entity}}PageDTO params, HttpServletResponse response) {
+        // <wl-custom name="export">
+        throw new UnsupportedOperationException("{{apiDesc}} 导出实现需业务补齐：设置响应头并写入输出流");
+        // </wl-custom>
     }
+{{/exportPresent}}
+{{#relations}}
+{{#exposeQuery}}
+
+    /**
+     * 按父级主键查询{{detailEntity}}列表。
+     * <p>关联契约：{{detailContractId}}，外键列 {{joinColumn}}。
+     *
+     * @param parentId 父级主键
+     * @return 关联列表（业务实现需注入 {{detailEntityLower}}Service 并转发）
+     */
+    public java.util.List<{{detailEntity}}VO> query{{detailEntity}}ByParentId(String parentId) {
+        // <wl-custom name="relation:{{name}}">
+        throw new UnsupportedOperationException("{{detailEntity}} 关联查询需注入对应 Service 并转发；契约 {{detailContractId}}");
+        // </wl-custom>
+    }
+{{/exposeQuery}}
+{{/relations}}
+{{#customOperations}}
+{{#isBatch}}
+
+    /**
+     * {{summary}}（批量）。
+     * <p>四段式：遍历 → 校验前置 → 构造 patch → 更新。返回成功/失败计数。
+     *
+     * @param ids 主键集合
+{{#requestFields}}
+     * @param {{field}} {{fieldComment}}
+{{/requestFields}}
+     * @return 含 successCount/failureCount 的结果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public java.util.Map<String, Object> {{methodName}}({{serviceParamsJoined}}) {
+{{#implementationReady}}
+        ServiceAssert.isTrue(ids != null && !ids.isEmpty(), "{{summary}}：ids 不能为空");
+        ServiceAssert.isTrue(ids.size() <= 1000, "{{summary}}：单批不能超过1000条");
+        String companyId = AuthUtil.getLoginCompanyId();
+        java.util.List<{{Entity}}> entities = new java.util.ArrayList<>();
+        for (String id : ids) {
+            {{Entity}} entity = lambdaQuery()
+                    .eq({{Entity}}::getId, id)
+                    .eq({{Entity}}::getCompanyId, companyId)
+                    .one();
+            ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在：" + id);
+{{#preconditions}}
+            {{java}};
+{{/preconditions}}
+{{#patchLines}}
+            entity.set{{Field}}({{value}});
+{{/patchLines}}
+            EntityUtil.setUpdateProp(entity);
+            entities.add(entity);
+        }
+        for ({{Entity}} entity : entities) {
+            int updated = baseMapper.updateById(entity);
+            ServiceAssert.isTrue(updated == 1, "{{summary}}失败，数据可能已被其他用户更新");
+        }
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("successCount", entities.size());
+        result.put("failureCount", 0);
+        result.put("failedIds", java.util.Collections.emptyList());
+        return result;
+{{/implementationReady}}
+{{^implementationReady}}
+        // <wl-custom name="{{name}}">
+        throw new UnsupportedOperationException("{{skeletonReason}}");
+        // </wl-custom>
+{{/implementationReady}}
+    }
+{{/isBatch}}
+{{^isBatch}}
+
+    /**
+     * {{summary}}。
+     * <p>四段式：校验存在 → 校验前置状态 → 构造 patch → 持久化。
+     *
+{{#hasId}}
+     * @param id 主键
+{{/hasId}}
+{{#hasBodyId}}
+     * @param id 主键
+{{/hasBodyId}}
+{{#requestFields}}
+     * @param {{field}} {{fieldComment}}
+{{/requestFields}}
+     * @throws ServiceException 当记录不存在或前置条件不满足
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void {{methodName}}({{serviceParamsJoined}}) {
+{{#implementationReady}}
+        {{Entity}} entity = lambdaQuery()
+                .eq({{Entity}}::getId, id)
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .one();
+        ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
+{{#preconditions}}
+        {{java}};
+{{/preconditions}}
+{{#patchLines}}
+        entity.set{{Field}}({{value}});
+{{/patchLines}}
+        EntityUtil.setUpdateProp(entity);
+        int updated = baseMapper.updateById(entity);
+        ServiceAssert.isTrue(updated == 1, "{{summary}}失败，数据可能已被其他用户更新");
+{{/implementationReady}}
+{{^implementationReady}}
+        // <wl-custom name="{{name}}">
+        throw new UnsupportedOperationException("{{skeletonReason}}");
+        // </wl-custom>
+{{/implementationReady}}
+    }
+{{/isBatch}}
+{{/customOperations}}
 }

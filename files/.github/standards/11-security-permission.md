@@ -38,6 +38,8 @@ public ApiResult<...> queryPage(...) { ... }
 
 > 全小写下划线，与前端 `SYS_PERMISSION_INFO.md` **严格一致**。
 
+codegen 会把五个权限码写入 `docs/contracts/{contractId}.backend-contract.json` 和 `.api.md`。提交/发布前执行 `wl-skills-bd contract diff ... --permissions <清单>`；C301（缺权限）为阻断，不能只靠人工目测。
+
 ### 权限码同步流程（强制）
 
 ```
@@ -92,7 +94,7 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
         @Override
         public Expression getTenantId() {
             // 动态从安全上下文取，禁止硬编码
-            return new LongValue(SecurityUtils.getLoginUser().getCompanyId());
+            return new StringValue(AuthUtil.getLoginCompanyId());
         }
         @Override
         public String getTenantIdColumn() { return "COMPANY_ID"; }
@@ -110,7 +112,7 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
 
 ### 4.3 备选方案：显式过滤（插件未启用时）
 
-若团队未启用多租户插件，所有 SELECT **必须显式**带 COMPANY_ID 条件：
+若团队未启用并经过 doctor 验证的多租户插件，所有 SELECT/UPDATE/DELETE **必须显式**带 COMPANY_ID 条件：
 
 ```xml
 <select id="queryPage" resultType="...PageVO">
@@ -118,19 +120,17 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
     FROM MDM_FEATURE_CATEGORY t
     <where>
         AND t.IS_DELETE = 1
-        AND t.COMPANY_ID = #{param.companyId}          <!-- 显式过滤，值从 LoginUser 动态取 -->
+        AND t.COMPANY_ID = #{companyId}                <!-- 独立 @Param，由 Service 从 AuthUtil 动态取 -->
     </where>
 </select>
 ```
 
-be-rules B7 启发式检测：SELECT 无 COMPANY_ID 且无 JOIN → 提示确认。
+be-rules B7 检查 WHERE/JOIN ON 中是否存在 COMPANY_ID 谓词；SELECT 列表中出现 COMPANY_ID 不算租户过滤，JOIN 也不得自动豁免。
 
 ### 4.4 写操作租户填充
 
 ```java
-entity.setId(IdWorker.getIdStr());
-entity.setCompanyId(SecurityUtils.getLoginUser().getCompanyId());  // ✅ 动态取
-EntityUtil.setCreateProp(entity);
+EntityUtil.setCreateProp(entity); // ✅ 同时生成 ID，并从 AuthUtil 填充 companyId/create*
 baseMapper.insert(entity);
 ```
 
@@ -155,7 +155,7 @@ obj.put(COMPANY_ID.name(), "1");                                 // 所有租户
 ## 6. 数据权限（行级，进阶）
 
 - 行级数据权限走 jh4j-cloud 数据权限拦截器（基于角色 + 部门 + 自定义规则）
-- SQL 中预留 `${dataScope}` 占位（由拦截器注入 WHERE 条件）
+- 数据权限必须由已登记的拦截器/Wrapper 参数注入；禁止在普通 XML 中直接拼 `${dataScope}`
 - 字段级权限：敏感字段（如薪资）通过 VO 按角色过滤
 
 ## 7. 越权检查清单（audit 用）
@@ -163,7 +163,7 @@ obj.put(COMPANY_ID.name(), "1");                                 // 所有租户
 | 检查项 | 风险 | 检测方式 |
 |--------|:---:|---------|
 | Controller 接口缺 @PreAuthorize | 🔴 | B1 regex |
-| SELECT 缺 COMPANY_ID | 🔴 | B7 regex |
+| SELECT/UPDATE/DELETE 缺 COMPANY_ID 或未验证租户插件 | 🔴 | B7 XML/SQL 结构检查 |
 | **COMPANY_ID 硬编码**（如 "1"）| 🔴 | regex：搜索 `"1"` 字面量赋给 companyId |
 | 从请求参数取 userId/companyId | 🔴 | 人工/AI |
 | 公开接口返回敏感数据 | 🔴 | 人工 |
@@ -180,7 +180,26 @@ obj.put(COMPANY_ID.name(), "1");                                 // 所有租户
 | 业务代码硬编码用户 ID | 越权风险 |
 | 公开接口不做限流 | 被刷 |
 
-## 9. 正反例
+## 9. 敏感操作二次确认（v0.10，详见 standards/21 §9）
+
+以下操作必须有业务级二次确认（前端弹窗 + 后端校验 token）：
+
+| 操作 | 二次确认 |
+|---|---|
+| 重置密码 | 短信/邮箱验证码 |
+| 批量删除（>10 条） | 输入安全词 + confirmToken |
+| 数据导出（>1万行）| 审批流 + 水印 |
+| 角色权限变更 | 审批流 |
+| 生产配置修改 | 双签 + 操作日志 |
+
+```java
+// 二次确认 token 校验
+if (!tokenService.verify(dto.getConfirmToken(), "batchDelete:" + dto.getOperateAt())) {
+    throw new ServiceException("二次确认 token 无效或已过期");
+}
+```
+
+## 10. 正反例
 
 ```java
 ✅ @PreAuthorize("@pms.hasPermission('mdm_feature_category_save')")
@@ -200,12 +219,14 @@ obj.put(COMPANY_ID.name(), "1");                                 // 所有租户
 ```
 
 ```xml
-✅ <where> AND t.IS_DELETE = 1 AND t.COMPANY_ID = #{param.companyId} </where>
+✅ <where> AND t.IS_DELETE = 1 AND t.COMPANY_ID = #{companyId} </where>
 
 ❌ <where> AND t.IS_DELETE = 1 </where>                  <!-- 缺 COMPANY_ID（B7）-->
 ```
 
 ## 变更记录
+
+- 2026-07-18 v0.10：新增 §9 敏感操作二次确认（详见 standards/21）。
 - 2026-07-17 v0.4.2 修正：依据 MyBatis-Plus 官方多租户重写；明确禁止硬编码并标注 mdm-service 反面教材
 - 2026-07-17 v0.4 补厚（误用 mdm-service 为基线，已纠正）
 - 2026-05-14 v0.0.1 骨架

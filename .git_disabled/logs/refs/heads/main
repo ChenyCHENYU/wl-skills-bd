@@ -1,0 +1,17 @@
+0000000000000000000000000000000000000000 1e4891783e905b5bdc2fa3e04a32d8bf6c891b44 ChenYu <ycyplus@gmail.com> 1778950652 +0800	commit (initial): chore: 初始化仓库
+1e4891783e905b5bdc2fa3e04a32d8bf6c891b44 7c7ffad9a3c7abf987030e3c707f2bc6c4db9523 ChenYu <ycyplus@gmail.com> 1778951099 +0800	commit: feat: v0.0.2 补全 P0/P1/P2 基础设施（不含项目特定内容）
+7c7ffad9a3c7abf987030e3c707f2bc6c4db9523 7c7ffad9a3c7abf987030e3c707f2bc6c4db9523 ChenYu <ycyplus@gmail.com> 1780317651 +0800	Branch: renamed refs/heads/master to refs/heads/main
+7c7ffad9a3c7abf987030e3c707f2bc6c4db9523 d74bdad298de7bd86edfe315e2d72db4873e98c3 ChenYu <ycyplus@gmail.com> 1780317680 +0800	commit: chore(release): 配置 npm 发布并准备 v0.0.2
+d74bdad298de7bd86edfe315e2d72db4873e98c3 5a5deaacc88d5dd116ab5ef4b35aeffe16e0d64b unknown <EX26071@walsin.corp> 1783850955 +0800	commit: feat: 新增后端环境标准化 Skill standard-env-config-be
+5a5deaacc88d5dd116ab5ef4b35aeffe16e0d64b 00a1a34b2262bbc4560c2f3b977af22e91fb9de9 CHENY <ycyplus@gmail.com> 1784274151 +0800	commit: feat（wl-skills-bd）：对齐开发手册-补提交规范、包名映射、物理库归属、端口段
+00a1a34b2262bbc4560c2f3b977af22e91fb9de9 1deb89f652c20162981f28647aac8a9972c7fee9 CHENY <ycyplus@gmail.com> 1784291281 +0800	commit: feat(bd): MCP工具层+Java检查工具链补全+提交规范强制
+1deb89f652c20162981f28647aac8a9972c7fee9 82bfa22065de837e8c07c02a9d7304a16d939fab CHENY <ycyplus@gmail.com> 1784292089 +0800	commit: feat(bd): 多编辑器MCP适配(Cursor/VSCode/Kiro) + 指令文件同步
+82bfa22065de837e8c07c02a9d7304a16d939fab 851887cde16eb952aa58d6ce70b1f1d88cbf3cea CHENY <ycyplus@gmail.com> 1784292772 +0800	commit: feat(codegen): 3个codegen SKILL补厚落地+USAGE.md执行细节
+851887cde16eb952aa58d6ce70b1f1d88cbf3cea 7073d050e0b38e161e9c3a0e0a41ba2e718396b8 CHENY <ycyplus@gmail.com> 1784295758 +0800	commit: docs(bd): README重写反映v0.4.0真实能力+copilot/architecture版本同步
+7073d050e0b38e161e9c3a0e0a41ba2e718396b8 cc6fdefc14e417817fb7bdc27f73a3e2f38a2b8e CHENY <ycyplus@gmail.com> 1784301969 +0800	commit: feat(standards): 5条必遵规范骨架补厚落地(工具链/异常/日志/事务/安全)
+cc6fdefc14e417817fb7bdc27f73a3e2f38a2b8e 4577797d54084ae4dd76e03b98fbe79b29665a0e CHENY <ycyplus@gmail.com> 1784303584 +0800	commit: fix(standards): 依据官方/社区最佳实践重写5条规范,mdm-service改为反面教材
+4577797d54084ae4dd76e03b98fbe79b29665a0e 83541d2dc5f49bac2189c45adabe920c01b40b02 CHENY <ycyplus@gmail.com> 1784304881 +0800	commit: feat(standards): 设计规约(19)+阿里P3C规则集(J6)+be-rules B9/B10/B11
+83541d2dc5f49bac2189c45adabe920c01b40b02 c7cd851efa0e70c0b54de0d41fdf3fd6f9646c4d CHENY <ycyplus@gmail.com> 1784307374 +0800	commit: feat(guides): codegen闭环权威文档(生成顺序+验证+修复三闭环)
+c7cd851efa0e70c0b54de0d41fdf3fd6f9646c4d 011837eee3961c7e270c1d4bbfb393a72e191616 CHENY <ycyplus@gmail.com> 1784308439 +0800	commit: fix(templates): 注释闭环-8模板补全Javadoc+注释规范单一数据源+be-rules B12
+011837eee3961c7e270c1d4bbfb393a72e191616 fca4141a069bc531f1783e1ac19a270104ccb4a7 CHENY <ycyplus@gmail.com> 1784309540 +0800	commit: feat(swagger): OpenAPI3+Knife4j在线文档标配(J7)+Controller模板迁移OpenAPI3
+fca4141a069bc531f1783e1ac19a270104ccb4a7 cd57615dfa5b5675e0913d352065831f2d186495 CHENY <ycyplus@gmail.com> 1784310351 +0800	commit: feat(docs): 全Skill配USAGE.md(10/10)+README重写反映v0.7+清理docs冗余

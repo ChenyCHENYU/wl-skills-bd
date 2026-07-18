@@ -1,16 +1,21 @@
 package {{rootPackage}}.api.entity.{{module}};
 
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import com.jhict.common.core.entity.CoreEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+{{#entityImports}}
+import {{.}};
+{{/entityImports}}
 
 /**
  * {{apiDesc}}({{Entity}})表实体类。
- * <p>映射数据库表 {{table}}，继承 CoreEntity 复用审计字段（id/companyId/isDelete/revision/create*/update*）。
- * <p>本类仅含业务字段，审计字段勿重复声明。
+ * <p>映射数据库表 {{table}}，继承 CoreEntity 复用 id、companyId、创建人与更新人、创建与更新时间六个基础字段。
+ * <p>jh4j-cloud 3.1.0 的 CoreEntity 不含 isDelete/revision，因此本类显式声明软删除与乐观锁字段。
  *
  * @author wl-skills-bd codegen
  * @since 1.0.0
@@ -18,14 +23,25 @@ import lombok.experimental.Accessors;
 @Getter
 @Setter
 @Accessors(chain = true)
-@TableName("{{table}}")
+{{tableNameAnnotation}}
 @Schema(description = "{{apiDesc}}")
 public class {{Entity}} extends CoreEntity {
 
+    @TableLogic(value = "1", delval = "0")
+    @Schema(description = "有效标记：1=有效，0=已删除")
+    private Integer isDelete;
+
+    @Version
+    @Schema(description = "乐观锁版本号")
+    private Integer revision;
+
     // ===== 业务字段（按表结构生成，勿手改结构）=====
-    {{#fields}}
+    {{#entityFields}}
+    {{#persistenceAnnotations}}
+    {{.}}
+    {{/persistenceAnnotations}}
     @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 
-    {{/fields}}
+    {{/entityFields}}
 }

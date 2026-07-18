@@ -1,8 +1,41 @@
-# 18 · Git 提交信息规范（✅ 已落地）
+# 18 · Git 提交信息与分支模型规范（✅ 已落地）
 
-> 依据：《项目开发手册》§"代码提交"。本规范**只约束提交信息格式**，不含分支策略与合并链（后者由团队 Git 规范单独卡控）。
+> 依据：《项目开发手册》§"代码提交" / §"分支及版本管理"。本规范约束**提交信息格式 + 分支模型**。
 >
 > 强制度：🔴 必遵。`code-fix-be` 完成整改后、`convention-audit-be` 审计时一并对照。
+
+---
+
+## 0. 分支模型（《项目开发手册》§"分支及版本管理"，详见 standards/24 §2）
+
+```
+master（生产，保护）← pre（预发布，保护）← uat（验收，保护）← slt（联调）← dev ← dev-{模块}-{工号}
+```
+
+| 分支 | 命名 | 权限 | 合并方向 |
+|---|---|---|---|
+| master | `master` | 技术经理保护 | pre → master（发布）|
+| pre | `pre` | 技术经理保护 | uat → pre |
+| uat | `uat` | 技术经理保护 | slt → uat |
+| slt | `slt` | 模块负责人 | dev → slt |
+| dev | `dev` | 模块负责人 | dev-{模块}-{工号} → dev |
+| 个人 | `dev-{模块}-{工号}` | 个人 | — |
+
+**合并铁律**：
+- 禁止跨级合并（如 dev → master 直推）
+- master/pre 禁止直接提交，必须走 PR
+- 个人分支定期从 dev rebase，避免长期分叉
+
+```bash
+# 个人分支创建
+git checkout dev
+git pull
+git checkout -b dev-sale-EX26071
+
+# 合并回 dev（PR）
+git push origin dev-sale-EX26071
+# 在 GitLab/GitHub 创建 PR：dev-sale-EX26071 → dev
+```
 
 ---
 
@@ -69,7 +102,7 @@ docs（produce）：生产订单-补充 README 启动说明
 - **一个 commit 一个意图**：新增与修复不要塞进同一提交，便于回溯与 revert
 - **AI 生成代码后提交**：仍由开发人员按本格式撰写；AI 可建议 commit message，但不自动提交
 - **不自动提交**：与 `db-migration`、菜单/字典/权限写操作红线一致，提交动作一律人工执行
-- **不影响分支规范**：分支命名（dev/sit/uat/pre/main）与合并链不在本规范范围
+- **分支规范**：见本规范 §0（master/pre/uat/slt/dev 五级 + dev-{模块}-{工号} 个人分支），与 standards/24 §2 一致
 
 ---
 
@@ -90,4 +123,5 @@ docs（produce）：生产订单-补充 README 启动说明
 
 ## 变更记录
 
+- 2026-07-18 v0.11 新增 §0 分支模型（master/pre/uat/slt/dev + dev-{模块}-{工号}），与 standards/24 §2 一致。
 - 2026-07-17 v0.0.4 新增（对齐《项目开发手册》§"代码提交"）

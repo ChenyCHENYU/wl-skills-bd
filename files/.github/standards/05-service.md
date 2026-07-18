@@ -1,190 +1,90 @@
-# 05 · Service 层规范（✅ 已落地，依据 Spring 官方 + 团队基线）
+# 05 · Application Service 规范（✅ 已落地）
 
-> 团队基线：Service 接口 + ServiceImpl，**继承 `JhServiceImpl<Mapper, Entity>` 获取 MyBatis-Plus 通用方法**；状态变更模板抽自 CLAUDE 共性最佳实践。
+> 当前 `jh4j3-openapi3` Profile 采用直接 Service：`XxxService extends JhServiceImpl<Mapper, Entity>`。只有多实现、策略或跨模块边界才抽 `ServicePort + ServiceImpl`；新的形态必须通过兼容性 Profile 固化。
 
----
+## 1. 职责
 
-## Service 接口
+Service 是用例编排和事务边界，负责权限之后的数据归属校验、业务校验、状态变化、审计字段、Mapper/远程调用编排。禁止返回 Entity 给 Controller，禁止拼接 SQL，禁止让 Controller 决定租户。
 
-```java
-package com.jhict.mdm.service.feature;
+## 2. 查询
 
-import com.jhict.common.data.service.JhService;
-import com.jhict.mdm.api.dto.feature.MdmFeatureCategoryDTO;
-import com.jhict.mdm.api.entity.feature.MdmFeatureCategory;
+- 分页参数使用 `JhPage<XxxPageVO>`，禁止 raw type。
+- 详情和列表查询必须带租户条件；租户值由 `AuthUtil.getLoginCompanyId()` 获取，禁止从 DTO 接收。
+- `getById` 不是仅按主键查询，而是按 `id + companyId + isDelete` 数据归属查询。
 
-/**
- * 特征量分类 应用服务
- *
- * @author jason
- * @since 2025-08-19
- */
-public interface MdmFeatureCategoryService extends JhService<MdmFeatureCategory> {
-
-    /** 分页查询 */
-    JhPage<List<MdmFeatureCategoryPageVO>> queryMdmFeatureCategoryPage(JhPage page, MdmFeatureCategoryPageDTO dto);
-
-    /** 主键查询 */
-    MdmFeatureCategoryVO getById(String id);
-
-    /** 新增 */
-    String save(MdmFeatureCategoryDTO dto);
-
-    /** 更新 */
-    void updateById(MdmFeatureCategoryDTO dto);
-
-    /** 删除 */
-    void deleteById(String id);
-}
-```
-
-**要点**：
-
-- 接口名不加 `I` 前缀，直接 `XxxService`
-- 接口可继承 `JhService<Entity>` 复用 MyBatis-Plus 通用方法（`getById` / `save` / `updateById` / `removeById` / `list` / `page` 等）；**重写时显式声明**，让 IDE 跳转更清晰
-- 方法签名使用 DTO / VO，**不返回 Entity 给上层**（除内部使用）
-
----
-
-## ServiceImpl 实现
+## 3. 新增
 
 ```java
-@Service
-@RequiredArgsConstructor                // Lombok 构造注入
-public class MdmFeatureCategoryServiceImpl
-        extends JhServiceImpl<MdmFeatureCategoryMapper, MdmFeatureCategory>
-        implements MdmFeatureCategoryService {
-
-    private final MdmFeatureCategoryMapper categoryMapper;        // 同 baseMapper
-    private final MdmModelMapper modelMapper;                     // 跨域 Mapper
-    private final TableNameConverter tableNameConverter;
-
-    @Override
-    public JhPage<List<MdmFeatureCategoryPageVO>> queryMdmFeatureCategoryPage(JhPage page, MdmFeatureCategoryPageDTO dto) {
-        return categoryMapper.queryPage(page, dto);
-    }
-
-    @Override
-    public MdmFeatureCategoryVO getById(String id) {
-        MdmFeatureCategory entity = baseMapper.selectById(id);
-        ServiceAssert.notNull(entity, "记录不存在");
-        MdmFeatureCategoryVO vo = new MdmFeatureCategoryVO();
-        BeanUtils.copyProperties(entity, vo);
-        return vo;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public String save(MdmFeatureCategoryDTO dto) {
-        MdmFeatureCategory entity = BeanUtil.copyProperties(dto, MdmFeatureCategory.class);
-        if (entity.getId() == null) {
-            entity.setId(String.valueOf(IdWorker.getId()));
-        }
-        // 重复校验
-        MdmFeatureCategory exist = baseMapper.getByFeatureKey(entity.getFeatureKey());
-        ServiceAssert.isNull(exist, "feature_key 已存在");
-        EntityUtil.fillCreateData(entity);             // 团队工具：填创建人 / 创建时间 / IS_DELETE=1
-        baseMapper.insert(entity);
-        return entity.getId();
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void updateById(MdmFeatureCategoryDTO dto) {
-        ServiceAssert.notNull(dto.getId(), "主键不能为空");
-        MdmFeatureCategory entity = BeanUtil.copyProperties(dto, MdmFeatureCategory.class);
-        EntityUtil.fillUpdateData(entity);             // 团队工具：填更新人 / 更新时间
-        baseMapper.updateById(entity);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteById(String id) {
-        MdmFeatureCategory db = baseMapper.selectById(id);
-        ServiceAssert.notNull(db, "记录不存在");
-        // 软删除：把 IS_DELETE 置为 0（团队约定 1=有效, 0=删除）
-        MdmFeatureCategory patch = new MdmFeatureCategory();
-        patch.setId(id);
-        patch.setIsDelete(WhetherEnum.NO.getCode());
-        EntityUtil.fillUpdateData(patch);
-        baseMapper.updateById(patch);
-    }
-}
-```
-
-**要点**：
-
-1. **写操作必加** `@Transactional(rollbackFor = Exception.class)`
-2. **构造注入**优先（`@RequiredArgsConstructor`）；不用字段 `@Autowired`
-3. **业务校验**用 `ServiceAssert`（团队工具，抛 `ServiceException`），不直接 `throw new RuntimeException`
-4. **审计字段**统一通过 `EntityUtil.fillCreateData / fillUpdateData` 填充，禁止业务代码裸写 `setCreateUserNo` / `setCreateDateTime`
-5. **软删除**：约定 `IS_DELETE = 1 (有效) / 0 (删除)`；查询时在 XML 加 `AND IS_DELETE = 1`
-6. **主键生成**：`IdWorker.getId()`（雪花算法，String 类型，与数据库类型无关）
-7. **BeanCopy**：用 `BeanUtil` (Hutool) 或 `BeanUtils.copyProperties` (Spring) 二选一在团队内统一；本基线 **保存场景用 Hutool，单转用 Spring**
-
----
-
-## 状态变更通用模板（共性最佳实践）
-
-```java
-@Override
 @Transactional(rollbackFor = Exception.class)
-public void submitForReview(String id) {
-    MdmFeatureCategory db = requireExist(id);
-    ServiceAssert.isTrue("DRAFT".equals(db.getStatus()), "仅「待提交」可提交审核");
-
-    MdmFeatureCategory patch = new MdmFeatureCategory();
-    patch.setId(id);
-    patch.setStatus("REVIEWING");
-    EntityUtil.fillUpdateData(patch);
-    baseMapper.updateById(patch);
-}
-
-private MdmFeatureCategory requireExist(String id) {
-    MdmFeatureCategory entity = baseMapper.selectById(id);
-    ServiceAssert.notNull(entity, "记录不存在");
-    return entity;
+public String save(XxxCreateDTO dto) {
+    Xxx entity = new Xxx();
+    BeanUtil.copyProperties(dto, entity);
+    EntityUtil.setCreateProp(entity);
+    entity.setIsDelete(1);
+    entity.setRevision(0);
+    ServiceAssert.isTrue(baseMapper.insert(entity) == 1, "新增失败");
+    return entity.getId();
 }
 ```
 
-> 共性来自 CLAUDE 规范 §七：**先校验存在 → 再校验当前状态 → 构造 patch 只更新必要字段 → updateById** 四段式。
+- `EntityUtil.setCreateProp` 已生成 ID 并填充 companyId/create*，禁止再次调用 `IdWorker`。
+- 默认值在 Service/Entity 明确设置，不依赖未声明的数据库隐式行为。
+- 必须检查影响行数。
 
----
+## 4. 修改
 
-## 批量保存模式
+- UpdateDTO 必须含 id/revision；revision 使用 `@Version` 做乐观锁。
+- 先按当前租户查询，再复制允许修改的白名单字段。
+- 禁止覆盖 id、companyId、isDelete、createUserNo、createDateTime。
+- Patch 语义忽略 null；PUT 全量替换必须由契约明确声明。
+- 更新影响行数为 0 时提示并发更新或记录不存在。
 
-```java
-public void saveBatch(List<MdmFeatureCategoryDTO> rows) {
-    List<MdmFeatureCategory> inserts = new ArrayList<>();
-    List<MdmFeatureCategory> updates = new ArrayList<>();
-    for (MdmFeatureCategoryDTO dto : rows) {
-        MdmFeatureCategory e = BeanUtil.copyProperties(dto, MdmFeatureCategory.class);
-        if (StringUtils.isBlank(e.getId())) {
-            e.setId(String.valueOf(IdWorker.getId()));
-            EntityUtil.fillCreateData(e);
-            inserts.add(e);
-        } else {
-            EntityUtil.fillUpdateData(e);
-            updates.add(e);
-        }
-    }
-    if (CollectionUtils.isNotEmpty(inserts)) saveBatch(inserts);           // 来自 JhServiceImpl
-    if (CollectionUtils.isNotEmpty(updates)) updateBatchById(updates);
-}
-```
+## 5. 删除
 
----
+- 默认只允许软删除：`IS_DELETE` 从 1 变为 0，并填充更新审计字段。
+- 默认模板不生成 `deleteBatchIds` 等物理删除入口。
+- 物理删除只能由单独的运维/数据治理契约生成，必须预览 SQL、人工确认和审计。
 
-## 禁止事项
+## 6. 事务
 
-- 禁止 Controller 直接调用 Mapper
-- 禁止 ServiceImpl 之间互相直接 new（必须 @Autowired/@Resource）
-- 禁止 Service 中拼 SQL 字符串
-- 禁止在事务方法中调外部 Feign 接口（除非 Feign 失败可回滚业务）
-- 禁止裸写 `setCreateDateTime` 等审计字段（统一走 EntityUtil）
+- 写用例使用 `@Transactional(rollbackFor = Exception.class)`。
+- 不使用同类自调用绕开代理；拆分 Bean 或使用明确的事务模板。
+- 外部通知需要提交成功后执行时使用 `@TransactionalEventListener(AFTER_COMMIT)`。
+- 不在长事务中执行文件上传、慢网络调用或无界循环。
 
----
+## 7. 接口抽取决策
+
+| 场景 | 规则 |
+|---|---|
+| 单模块、单实现、普通 CRUD | 直接 `XxxService` |
+| 两个及以上实现 | `XxxServicePort + XxxServiceImpl` |
+| 跨模块公开能力 | 在 API 模块声明 Port/Feign 契约 |
+| 外部系统适配 | Port + Adapter |
+| 为“以后可能有实现”预建接口 | 禁止 |
+
+同一业务子域只能选择一种风格，由 Profile/模块配置记录，ArchUnit 据此校验。
+
+## 8. 业务命令/状态机（customOperations，v0.9）
+
+契约声明 `customOperations[]` 时，codegen 按**四段式**机械生成 Service 方法，覆盖 submit/approve/reject/withdraw/changeStatus/convert/release/close/cancel/batchXxx 等业务命令：
+
+1. **校验存在**：按 id + companyId 查询，ServiceAssert.isNotNull
+2. **校验前置**：按 preconditions（equals/notEquals/in/notIn/isNull/notNull）逐条 ServiceAssert
+3. **构造 patch**：按 patch 字段列表逐字段 setXxx
+4. **持久化**：EntityUtil.setUpdateProp + updateById + 影响行数校验
+
+`kind=batch` 时方法签名改为 `(List<String> ids)`，遍历四段式并返回 `{successCount, failureCount, failedIds}`；单次失败不回滚已成功项，由前端按 failedIds 重试。
+
+业务命令命名规范与 wl-skills-kit api-contract 对齐；B5 规则已扩展识别全部业务命令前缀，确保 @Transactional 覆盖。请求字段用 `@RequestParam`（GET/POST 适用），避免生成独立 RequestDTO；批量操作用 `@RequestBody List<String> ids`。
+
+## 9. 机器门禁
+
+- B5：写方法缺事务为 error；只有公开写方法且不存在事务注解冲突时才允许进入条件安全修复。v0.9 扩展识别 release/close/cancel/withdraw/convert/changeStatus/publish/archive/restore/print/send/reset/assign/transfer/lock/unlock/audit/verify 等业务命令前缀。
+- B8：业务层抛裸通用异常，warn。
+- B12：公开业务方法缺业务 Javadoc，warn。
+- J1：跨层/跨模块非法依赖，error。
 
 ## 变更记录
 
-- 2026-05-14 v0.0.1 落地（基于 `mdm-service/MdmFeatureCategoryServiceImpl.java` 真实代码 + CLAUDE 共性 §七）
+- 2026-07-18 v0.9：新增 §8 业务命令/状态机四段式生成；B5 扩展业务命令前缀识别。
+- 2026-07-18 v0.8：以直接 Service 为默认，统一租户、乐观锁、影响行数和软删除规则。

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  可选兼容审计，不属于默认硬门。p3c-pmd 2.1.1 编译于 PMD 6.15，不能混入 PMD 7。
+  单独运行：mvn pmd:check -Pwl-p3c-legacy；不要和 wl-quality 同时激活。
+-->
+<profiles xmlns="http://maven.apache.org/POM/4.0.0">
+  <profile>
+    <id>wl-p3c-legacy</id>
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-pmd-plugin</artifactId>
+          <version>3.21.2</version>
+          <configuration>
+            <targetJdk>1.8</targetJdk>
+            <failOnViolation>false</failOnViolation>
+            <printFailingErrors>true</printFailingErrors>
+            <rulesets>
+              <ruleset>/rulesets/java/ali-comment.xml</ruleset>
+              <ruleset>/rulesets/java/ali-concurrent.xml</ruleset>
+              <ruleset>/rulesets/java/ali-constant.xml</ruleset>
+              <ruleset>/rulesets/java/ali-exception.xml</ruleset>
+              <ruleset>/rulesets/java/ali-flowcontrol.xml</ruleset>
+              <ruleset>/rulesets/java/ali-naming.xml</ruleset>
+              <ruleset>/rulesets/java/ali-oop.xml</ruleset>
+              <ruleset>/rulesets/java/ali-orm.xml</ruleset>
+              <ruleset>/rulesets/java/ali-other.xml</ruleset>
+              <ruleset>/rulesets/java/ali-set.xml</ruleset>
+            </rulesets>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.alibaba.p3c</groupId>
+              <artifactId>p3c-pmd</artifactId>
+              <version>2.1.1</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+</profiles>

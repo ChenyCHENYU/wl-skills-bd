@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "contractId": "mdm-feature-category",
+  "profile": "jh4j3-openapi3",
+  "rootPackage": "com.jhict.mdm",
+  "module": "feature",
+  "entity": {
+    "name": "MdmFeatureCategory",
+    "table": "MDM_FEATURE_CATEGORY",
+    "description": "特征量分类"
+  },
+  "api": {
+    "requestPath": "mdmFeatureCategory",
+    "externalBasePath": "/mdm/mdmFeatureCategory",
+    "permissionPrefix": "mdm_feature_category",
+    "permissions": {
+      "page": "mdm_feature_category_query_page",
+      "detail": "mdm_feature_category_get_by_id",
+      "create": "mdm_feature_category_save",
+      "update": "mdm_feature_category_update_by_id",
+      "remove": "mdm_feature_category_delete_by_id"
+    }
+  },
+  "database": "oracle",
+  "migration": {
+    "version": "20260718_120000",
+    "rollbackStrategy": "应用保持向后兼容；失败时先回滚应用。若表尚无业务数据，经 DBA 确认后人工删除新表；已有数据时只允许 roll-forward。",
+    "verificationSql": [
+      "SELECT COUNT(1) FROM MDM_FEATURE_CATEGORY",
+      "SELECT COUNT(1) FROM MDM_FEATURE_CATEGORY WHERE COMPANY_ID IS NULL"
+    ]
+  },
+  "fields": [
+    {
+      "name": "categoryCode",
+      "column": "CATEGORY_CODE",
+      "javaType": "String",
+      "dbType": "VARCHAR2(64 CHAR)",
+      "comment": "分类编码",
+      "requiredOnCreate": true,
+      "queryMode": "like",
+      "maxLength": 64
+    },
+    {
+      "name": "categoryName",
+      "column": "CATEGORY_NAME",
+      "javaType": "String",
+      "dbType": "VARCHAR2(200 CHAR)",
+      "comment": "分类名称",
+      "requiredOnCreate": true,
+      "queryMode": "like",
+      "maxLength": 200
+    },
+    {
+      "name": "sortOrder",
+      "column": "SORT_ORDER",
+      "javaType": "Integer",
+      "dbType": "NUMBER(10)",
+      "comment": "排序号",
+      "queryMode": "none"
+    }
+  ]
+}

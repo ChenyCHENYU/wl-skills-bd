@@ -1,0 +1,49 @@
+# application.yml（L1 环境无关骨架）— 由 wl-skills-bd config init 生成
+# 仅放环境无关的业务配置；环境差异走 L2(.env) + L3(nacos)
+server:
+  port: ${SERVER_PORT:{{port}}}
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+mybatis-plus:
+  mapper-locations: classpath*:mybatis/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 0
+      logic-not-delete-value: 1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# springdoc OpenAPI 3（详见 standards/13）
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SPRINGDOC_UI_ENABLED:true}
+knife4j:
+  enable: ${SPRINGDOC_UI_ENABLED:true}
+  production: ${KNIFE4J_PRODUCTION:false}

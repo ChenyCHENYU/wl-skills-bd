@@ -1,269 +1,757 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-
-/**
- * wl-skills-bd CLI（v0.7.1）
- *
- * 命令：
- *   init      全量安装（释放 .github 到后端工程）
- *   validate  ★确定性规范校验（接 lib/be-rules.js，B1~B8 规则）
- *   doctor    工具链 + java-quality 接入体检
- *   help      帮助
- *   version   版本
- *
- * 待实现：update / diff / clean / export
- */
+"use strict";
 
 const fs = require("fs");
 const path = require("path");
+const pkg = require("../package.json");
+const { runBeRules } = require("../lib/be-rules");
+const codegen = require("../lib/codegen");
+const collaboration = require("../lib/collaboration");
+const { loadContract } = require("../lib/contract");
+const { runDoctor } = require("../lib/doctor");
+const installer = require("../lib/installer");
+const { resolveWithin, writeTextAtomic } = require("../lib/manifest");
+const { formatReport } = require("../lib/reporters");
+const safeFix = require("../lib/safe-fix");
 
-const VERSION = "0.7.1";
-const PKG_ROOT = path.join(__dirname, "..");
-const SRC_DIR = path.join(PKG_ROOT, "files");
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-function copyDir(src, dest, dryRun = false, log = []) {
-  if (!dryRun) fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(srcPath, destPath, dryRun, log);
-    } else {
-      const exists = fs.existsSync(destPath);
-      log.push({ destPath, exists });
-      if (!dryRun) fs.copyFileSync(srcPath, destPath);
-    }
-  }
-  return log;
+function has(args, flag) {
+  return args.includes(flag);
 }
 
-function relPath(p) {
-  return path.relative(process.cwd(), p);
+function option(args, name, fallback) {
+  const index = args.indexOf(name);
+  return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 }
 
-// ─── init ─────────────────────────────────────────────────────────────────────
-
-function cmdInit(args) {
-  const dryRun = args.includes("--dry-run");
-  const force = args.includes("--force");
-  const target = process.cwd();
-
-  console.log(`[wl-skills-bd] init → ${target}${dryRun ? " (dry-run)" : ""}\n`);
-
-  const destGithub = path.join(target, ".github");
-  if (fs.existsSync(destGithub) && !force && !dryRun) {
-    console.warn("⚠️  .github/ 已存在。使用 --force 强制覆盖，或 --dry-run 预览变更。");
-    process.exit(1);
-  }
-
-  const log = copyDir(SRC_DIR, target, dryRun);
-
-  let added = 0, overwritten = 0;
-  for (const { destPath, exists } of log) {
-    const tag = exists ? "~ 覆盖" : "+ 新增";
-    if (exists) overwritten++; else added++;
-    console.log(`  ${tag}  ${relPath(destPath)}`);
-  }
-
-  console.log(`\n${dryRun ? "[dry-run]" : "✅"} 完成：新增 ${added} 个文件，覆盖 ${overwritten} 个文件`);
-  if (dryRun) {
-    console.log("   去掉 --dry-run 参数后再次运行以实际写入。");
-  } else {
-    console.log("\n下一步：");
-    console.log("  1. git add .github（纳入版本控制）");
-    console.log("  2. 接入 java-quality/ 的 Maven 插件（见 .github/java-quality/maven-snippets/README.md）");
-    console.log("  3. 运行 wl-skills-bd validate 检查现有代码");
-    console.log("  4. 运行 wl-skills-bd doctor 体检工具链接入");
-  }
+function targetRoot(args) {
+  return path.resolve(option(args, "--target", process.cwd()));
 }
 
-// ─── validate ★（接 be-rules）──────────────────────────────────────────────
+function printJson(value) {
+  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
 
-function cmdValidate(args) {
-  const target = process.cwd();
-  const scanRel = args.find((a) => !a.startsWith("-"));
-  // 支持绝对路径或相对路径
-  const root = scanRel ? (path.isAbsolute(scanRel) ? scanRel : path.join(target, scanRel)) : target;
-
-  console.log(`[wl-skills-bd] validate → ${root}\n`);
-
-  let runBeRules;
-  try {
-    ({ runBeRules } = require("../lib/be-rules"));
-  } catch (e) {
-    console.error("❌ 无法加载 lib/be-rules.js（npm 包损坏？）：" + e.message);
-    process.exit(2);
+function printPlan(plan) {
+  const labels = {
+    add: "+ 新增",
+    update: "~ 更新",
+    unchanged: "= 未变",
+    conflict: "! 冲突",
+    "remove-stale": "- 移除旧文件",
+    "preserve-stale": "! 保留已修改旧文件",
+    "stale-missing": "= 旧文件已不存在",
+  };
+  for (const item of plan.actions) {
+    console.log(`${labels[item.action] || item.action}  ${item.rel}`);
   }
+  console.log(`\n汇总：${JSON.stringify(plan.summary)}`);
+}
 
-  if (!fs.existsSync(root)) {
-    console.error(`❌ 扫描路径不存在：${root}`);
-    process.exit(2);
-  }
-
-  // be-rules 的 targetDir 用于相对路径计算；scanRel 用于限制范围
-  // 若是绝对路径，转成相对 target 的形式传给 be-rules（它内部用 targetDir 拼）
-  const relScan = path.isAbsolute(scanRel || "") ? path.relative(target, scanRel) || undefined : scanRel;
-  const { issues, stats } = runBeRules(target, { scanRel: relScan });
-
-  if (issues.length === 0) {
-    console.log("✅ 未发现确定性违规（B1~B8 全过）");
-    console.log("   注：本工具覆盖框架级注解/SQL/目录密度；命名/架构分层请配合 Checkstyle + ArchUnit。");
+function printCodegenPlan(plan) {
+  if (!plan.ok) {
+    for (const error of plan.errors || []) console.error(`${error.path}: ${error.message}`);
     return;
   }
-
-  // 按规则分组输出
-  const byRule = {};
-  for (const i of issues) {
-    if (!byRule[i.rule]) byRule[i.rule] = [];
-    byRule[i.rule].push(i);
+  const labels = {
+    add: "+ 新增",
+    update: "~ 更新",
+    unchanged: "= 未变",
+    conflict: "! 冲突",
+    "remove-stale": "- 移除过期产物",
+    "preserve-stale": "! 保留已修改的过期产物",
+    "stale-missing": "= 过期产物已不存在",
+  };
+  for (const item of plan.actions) {
+    console.log(`${labels[item.action] || item.action}  ${item.rel}${item.reason ? ` (${item.reason})` : ""}`);
   }
+  console.log(`\nplanHash: ${plan.planHash}`);
+  console.log(`汇总：${JSON.stringify(plan.summary)}`);
+}
 
-  console.log("规则编号说明：");
-  console.log("  B1 Controller缺@PreAuthorize  B2 缺@ApiOperation  B3 SELECT*  B4 ${}注入");
-  console.log("  B5 缺@Transactional  B6 目录文件>20  B7 缺COMPANY_ID  B8 裸RuntimeException\n");
+function commandInstall(command, args) {
+  const root = targetRoot(args);
+  const dryRun = has(args, "--dry-run");
+  const force = has(args, "--force");
+  const plan = installer.buildPlan(root);
+  if (has(args, "--json")) printJson({ command, root, plan: plan.actions, summary: plan.summary });
+  else {
+    console.log(`[wl-skills-bd] ${command} → ${root}${dryRun ? " (dry-run)" : ""}\n`);
+    printPlan(plan);
+  }
+  if (command === "diff") {
+    return plan.actions.some((item) => !["unchanged", "stale-missing"].includes(item.action)) ? 1 : 0;
+  }
+  const result = installer.applyPlan(plan, { dryRun, force });
+  if (!has(args, "--json") && result.blocked.length) {
+    console.error("\n存在本地修改冲突，本次零写入。请先处理 diff；确需覆盖时使用 --force，原文件会备份。");
+  }
+  return result.ok ? 0 : 2;
+}
 
-  for (const rule of Object.keys(byRule).sort()) {
-    const list = byRule[rule];
-    const sev = list[0].severity;
-    const icon = sev === "error" ? "🔴" : "🟡";
-    console.log(`${icon} ${rule} (${list.length} 项)  [${sev}] standards/${list[0].standard}`);
-    for (const i of list.slice(0, 20)) {
-      const loc = i.line ? `:${i.line}` : "";
-      console.log(`   ${i.file}${loc}  ${i.message}`);
+function commandClean(args) {
+  const root = targetRoot(args);
+  const result = installer.clean(root, { dryRun: has(args, "--dry-run") });
+  if (has(args, "--json")) printJson(result);
+  else if (!result.ok) console.error(`无法 clean：${result.reason}`);
+  else console.log(`移除 ${result.removed.length} 个受管文件；保留 ${result.preserved.length} 个本地修改文件。`);
+  return result.ok ? 0 : 1;
+}
+
+function commandCheck(args) {
+  const result = installer.check(targetRoot(args));
+  if (has(args, "--json")) printJson(result);
+  else {
+    console.log(result.ok ? `✅ 安装完整：v${result.version}` : "❌ 安装不完整或存在漂移");
+    for (const item of result.drift || []) console.log(`  ${item.status}: ${item.rel}`);
+    for (const error of result.errors || []) console.log(`  ${error}`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandValidate(args) {
+  const root = targetRoot(args);
+  const valueOptions = new Set(["--target", "--format", "--output"]);
+  const positionals = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (valueOptions.has(args[index])) { index += 1; continue; }
+    if (!args[index].startsWith("-")) positionals.push(args[index]);
+  }
+  const positional = positionals[0];
+  const result = runBeRules(root, { scanRel: positional, quick: has(args, "--quick") });
+  const format = has(args, "--json") ? "json" : option(args, "--format", "text");
+  let rendered;
+  try {
+    rendered = formatReport(result, format);
+  } catch (error) {
+    console.error(error.message);
+    return 1;
+  }
+  const output = option(args, "--output");
+  if (output) {
+    try {
+      const destination = resolveWithin(root, output);
+      writeTextAtomic(destination, rendered);
+      if (format !== "json") console.log(`报告已写入 ${destination}`);
+    } catch (error) {
+      console.error(`无法写入报告：${error.message}`);
+      return 1;
     }
-    if (list.length > 20) console.log(`   ... 还有 ${list.length - 20} 项`);
-    console.log("");
-  }
-
-  console.log("─".repeat(50));
-  console.log(`汇总：🔴 error ${stats.error} | 🟡 warn ${stats.warn} | 共 ${stats.total} 项`);
-
-  // 有 error 则非0退出（CI 可阻断）
-  if (stats.error > 0) {
-    console.log("\n⛔ 存在 error 级违规，CI 应阻断。修复方式见 .github/skills/ops/code-fix-be/SKILL.md");
-    process.exit(1);
   } else {
-    console.log("\n⚠️  仅有 warn 级提示，CI 不阻断。建议逐步治理。");
+    process.stdout.write(rendered);
   }
+  const strict = has(args, "--strict");
+  return result.stats.error > 0 || (strict && result.stats.warn > 0) ? 1 : 0;
 }
 
-// ─── doctor（工具链 + java-quality 接入体检）──────────────────────────────
+function commandDoctor(args) {
+  const result = runDoctor(targetRoot(args));
+  if (has(args, "--json")) printJson(result);
+  else {
+    for (const item of result.checks) {
+      console.log(`${item.ok ? "✅" : "❌"} ${item.id}: ${item.detail}`);
+      if (!item.ok) console.log(`   → ${item.fix}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
 
-function cmdDoctor() {
-  const target = process.cwd();
-  console.log(`[wl-skills-bd] doctor → ${target}\n`);
-
-  const checks = [];
-
-  // 1. 是否 init 过（.github/standards 存在）
-  const hasGithub = fs.existsSync(path.join(target, ".github", "standards"));
-  checks.push({ item: "wl-skills-bd 已 init（.github/standards）", ok: hasGithub, hint: "运行 wl-skills-bd init" });
-
-  // 2. 是否 Maven 工程
-  const hasPom = fs.existsSync(path.join(target, "pom.xml"));
-  checks.push({ item: "Maven 工程（pom.xml）", ok: hasPom, hint: "bd 面向 Maven 后端工程" });
-
-  // 3. java-quality 接入检测
-  const jqDir = path.join(target, ".github", "java-quality");
-  const archunitReadme = path.join(jqDir, "archunit", "README.md");
-  const checkstyleXml = path.join(jqDir, "checkstyle", "checkstyle.xml");
-  checks.push({ item: "ArchUnit 规则已就位（J1 架构分层）", ok: fs.existsSync(archunitReadme), hint: "复制 .github/java-quality/archunit/" });
-  checks.push({ item: "Checkstyle 规则已就位（J2 命名风格）", ok: fs.existsSync(checkstyleXml), hint: "复制 .github/java-quality/checkstyle/" });
-
-  // 4. ArchUnit 测试是否已拷到 src/test
-  let archunitTest = false;
-  if (hasPom) {
-    const walk = (dir) => {
-      if (!fs.existsSync(dir)) return false;
-      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (e.isDirectory()) { if (walk(path.join(dir, e.name))) return true; }
-        else if (/LayerRulesTest\.java$/.test(e.name)) return true;
-      }
-      return false;
+function commandCodegen(args) {
+  const [subcommand = "help", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  if (!contractArg || contractArg.startsWith("-")) {
+    console.error("codegen 需要契约文件路径");
+    return 1;
+  }
+  if (subcommand === "validate") {
+    const result = loadContract(contractArg, { projectRoot: root });
+    const output = {
+      ok: result.ok,
+      contractFile: result.file,
+      contractId: result.contract && result.contract.contractId,
+      profile: result.profile && result.profile.id,
+      errors: result.errors,
     };
-    archunitTest = walk(path.join(target, "src", "test"));
+    if (has(allArgs, "--json")) printJson(output);
+    else if (result.ok) console.log(`✅ 契约有效：${output.contractId} (${output.profile})`);
+    else for (const error of result.errors) console.error(`${error.path}: ${error.message}`);
+    return result.ok ? 0 : 1;
   }
-  checks.push({ item: "ArchUnit 测试已接入 src/test（J1 生效）", ok: archunitTest, hint: "拷 LayerRulesTest.java 到 src/test/java/.../arch/" });
-
-  // 5. pom 是否含 checkstyle/archunit 插件配置（粗判）
-  let pomHasCheckstyle = false, pomHasArchunit = false;
-  if (hasPom) {
-    const pom = fs.readFileSync(path.join(target, "pom.xml"), "utf8");
-    pomHasCheckstyle = /maven-checkstyle-plugin|checkstyle/.test(pom);
-    pomHasArchunit = /archunit/.test(pom);
+  if (!["plan", "apply"].includes(subcommand)) {
+    console.error(`未知 codegen 子命令：${subcommand}`);
+    return 1;
   }
-  checks.push({ item: "pom.xml 已配 Checkstyle 插件", ok: pomHasCheckstyle, hint: "见 java-quality/maven-snippets/pom-plugins.xml" });
-  checks.push({ item: "pom.xml 已加 ArchUnit 依赖", ok: pomHasArchunit, hint: "见 java-quality/maven-snippets/pom-plugins.xml" });
-
-  // 输出
-  let pass = 0;
-  for (const c of checks) {
-    const icon = c.ok ? "✅" : "❌";
-    console.log(`${icon} ${c.item}`);
-    if (!c.ok) console.log(`   → ${c.hint}`);
-    if (c.ok) pass++;
+  const plan = codegen.buildPlan(contractArg, { projectRoot: root });
+  if (subcommand === "plan") {
+    if (has(allArgs, "--json")) printJson(codegen.publicPlan(plan));
+    else printCodegenPlan(plan);
+    return plan.ok ? 0 : 1;
   }
-
-  console.log("\n" + "─".repeat(50));
-  console.log(`体检结果：${pass}/${checks.length} 项就绪`);
-  if (pass === checks.length) {
-    console.log("🎉 全部就绪。建议跑：mvn clean verify（Checkstyle + ArchUnit + 测试全过）");
+  const result = codegen.applyPlan(plan, {
+    confirm: has(allArgs, "--confirm"),
+    force: has(allArgs, "--force"),
+    requireComplete: has(allArgs, "--require-complete"),
+    planHash: option(allArgs, "--plan-hash"),
+  });
+  if (has(allArgs, "--json")) printJson(result);
+  else if (result.ok) console.log(`✅ 已按 planHash 写入 ${result.applied.length} 个受管产物`);
+  else {
+    console.error(`代码生成未写入：${result.reason || "契约校验失败"}`);
+    if (result.expectedPlanHash) console.error(`当前 planHash: ${result.expectedPlanHash}`);
+    for (const item of (result.completion && result.completion.openQuestions) || []) console.error(`  未完成：${item}`);
+    for (const item of result.blocked || []) console.error(`  冲突：${item.rel}`);
   }
+  return result.ok ? 0 : 2;
 }
 
-// ─── help ─────────────────────────────────────────────────────────────────────
+function commandContract(args) {
+  const [subcommand = "help", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  if (!contractArg || contractArg.startsWith("-")) {
+    console.error("contract 需要后端契约文件路径");
+    return 1;
+  }
+  const loaded = loadContract(contractArg, { projectRoot: root });
+  if (!loaded.ok) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: loaded.errors });
+    else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
+    return 1;
+  }
+  const implementation = codegen.inspectImplementation(loaded.contract, root);
+  const manifest = collaboration.buildManifest(loaded.contract, loaded.profile, loaded.deliveryProfile, {
+    implementedOperations: implementation.implementedOperations,
+  });
+  if (subcommand === "show") {
+    const format = option(allArgs, "--format", has(allArgs, "--json") ? "json" : "markdown");
+    let content;
+    if (format === "json") content = `${JSON.stringify(manifest, null, 2)}\n`;
+    else if (format === "markdown") content = collaboration.renderMarkdown(manifest);
+    else {
+      console.error("contract show --format 只支持 json/markdown");
+      return 1;
+    }
+    const output = option(allArgs, "--output");
+    if (output) {
+      const destination = resolveWithin(root, output);
+      writeTextAtomic(destination, content);
+      if (!has(allArgs, "--json")) console.log(`✅ 已写入验证后的协作契约：${output}`);
+    } else process.stdout.write(content);
+    return 0;
+  }
+  if (subcommand !== "diff") {
+    console.error(`未知 contract 子命令：${subcommand}`);
+    return 1;
+  }
+
+  const inputs = {
+    frontend: option(allArgs, "--frontend"),
+    openapi: option(allArgs, "--openapi"),
+    permissions: option(allArgs, "--permissions"),
+    kitApiMd: option(allArgs, "--kitApiMd") || option(allArgs, "--kit-api-md"),
+  };
+  if (!Object.values(inputs).some(Boolean)) {
+    console.error("contract diff 至少需要 --frontend、--openapi、--permissions 或 --kitApiMd 之一");
+    return 1;
+  }
+  const checks = {};
+  try {
+    if (inputs.frontend) {
+      const file = resolveWithin(root, inputs.frontend);
+      checks.frontend = collaboration.compareManifest(
+        manifest,
+        collaboration.readManifestArtifact(file),
+        { strict: has(allArgs, "--strict") },
+      );
+    }
+    if (inputs.openapi) {
+      const file = resolveWithin(root, inputs.openapi);
+      checks.openapi = collaboration.compareOpenApi(manifest, JSON.parse(fs.readFileSync(file, "utf8")));
+    }
+    if (inputs.permissions) {
+      const file = resolveWithin(root, inputs.permissions);
+      const content = fs.readFileSync(file, "utf8");
+      const inventory = path.extname(file).toLowerCase() === ".json" ? JSON.parse(content) : content;
+      checks.permissions = collaboration.comparePermissions(manifest, inventory, inputs.permissions);
+    }
+    if (inputs.kitApiMd) {
+      const file = resolveWithin(root, inputs.kitApiMd);
+      checks.kitApiMd = collaboration.compareKitApiMarkdown(
+        manifest,
+        fs.readFileSync(file, "utf8"),
+        inputs.kitApiMd,
+        { strict: has(allArgs, "--strict") },
+      );
+    }
+  } catch (error) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: [{ code: "C000", path: "$", message: error.message }] });
+    else console.error(`契约差异检查失败：${error.message}`);
+    return 1;
+  }
+  const errors = Object.entries(checks).flatMap(([source, result]) => result.errors.map((item) => ({ source, ...item })));
+  const warnings = Object.entries(checks).flatMap(([source, result]) => result.warnings.map((item) => ({ source, ...item })));
+  const blockingWarnings = warnings.filter((item) => item.code !== "C113");
+  const strictFailed = has(allArgs, "--strict") && blockingWarnings.length > 0;
+  const result = {
+    ok: errors.length === 0 && !strictFailed,
+    contractId: loaded.contract.contractId,
+    checks,
+    errors,
+    warnings,
+    summary: { errors: errors.length, warnings: warnings.length, blockingWarnings: blockingWarnings.length },
+  };
+  if (has(allArgs, "--json")) printJson(result);
+  else {
+    console.log(result.ok ? "✅ 前后端/OpenAPI/权限契约无阻断差异" : "❌ 契约存在阻断差异");
+    for (const item of errors) console.error(`  [${item.source}/${item.code}] ${item.path}: ${item.message}`);
+    for (const item of warnings) console.log(`  [${item.source}/${item.code}] ${item.path}: ${item.message}`);
+    console.log(`汇总：${errors.length} error，${warnings.length} warning`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandFix(args) {
+  const [subcommand = "plan", ...rest] = args;
+  if (!["plan", "apply"].includes(subcommand)) {
+    console.error(`未知 fix 子命令：${subcommand}`);
+    return 1;
+  }
+  const root = targetRoot(rest);
+  const valueOptions = new Set(["--target", "--rules", "--plan-hash"]);
+  const positionals = [];
+  for (let index = 0; index < rest.length; index += 1) {
+    if (valueOptions.has(rest[index])) { index += 1; continue; }
+    if (!rest[index].startsWith("-")) positionals.push(rest[index]);
+  }
+  const ruleValue = option(rest, "--rules");
+  const rules = ruleValue ? ruleValue.split(",").map((value) => value.trim()).filter(Boolean) : undefined;
+  let plan;
+  try {
+    plan = safeFix.buildFixPlan(root, { scanRel: positionals[0], rules });
+  } catch (error) {
+    console.error(`无法建立安全修复计划：${error.message}`);
+    return 1;
+  }
+  if (!plan.ok) {
+    if (has(rest, "--json")) printJson(plan);
+    else console.error(`只允许安全自动修复 ${plan.safeRules.join("/")}；不支持：${plan.unsupported.join(", ")}`);
+    return 1;
+  }
+  if (subcommand === "plan") {
+    const output = safeFix.publicFixPlan(plan);
+    if (has(rest, "--json")) printJson(output);
+    else {
+      console.log(`安全修复预览：${output.actions.length} 个文件，${output.selected} 个选中问题，${output.manual.length} 个人工项`);
+      for (const action of output.actions) for (const edit of action.edits) console.log(`  ${edit.rule} ${action.rel}:${edit.line} ${edit.before} → ${edit.after}`);
+      for (const item of output.manual) console.log(`  人工 ${item.rule} ${item.file}:${item.line} — ${item.reason}`);
+      console.log(`planHash: ${output.planHash}`);
+      console.log(`复扫报告：${output.reportRel}`);
+    }
+    return 0;
+  }
+  const result = safeFix.applyFixPlan(plan, {
+    confirm: has(rest, "--confirm"),
+    planHash: option(rest, "--plan-hash"),
+  });
+  if (has(rest, "--json")) printJson(result);
+  else if (!result.ok) console.error(`安全修复零写入：${result.reason}${result.expectedPlanHash ? `；当前 planHash=${result.expectedPlanHash}` : ""}`);
+  else console.log(`✅ 已修改 ${result.applied.length} 个文件并强制复扫；remaining=${result.closure.remaining}，报告=${result.reportRel}`);
+  return result.ok && result.closure.selectedOk ? 0 : result.ok ? 1 : 2;
+}
+
+function commandDb(args) {
+  const [subcommand = "preview", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  if (subcommand !== "preview") {
+    console.error(`未知 db 子命令：${subcommand}（当前只支持 preview）`);
+    return 1;
+  }
+  if (!contractArg || contractArg.startsWith("-")) {
+    console.error("db preview 需要契约文件路径");
+    return 1;
+  }
+  const loaded = loadContract(contractArg, { projectRoot: root });
+  if (!loaded.ok) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: loaded.errors });
+    else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
+    return 1;
+  }
+  const migrationSql = codegen.renderMigration(loaded.contract);
+  const migrationFile = codegen.migrationFileBase(loaded.contract);
+  const isAlter = Boolean(loaded.contract.alter);
+  const output = {
+    ok: true,
+    contractId: loaded.contract.contractId,
+    migrationFile,
+    migrationKind: isAlter ? "ALTER" : "CREATE",
+    database: loaded.contract.database,
+    migrationSql,
+    indexes: loaded.contract.indexes || [],
+  };
+  if (has(allArgs, "--json")) printJson(output);
+  else {
+    console.log(`DDL 预览（${output.migrationKind}）— ${output.contractId} [${output.database}]`);
+    console.log(`迁移文件：${output.migrationFile}`);
+    console.log("");
+    console.log(migrationSql);
+    if (output.indexes.length > 0) {
+      console.log(`\n自定义索引：${output.indexes.length} 个`);
+      for (const idx of output.indexes) console.log(`  ${idx.unique ? "UNIQUE " : ""}${idx.name} (${idx.columns.join(", ")})`);
+    }
+    console.log("\n本预览只读；写入仍需通过 codegen plan/apply。");
+  }
+  return 0;
+}
+
+function commandPermissions(args) {
+  const [subcommand = "export", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  if (subcommand !== "export") {
+    console.error(`未知 permissions 子命令：${subcommand}（当前只支持 export）`);
+    return 1;
+  }
+  if (!contractArg || contractArg.startsWith("-")) {
+    console.error("permissions export 需要契约文件路径");
+    return 1;
+  }
+  const loaded = loadContract(contractArg, { projectRoot: root });
+  if (!loaded.ok) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: loaded.errors });
+    else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
+    return 1;
+  }
+  const manifest = collaboration.buildManifest(loaded.contract, loaded.profile, loaded.deliveryProfile);
+  const inventory = collaboration.buildPermissionInventory(manifest);
+  const markdown = collaboration.renderPermissionInventoryMarkdown(inventory);
+  const outputRel = option(allArgs, "--output") || `reports/SYS_PERMISSION_INFO_${inventory.contractId}.md`;
+  const destination = resolveWithin(root, outputRel);
+  writeTextAtomic(destination, markdown);
+  if (has(allArgs, "--json")) printJson({ ok: true, output: outputRel, inventory });
+  else console.log(`✅ 已导出 ${inventory.rows.length} 个权限码到 ${outputRel}`);
+  return 0;
+}
 
 function help() {
-  console.log(`@agile-team/wl-skills-bd v${VERSION}
+  console.log(`wl-skills-bd v${pkg.version}
 
-USAGE
-  wl-skills-bd <command> [options]
+用法：wl-skills-bd <command> [options]
 
-COMMANDS
-  init [--dry-run] [--force]
-        将 AI Skill / 规范 / Java 工具规则集释放到后端工程根目录
+  init         安装受管资产；已有未受管同名文件会阻断
+  update       按 manifest 增量更新并保护本地修改
+  diff         查看包内容、manifest 与当前项目差异
+  clean        只清理未被修改的受管文件
+  check        检查 manifest 和安装漂移
+  validate     执行 B1~B23 快速规则
+  doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
+  codegen      契约驱动生成：validate / plan / apply
+  contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
+  db           数据库预览：preview（只读 DDL + Expand-Contract）
+  permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
+  fix          安全修复：plan / apply（仅 B3/B5，强制复扫）
+  config       配置分层（v0.12）：init / migrate / doctor / fix
+  troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
+  task         任务驱动（v0.13）：只读识别任务类型 → skill+规则子集+安全写链步骤
+  mcp          启动 stdio MCP Server
+  version      输出版本
 
-  validate [path] [--quick]
-        ★ 确定性规范校验（接 lib/be-rules.js，B1~B8）
-        - 检查 Controller 缺 @PreAuthorize/@ApiOperation、XML SELECT 星号、
-          美元花括号注入、缺 @Transactional、目录文件>20、缺 COMPANY_ID、裸 RuntimeException
-        - 有 error 级违规返回非0（CI 可阻断）
-        - [path] 指定扫描子目录，默认当前目录
+通用参数：
+  --target <dir>  指定项目根目录
+  --dry-run       只预览，不写盘
+  --json          输出结构化 JSON
+  --force         发生安装冲突时备份后覆盖
+  --require-complete  codegen apply 时拒绝写入含业务骨架的 draft 契约
+  --strict        validate 的 warn 也返回失败
+  --quick         validate 跳过设计级慢规则
+  --format <type> validate 报告格式：text/json/sarif/markdown
+  --output <file> 将 validate/db/permissions 报告写入项目内相对路径
 
-  doctor
-        工具链 + java-quality 接入体检（init/插件/ArchUnit 测试是否就位）
+codegen 示例：
+  wl-skills-bd codegen validate wl-contract.json
+  wl-skills-bd codegen plan wl-contract.json --json
+  wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm [--require-complete]
 
-  help / --help
-        显示本帮助
+contract 示例：
+  wl-skills-bd contract show wl-contract.json --format markdown
+  wl-skills-bd contract diff wl-contract.json --frontend docs/contracts/page.api.md --openapi openapi.json --permissions permissions.json
+  wl-skills-bd contract diff wl-contract.json --kitApiMd src/views/mdm/feature/api.md
 
-  version / --version
-        显示版本号
+db 示例：
+  wl-skills-bd db preview wl-contract.json
 
-EXAMPLES
-  cd my-spring-boot-service
-  npx @agile-team/wl-skills-bd init --dry-run        # 先预览安装
-  npx @agile-team/wl-skills-bd init                  # 实际安装
-  npx @agile-team/wl-skills-bd validate              # 校验现有代码
-  npx @agile-team/wl-skills-bd validate src/main     # 仅校验主代码
-  npx @agile-team/wl-skills-bd doctor                # 体检工具链接入
+permissions 示例：
+  wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md
+
+fix 示例：
+  wl-skills-bd fix plan src/main --rules B3,B5 --json
+  wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
+
+配置分层与多环境（v0.12，详见 standards/25）：
+
+  wl-skills-bd config init [--project <name>] [--module <name>] [--port <n>]
+                           [--datasource-type oracle|mysql] [--customer <name>] [--confirm]
+    生成标准配置骨架：bootstrap.yml + application.yml + logback + .env.example ×5 + env-matrix.yml + .gitignore
+
+  wl-skills-bd config migrate --to <customer> [--from <customer>] [--plan|--apply] [--plan-hash <hash>] [--confirm]
+    客户迁移：生成 .env + K8s ConfigMap/Secret/Deployment ×5 + 迁移报告
+
+  wl-skills-bd config doctor [--probe] [--probe-timeout <ms>] [--target <dir>]
+    配置全链路体检 L0~L8（骨架/明文密码/占位符/矩阵/K8s/端口/一致性/生产护栏）
+    --probe 开启 DB/Redis/Nacos TCP 连通性探测
+
+  wl-skills-bd config fix [--confirm] [--target <dir>]
+    安全修复：明文密码自动改 ${VAR} 占位符 + 复扫验证
+
+  wl-skills-bd troubleshoot "<错误关键字>"   # 故障排查导引
+  wl-skills-bd troubleshoot --list            # 列出所有诊断项
+
+配置示例：
+  wl-skills-bd config init --project wl-sale --module sale --port 10000 --confirm
+  wl-skills-bd config migrate --to huaxin --plan
+  wl-skills-bd config migrate --to huaxin --apply --plan-hash <hash> --confirm
+  wl-skills-bd config doctor --probe
+  wl-skills-bd config fix --confirm
+  wl-skills-bd troubleshoot "Communications link failure"
+
+任务驱动（v0.13，精准触发 + 统一安全写链）：
+
+  wl-skills-bd task --list                              # 列出 8 种任务类型
+  wl-skills-bd task "加个查询接口"                       # 自然语言识别任务 → skill/规则/步骤
+  wl-skills-bd task "加字段落库"                         # 识别为 add-field
+  wl-skills-bd task "改空指针bug"                        # 识别为 fix-bug
+  wl-skills-bd task --type add-api                     # 输出契约增量与验证步骤
+  wl-skills-bd task --type add-field --target-file <file> # 输出目标相关步骤；不直接写文件
+
+任务类型：new-service / add-api / add-field / add-business-cmd / fix-bug / refactor / audit / config-op
 `);
 }
 
-// ─── main ─────────────────────────────────────────────────────────────────────
+function commandTask(args) {
+  const taskRouter = require("../lib/task-router");
 
-const [, , cmd, ...args] = process.argv;
+  // --list 列出所有任务类型
+  if (has(args, "--list")) {
+    const list = taskRouter.listTasks();
+    console.log("任务类型（task-driven 精准触发）：");
+    for (const t of list) {
+      console.log(`  ${t.id.padEnd(18)} ${t.name}（${t.mode}，${t.ruleCount} 规则，${t.skillCount} skill${t.requiresContract ? "，需契约" : ""}）`);
+      console.log(`                     触发词示例：${t.triggerExamples.join("、")}`);
+    }
+    console.log("\n用法：wl-skills-bd task \"<自然语言描述>\"        # 自动识别任务");
+    console.log("      wl-skills-bd task --type add-api                # 指定类型输出安全执行步骤");
+    return 0;
+  }
 
-if (!cmd || cmd === "-h" || cmd === "--help" || cmd === "help") {
-  help(); process.exit(0);
+  const taskType = option(args, "--type");
+  const keyword = args.find((a) => !a.startsWith("-"));
+
+  // 模式 1：--type 指定类型并输出统一安全写链。
+  if (taskType) {
+    const task = taskRouter.getTask(taskType);
+    if (!task) {
+      console.error(`未知任务类型：${taskType}（--list 查看全部）`);
+      return 1;
+    }
+    if (has(args, "--apply")) {
+      console.error("task 是只读指挥层，不直接写代码；请按计划使用 codegen plan/apply（planHash + --confirm）或 safe-fix/config 的确认链。");
+      return 1;
+    }
+    // 默认：输出任务计划
+    console.log(taskRouter.formatTaskPlan(task, { targetFile: option(args, "--target-file") }));
+    return 0;
+  }
+
+  // 模式 2：自然语言识别
+  if (!keyword) {
+    console.error('用法：wl-skills-bd task "<描述>" 或 --type <id> 或 --list');
+    return 1;
+  }
+  const detected = taskRouter.detectTask(keyword);
+  if (!detected) {
+    console.log(`未识别任务意图："${keyword}"`);
+    console.log("可用任务类型：wl-skills-bd task --list");
+    return 1;
+  }
+  console.log(taskRouter.formatTaskPlan(detected.task));
+  if (detected.candidates.length > 1) {
+    console.log("\n其他候选：");
+    for (const c of detected.candidates.slice(1)) console.log(`  ${c.id}（${c.score}分）：${c.name}`);
+  }
+  return 0;
 }
-if (cmd === "-v" || cmd === "--version" || cmd === "version") {
-  console.log(VERSION); process.exit(0);
-}
-if (cmd === "init") { cmdInit(args); process.exit(0); }
-if (cmd === "validate") { cmdValidate(args); process.exit(0); }
-if (cmd === "doctor") { cmdDoctor(); process.exit(0); }
 
-console.error(`[wl-skills-bd] 未知命令 "${cmd}"，运行 wl-skills-bd --help 查看帮助。`);
-process.exit(1);
+function commandConfig(args) {
+  const [subcommand = "help", ...rest] = args;
+  const root = targetRoot(rest);
+  if (subcommand === "init") return commandConfigInit(rest, root);
+  if (subcommand === "migrate") return commandConfigMigrate(rest, root);
+  if (subcommand === "doctor") return commandConfigDoctor(rest, root);
+  if (subcommand === "fix") return commandConfigFix(rest, root);
+  console.error(`未知 config 子命令：${subcommand}（支持 init/migrate/doctor/fix）`);
+  return 1;
+}
+
+function commandConfigInit(args, root) {
+  const configInit = require("../lib/config-init");
+  const plan = configInit.buildInitPlan(root, {
+    project: option(args, "--project"),
+    module: option(args, "--module"),
+    port: option(args, "--port") ? Number(option(args, "--port")) : undefined,
+    datasourceType: option(args, "--datasource-type") || option(args, "--datasource"),
+    customer: option(args, "--customer"),
+  });
+  if (has(args, "--dry-run")) {
+    printJson(plan);
+    return 0;
+  }
+  const result = configInit.applyInitPlan(plan, {
+    projectRoot: root,
+    confirm: has(args, "--confirm"),
+    overwrite: has(args, "--overwrite"),
+    dryRun: has(args, "--dry-run"),
+  });
+  if (has(args, "--json")) printJson(result);
+  else if (!result.ok) {
+    console.error(`❌ config init 失败：${result.reason || "未知"}`);
+    return 1;
+  } else {
+    console.log(`✅ config init 完成：${result.applied.filter((a) => a.result === "created").length} 创建 / ${result.applied.filter((a) => a.result === "exists-skipped").length} 跳过`);
+    for (const a of result.applied) console.log(`  ${a.result === "created" ? "+" : a.result === "appended" ? "~" : "="} ${a.rel}`);
+    console.log("\n下一步：编辑 .wl-skills-bd/env-matrix.yml 填充实际客户配置，运行 config doctor 体检");
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandConfigMigrate(args, root) {
+  const envMatrix = require("../lib/env-matrix");
+  const to = option(args, "--to");
+  if (!to) {
+    console.error("config migrate 需要 --to <customer>");
+    return 1;
+  }
+  const plan = envMatrix.buildMigrationPlan(root, {
+    to,
+    from: option(args, "--from"),
+  });
+  if (!plan.ok) {
+    if (has(args, "--json")) printJson(plan);
+    else console.error(`❌ config migrate 失败：${plan.reason}${plan.customer ? "（" + plan.customer + "）" : ""}`);
+    return 1;
+  }
+  const publicPlan = envMatrix.publicMigrationPlan(plan);
+  if (has(args, "--plan") || !has(args, "--apply")) {
+    if (has(args, "--json")) printJson(publicPlan);
+    else {
+      console.log(`配置迁移：${plan.from} → ${plan.to}`);
+      console.log(`差异：${plan.diffs.length} 项`);
+      console.log(`生成：${plan.actions.length} 个文件（.env ×5 + K8s ×15 + 报告 + 矩阵更新）`);
+      console.log(`planHash: ${plan.planHash}`);
+      console.log("\n确认后执行：");
+      console.log(`  wl-skills-bd config migrate --to ${plan.to} --apply --plan-hash ${plan.planHash} --confirm`);
+    }
+    return 0;
+  }
+  const result = envMatrix.applyMigrationPlan(plan, {
+    projectRoot: root,
+    confirm: has(args, "--confirm"),
+    planHash: option(args, "--plan-hash"),
+  });
+  if (has(args, "--json")) printJson(result);
+  else if (!result.ok) {
+    console.error(`❌ config migrate apply 失败：${result.reason}`);
+    return 1;
+  } else {
+    console.log(`✅ config migrate 完成：${plan.from} → ${plan.to}，生成 ${result.applied.length} 个文件`);
+    console.log("\n下一步：");
+    console.log("  1. 填充 .env.{to}.{env} 的实际密码（从 K8s Secret 获取）");
+    console.log("  2. wl-skills-bd config doctor --probe（连通性探测）");
+    console.log("  3. 更新 Nacos {to} namespace 的配置");
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandConfigDoctor(args, root) {
+  const { runConfigDoctor } = require("../lib/config-doctor");
+  const result = runConfigDoctor(root, {
+    probe: has(args, "--probe"),
+    probeTimeoutMs: option(args, "--probe-timeout") ? Number(option(args, "--probe-timeout")) : 3000,
+  });
+  if (has(args, "--json")) printJson(result);
+  else {
+    for (const c of result.checks) {
+      const mark = c.ok ? "✅" : (c.severity === "warn" ? "⚠️ " : "❌");
+      console.log(`${mark} ${c.id}: ${c.detail}`);
+      if (!c.ok && c.fix) console.log(`   → ${c.fix}`);
+    }
+    console.log(`\n汇总：${result.summary.ok}/${result.summary.total} 通过，${result.summary.error} 错误`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandConfigFix(args, root) {
+  const configFix = require("../lib/config-fix");
+  const plan = configFix.buildFixPlan(root);
+  if (has(args, "--plan") || !has(args, "--confirm")) {
+    if (has(args, "--json")) printJson(plan);
+    else {
+      console.log(`config fix 预览：${plan.summary.total} 处明文敏感信息，可修复 ${plan.summary.fixed}`);
+      for (const a of plan.actions) console.log(`  ${a.file}: ${a.fixed}/${a.total}`);
+    }
+    return 0;
+  }
+  const result = configFix.applyFixPlan(plan, { projectRoot: root, confirm: true });
+  if (has(args, "--json")) printJson(result);
+  else if (!result.ok) {
+    console.error(`❌ config fix 后仍有 ${result.closure.remaining} 处未修复`);
+    return 1;
+  } else {
+    console.log(`✅ config fix 完成：修复 ${result.closure.fixed} 处，剩余 ${result.closure.remaining} 处`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandTroubleshoot(args) {
+  const ts = require("../lib/troubleshoot");
+  if (has(args, "--list")) {
+    const list = ts.listAllDiagnostics();
+    console.log("故障诊断项：");
+    for (const d of list) console.log(`  ${d.id}: ${d.title}（关键字：${d.keywords.join("、")}…）`);
+    return 0;
+  }
+  const keyword = args.find((a) => !a.startsWith("-"));
+  if (!keyword) {
+    console.error('用法：wl-skills-bd troubleshoot "<错误关键字>"  或  wl-skills-bd troubleshoot --list');
+    return 1;
+  }
+  const result = ts.troubleshoot(keyword);
+  console.log(result.output);
+  return result.ok ? 0 : 1;
+}
+
+function main(argv = process.argv.slice(2)) {
+  const [command = "help", ...args] = argv;
+  if (["help", "--help", "-h"].includes(command)) { help(); return 0; }
+  if (["version", "--version", "-v"].includes(command)) { console.log(pkg.version); return 0; }
+  if (["init", "update", "diff"].includes(command)) return commandInstall(command, args);
+  if (command === "clean") return commandClean(args);
+  if (command === "check") return commandCheck(args);
+  if (command === "validate") return commandValidate(args);
+  if (command === "doctor") return commandDoctor(args);
+  if (command === "codegen") return commandCodegen(args);
+  if (command === "contract") return commandContract(args);
+  if (command === "db") return commandDb(args);
+  if (command === "permissions") return commandPermissions(args);
+  if (command === "fix") return commandFix(args);
+  if (command === "config") return commandConfig(args);
+  if (command === "troubleshoot") return commandTroubleshoot(args);
+  if (command === "task") return commandTask(args);
+  if (command === "mcp") { require("../mcp/server"); return 0; }
+  console.error(`未知命令：${command}`);
+  help();
+  return 1;
+}
+
+if (require.main === module) process.exitCode = main();
+
+module.exports = { main };

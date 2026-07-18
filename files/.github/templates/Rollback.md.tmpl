@@ -1,0 +1,32 @@
+# {{apiDesc}}数据库变更人工处置说明
+
+- 契约：`{{contractId}}`
+- 变更类型：{{migrationKind}}
+- 正向迁移：`{{migrationFile}}`
+- 数据库：`{{database}}`
+- 风险级别：高，禁止 AI/MCP 自动执行
+- planHash：由执行时计划生成
+
+## 发布前验证
+
+{{#verificationSql}}
+- `{{.}}`
+{{/verificationSql}}
+
+## 恢复策略
+
+{{rollbackStrategy}}
+{{#isAlter}}
+
+## Expand-Contract 阶段（ALTER 场景）
+
+1. **expand**：执行含 add/modify 的迁移；旧应用仍可运行
+2. **deploy-compatible**：发布兼容新旧 schema 的应用
+3. **backfill**（如需）：分批回填新列数据，记录进度
+4. **switch**：切换读写到新结构，观察
+5. **contract**：后续独立版本才执行 drop 列/表
+
+> drop 操作必须在新应用稳定运行后再单独迁移，禁止与 add/modify 混在同一窗口。
+{{/isAlter}}
+
+> 本文件不放入 Flyway migration location；必须经 DBA/发布审批后人工执行或 roll-forward。

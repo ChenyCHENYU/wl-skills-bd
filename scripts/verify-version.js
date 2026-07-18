@@ -56,8 +56,6 @@ function checkVersionMatch(file, regex, label) {
   }
 }
 
-// bin/wl-skills-bd.js 注释里的版本
-checkVersionMatch("bin/wl-skills-bd.js", /v\d+\.\d+\.\d+/, "CLI header");
 // README 徽章（兼容多种格式：status-vX、status-skeleton%20vX）
 checkVersionMatch(
   "README.md",
@@ -79,6 +77,24 @@ if (!descMatch) {
   errors.push(
     `package.json#description: 版本不一致 (${descMatch[1]} vs ${VERSION})`,
   );
+}
+
+if (!exists("package-lock.json")) {
+  errors.push("package-lock.json: 文件缺失");
+} else {
+  try {
+    const lock = JSON.parse(read("package-lock.json"));
+    if (lock.version !== VERSION || lock.packages?.[""]?.version !== VERSION) {
+      errors.push(`package-lock.json: 根版本不一致 (${lock.version}/${lock.packages?.[""]?.version} vs ${VERSION})`);
+    }
+  } catch (error) {
+    errors.push(`package-lock.json: JSON 解析失败 - ${error.message}`);
+  }
+}
+
+const changelogVersion = (read("CHANGELOG.md").match(/^## \[(\d+\.\d+\.\d+)\]/m) || [])[1];
+if (changelogVersion !== VERSION) {
+  errors.push(`CHANGELOG.md: 最新版本不一致 (${changelogVersion || "missing"} vs ${VERSION})`);
 }
 
 // ─── standards 计数一致性 ────────────────────────────────────────────────
@@ -118,6 +134,12 @@ if (indexTableRows !== standardsCount) {
 const registry = read("files/.github/skills/_registry.md");
 const skillRefs = registry.match(/\]\([\w./-]+\/SKILL\.md\)/g) || [];
 const skillCount = skillRefs.length;
+for (const ref of skillRefs) {
+  const rel = ref.slice(2, -1);
+  if (!exists(`files/.github/skills/${rel}`)) {
+    errors.push(`skills/_registry.md: 引用不存在 ${rel}`);
+  }
+}
 
 // README 中的 Skill 数描述
 const readmeContent = read("README.md");
@@ -157,12 +179,29 @@ if (exists("mcp")) {
 }
 
 // ─── MCP 工具一致性 ─────────────────────────────────────────────────────
-// registry.js 注册的 TOOLS 数量应 > 0，且 server.js 可加载
+// registry.js 工具集合是对外契约；数量和名称漂移必须阻断。
+let mcpToolCount = 0;
 if (exists("mcp/registry.js")) {
   try {
     const { TOOLS } = require(path.join(ROOT, "mcp", "registry"));
-    if (!TOOLS || TOOLS.length === 0) {
-      errors.push("mcp/registry.js: 未注册任何 MCP 工具");
+    const expectedTools = [
+      "wls_be_validate",
+      "wls_be_doctor",
+      "wls_be_codegen",
+      "wls_be_contract",
+      "wls_be_safe_fix",
+      "wls_be_standards",
+      "wls_be_templates",
+      "wls_be_db_preview",
+      "wls_be_export_permissions",
+      "wls_be_config",
+      "wls_be_troubleshoot",
+      "wls_be_task",
+    ];
+    const actualTools = (TOOLS || []).map((tool) => tool.name);
+    mcpToolCount = actualTools.length;
+    if (JSON.stringify(actualTools) !== JSON.stringify(expectedTools)) {
+      errors.push(`mcp/registry.js: 工具集合漂移 (${actualTools.join(", ")})`);
     }
   } catch (e) {
     errors.push(`mcp/registry.js: 加载失败 - ${e.message}`);
@@ -194,18 +233,66 @@ for (const e of EDITOR_MCPS) {
 // ─── Java 模板完整性 ────────────────────────────────────────────────────
 const TEMPLATES = [
   "Entity.java.tmpl",
-  "DTO.java.tmpl",
+  "CreateDTO.java.tmpl",
+  "UpdateDTO.java.tmpl",
   "PageDTO.java.tmpl",
   "VO.java.tmpl",
+  "PageVO.java.tmpl",
   "Controller.java.tmpl",
   "Service.java.tmpl",
   "Mapper.java.tmpl",
   "Mapper.xml.tmpl",
+  "Migration.sql.tmpl",
+  "Rollback.md.tmpl",
+  "ServiceTest.java.tmpl",
+  "ControllerTest.java.tmpl",
 ];
 const tmplDir = path.join(ROOT, "files", ".github", "templates");
+const actualTemplates = fs.readdirSync(tmplDir).filter((file) => file.endsWith(".tmpl"));
+if (actualTemplates.length !== TEMPLATES.length) {
+  errors.push(`files/.github/templates: 期望 ${TEMPLATES.length} 个模板，实际 ${actualTemplates.length} 个`);
+}
 for (const t of TEMPLATES) {
   if (!fs.existsSync(path.join(tmplDir, t))) {
     errors.push(`files/.github/templates/${t}: 代码模板缺失`);
+  }
+}
+
+// ─── 机器配置单一数据源 ────────────────────────────────────────────────
+function readJson(rel) {
+  try {
+    return JSON.parse(read(rel));
+  } catch (error) {
+    errors.push(`${rel}: JSON 解析失败 - ${error.message}`);
+    return null;
+  }
+}
+
+const machineConfig = readJson("files/.wl-skills-bd/config.json");
+const compatibility = readJson("files/.wl-skills-bd/compatibility.json");
+const ruleCatalog = readJson("files/.wl-skills-bd/rules/catalog.json");
+if (machineConfig && !exists(`files/.wl-skills-bd/profiles/${machineConfig.defaultProfile}.json`)) {
+  errors.push(`config.json: defaultProfile ${machineConfig.defaultProfile} 不存在`);
+}
+if (compatibility && (!Array.isArray(compatibility.verified) || compatibility.verified.length === 0)) {
+  errors.push("compatibility.json: verified 不能为空");
+}
+if (ruleCatalog) {
+  const ids = new Set();
+  for (const rule of ruleCatalog.rules || []) {
+    if (!rule.id || ids.has(rule.id)) errors.push(`rules/catalog.json: 重复或空 rule id ${rule.id || "<empty>"}`);
+    ids.add(rule.id);
+    for (const standard of rule.source || []) {
+      if (!standardFiles.some((file) => file.startsWith(`${standard}-`))) {
+        errors.push(`rules/catalog.json: ${rule.id} 引用不存在的 standard ${standard}`);
+      }
+    }
+  }
+  for (let i = 1; i <= 23; i += 1) {
+    if (!ids.has(`B${i}`)) errors.push(`rules/catalog.json: 缺少 B${i}`);
+  }
+  for (let i = 1; i <= 8; i += 1) {
+    if (!ids.has(`J${i}`)) errors.push(`rules/catalog.json: 缺少 J${i}`);
   }
 }
 
@@ -216,6 +303,17 @@ const REQUIRED_EXIST = [
   "files/.github/standards/index.md",
   "files/.github/skills/_registry.md",
   "files/.github/skills/_pipeline.md",
+  "files/.wl-skills-bd/config.json",
+  "files/.wl-skills-bd/compatibility.json",
+  "files/.wl-skills-bd/schemas/contract.schema.json",
+  "files/.wl-skills-bd/schemas/collaboration-contract.schema.json",
+  "files/.wl-skills-bd/schemas/rules-config.schema.json",
+  "files/.github/guides/frontend-backend-contract.md",
+  "files/.github/guides/mcp-workflow.md",
+  "files/.github/java-quality/jacoco/README.md",
+  "files/.github/java-quality/maven-snippets/quality-profile.xml",
+  "files/.github/java-quality/maven-snippets/p3c-legacy-profile.xml",
+  "files/.wl-skills-bd/rules/catalog.json",
   "mcp/server.js",
   "CHANGELOG.md",
 ];
@@ -238,6 +336,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(
-  `[verify-version] ✔ v${VERSION} 一致 | standards=${standardsCount} | skills=${skillCount} | mcp=ok | files 数组完整`,
-);
+  console.log(
+    `[verify-version] ✔ v${VERSION} 一致 | standards=${standardsCount} | skills=${skillCount} | templates=${TEMPLATES.length} | mcp=${mcpToolCount} | files 数组完整`,
+  );

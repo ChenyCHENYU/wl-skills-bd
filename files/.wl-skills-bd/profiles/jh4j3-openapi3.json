@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "jh4j3-openapi3",
+  "status": "supported",
+  "java": 8,
+  "springBootMajor": 2,
+  "jh4jCloud": "3.1.0",
+  "serviceStyle": "direct",
+  "apiDocumentation": "openapi3",
+  "validationNamespace": "javax.validation",
+  "apiDefaults": {
+    "page": { "method": "POST", "path": "queryPage" },
+    "detail": { "method": "GET", "path": "getById/{id}" },
+    "create": { "method": "POST", "path": "save" },
+    "update": { "method": "PUT", "path": "updateById" },
+    "remove": { "method": "DELETE", "path": "deleteById/{id}" },
+    "export": { "method": "GET", "path": "export" }
+  },
+  "response": {
+    "successCode": 2000,
+    "envelope": ["code", "message", "data"],
+    "pageRecordsPath": "data.records",
+    "pageTotalPath": "data.total"
+  },
+  "tenant": {
+    "mode": "explicit",
+    "column": "COMPANY_ID",
+    "javaField": "companyId",
+    "provider": "AuthUtil.getLoginCompanyId()",
+    "requestSupplied": false
+  },
+  "softDelete": {
+    "column": "IS_DELETE",
+    "javaField": "isDelete",
+    "activeValue": 1,
+    "deletedValue": 0
+  },
+  "optimisticLock": {
+    "column": "REVISION",
+    "javaField": "revision",
+    "initialValue": 0
+  }
+}

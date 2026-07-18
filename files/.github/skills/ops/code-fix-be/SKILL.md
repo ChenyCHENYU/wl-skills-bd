@@ -1,129 +1,84 @@
 ---
 name: code-fix-be
 description: |
-  根据 convention-audit-be 输出的 AUDIT_BE_{ts}.md 修复违规。修复前展示 diff 逐项确认，
-  DDL 类违规走 db-migration。修复完成后★强制复扫验证（不可跳过），输出前后对比。
-  典型触发：「修复规范问题」「按审计报告改」「修违规」「批量改」「整改」
-status: 🟡 落地
+  根据 B1~B23 审计结果建立安全修复计划。只有满足确定性前置条件的 B3/B5 可自动修改；
+  其余规则输出人工方案。所有自动写入必须 planHash + 显式确认 + 备份 + 强制复扫。
+  典型触发：「修复规范问题」「按审计报告改」「修违规」「批量整改」
+status: ✅ 已落地
 stage: ⑨ 修复
-risk: 🟡 中风险（写代码，需 diff 预览）
+risk: 🟡 中风险（受控写代码）
 ---
 
 # code-fix-be
 
-读取 `reports/AUDIT_BE_{ts}.md` 偏差条目，用户确认 diff 后执行修复。**修复后必须强制复扫**（对标 wl-skills-kit/code-fix 的"不可跳过"闭环保障）。
+## Pre-flight
 
-## Pre-flight 声明（必填）
-
-```
-🚀 已触发技能 code-fix-be/SKILL.md → 受控自动修复
-✅ 已读取 standards/index.md              → 任务类型 E + H
-✅ 已读取 reports/AUDIT_BE_{ts}.md        → 输入源，{N} 条偏差
-✅ 已读取 .github/templates/              → 修复时对齐标准骨架（非自由发挥）
-⚠️ 写代码操作：每个补丁先展示 diff，逐项确认
+```text
+🚀 已触发 code-fix-be
+✅ 已读取 standards/index.md 与偏差报告
+✅ 自动修复白名单：B3/B5
+⚠️ 其他规则不自动猜权限、字段、租户、异常或业务结构
+⚠️ apply 必须使用刚刚预览的 planHash 并显式确认
 ```
 
-## 工作流
+## 可执行流程
 
-```
-reports/AUDIT_BE_{ts}.md（convention-audit-be 输出）
-        │
-        ▼
-[1] 用户挑选 issueId / issueGroup / "列出可修复项"
-        │
-        ▼
-[2] 解析 issue → 定位文件+行号+违规类型 → 读 templates 对应骨架
-        │
-        ▼
-[3] 选修复策略：
-    ├─ rule-based（缺注解/SELECT星号/美元符注入等）→ 按 templates + 规则生成 patch
-    └─ ai-based（语义性偏差）→ AI 生成 patch
-        │
-        ▼
-[4] Pre-flight 输出 diff 预览（必须等待确认）
-        │
-        ▼
-[5] 用户 yes → 写入文件 + 报告标记 ✅ 已修复
-    用户 no  → 跳过该 issue
-        │
-        ▼
-[6] ★ 强制复扫验证（闭环关键，不可跳过）
-    ├─ 本轮修复完成后，自动跑 wl-skills-bd validate
-    ├─ 仍有 error → 提示未完全修复，建议继续
-    └─ 全部通过 → 输出 ✔ 闭环完成，可安全提交
+```bash
+# 预览，零写入
+wl-skills-bd fix plan src/main --rules B3,B5 --json
+
+# 评审 actions/manual 后应用
+wl-skills-bd fix apply src/main --rules B3,B5 \
+  --plan-hash <hash> --confirm
 ```
 
-## 强制复扫验证（v0.2+ 闭环保障）
+MCP 对应工具为 `wls_be_safe_fix`：默认预览；正式写入传 `confirmApply: true` 和相同 `planHash`。
 
-> **闭环原则**：code-fix-be 修复后必须验证效果，不允许"改完就走"。
+## 自动修复白名单
 
-AI 完成**本轮全部修复**后（单条或批量），**必须自动执行**：
+| 规则 | 只有满足以下条件才自动修复 | 修改 |
+|---|---|---|
+| B3 SELECT 星号 | 同 Mapper XML 存在非空、无星号、无 `${}` 的 `BaseColumns`，且列别名与查询别名一致 | 用 `<include refid="BaseColumns"/>` 替换星号 |
+| B5 缺事务 | 定位到 public 写方法，且没有 `javax/jakarta.transaction.Transactional` 冲突 | 加 Spring `@Transactional(rollbackFor = Exception.class)` 和精确 import |
 
-1. 调 `wl-skills-bd validate {涉及文件}`
-2. 0 error → 输出 "✔ 复扫通过，闭环完成"
-3. 仍有 error → 输出残余清单，建议继续 code-fix-be 或标记人工
-4. 完成摘要记录复扫结果
+不满足前置条件时进入 `manual`，不会做部分猜测。
 
-**不可跳过**：即使用户说"不用验证了"，AI 也必须执行复扫。这是闭环完整性的硬性约束（对标 kit/code-fix 同款规则）。
+## 明确禁止自动修复
 
-## 修复策略表
-
-| 严重度 | 处理方式 |
+| 规则 | 原因 |
 |---|---|
-| 🔴 | 必修，逐项 diff 确认，复扫必须清零 |
-| 🟡 | 默认修，可批量分类展示，复扫建议清零 |
-| 🟢 | 默认不修，列入 backlog，用户主动要求才修 |
+| B1 | 权限码和公开接口豁免属于安全/产品决策，不能从方法名猜 |
+| B2 | `@Operation` 文案是公开 API 语义，机械 TODO 会污染文档 |
+| B4 | `${}` 可能代表列名、表名或排序，直接换 `#{}` 会改变 SQL 语义 |
+| B7 | 租户谓词涉及别名、JOIN、拦截器和参数来源，必须评审 |
+| B8 | 业务异常码和消息不能由工具臆造 |
+| B6/B9/B10/B11 | 分域、拆类、拆方法和复杂度治理是结构重构 |
+| B12 | Javadoc 必须描述真实业务契约，禁止生成空话 |
+| DDL/权限分配/API 破坏性变更 | 必须走 DBA、权限中心或契约评审流程 |
 
-## 典型修复模式（对齐 templates）
+## 写入与复扫保证
 
-| 偏差 | 来源 | 策略 | 修复依据 |
-|---|---|---|---|
-| 缺 @PreAuthorize | B1 | rule-based | Controller.java.tmpl 的权限码模板 |
-| 缺 @ApiOperation | B2 | rule-based | Controller.java.tmpl |
-| SELECT 星号 | B3 | rule-based | Mapper.xml.tmpl 的 BaseColumns |
-| 美元花括号注入 | B4 | rule-based | 改 #{} + jdbcType |
-| 缺 @Transactional | B5 | rule-based | Service.java.tmpl |
-| 裸 RuntimeException | B8 | rule-based | 改 ServiceAssert / ServiceException |
-| 缺 COMPANY_ID | B7 | 🔴 必修 | Mapper.xml.tmpl 软删+租户 |
-| 业务语义偏差 | 综合 | **不修复，标记人工** | — |
-
-> 修复时**读 templates 对应骨架**对齐结构，而非凭记忆改（防止修出新的不规范）。
-
-## 受控原则（严格执行）
-
-| 原则 | 说明 |
-|---|---|
-| 不修 🔴 之外的业务逻辑 | 严重偏差按模板修，业务逻辑偏差标人工 |
-| 不破坏功能 | 只改报告点名的行，不顺手重构周边 |
-| 不批量盲改 | 每文件首个补丁先 diff 预览，确认范式后才批量 |
-| 不生成新逻辑 | 只修偏差，功能补全是 service-codegen 的职责 |
-| DDL 违规转交 db-migration | 表结构变更不在本 Skill |
-
-## 产物
-
-- 源码补丁（直接改文件）
-- `reports/FIX_BE_{ts}.md`：修复清单 + 影响面 + **复扫结果**
+1. plan 输出每个文件的 before/after hash 和逐项 edit；
+2. apply 缺确认或 hash 不符时零写入；
+3. 写前重新扫描，任何漂移使 plan 失效；
+4. 所有目标先备份到 `.wl-skills-bd/.state/fix-backups/`；
+5. 多文件写入失败时从备份回滚；
+6. 写后强制执行同范围 B1~B23 复扫；
+7. 生成确定性的 `reports/FIX_BE_<planHash前12位>.md`；
+8. 报告给出 before/after/fixed/remaining/regressions。`remaining` 或 `regressions` 非零时不得宣称闭环完成。
 
 ## 完成摘要
 
-```
-✅ code-fix-be 完成
-   - 修复文件: N 个
-   - 🔴 已修: A / A
-   - 🟡 已修: B / C
-   - 🟢 跳过: D（backlog）
-   - 报告: reports/FIX_BE_{ts}.md
-
-## 复扫验证（不可跳过）
-   - 执行: wl-skills-bd validate {涉及文件}
-   - error: 0 / warn: {N}
-   - 结论: ✔ 闭环完成，可安全提交 / ✖ 残余 N 项待处理
-
-## 下一步建议
-   - 复扫通过 → git add + git commit（按 18-git-commit 规范）
-   - 复扫未过 → 继续 code-fix-be 或人工
+```text
+✅/✖ code-fix-be
+  - 自动修改文件：N
+  - 人工项：M
+  - fixed / remaining / regressions：A / B / C
+  - 项目 error：before → after
+  - 备份：backupId
+  - 报告：reports/FIX_BE_<hash>.md
 ```
 
 ## 变更记录
-- 2026-07-17 v0.2 落地强制复扫闭环 + 接 templates + validate（对标 kit/code-fix）
-- 2026-05-14 v0.0.1 骨架
+
+- 2026-07-18 v1：实现 B3/B5 严格白名单、planHash、确认门、备份回滚、漂移阻断和强制复扫；移除不安全的“万能自动修复”承诺。

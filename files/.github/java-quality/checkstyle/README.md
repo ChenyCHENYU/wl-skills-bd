@@ -15,18 +15,20 @@
 | 15 未用 import | `UnusedImports` |
 | 15 import 通配符 `*` | `AvoidStarImport` |
 | 15 大括号强制 | `NeedBraces` |
-| 15 方法长度 | `MethodLength` |
+| 15/19 文件与方法长度 | `FileLength` + `MethodLength` |
+| 15 缺少 Javadoc | `MissingJavadocType/Method` |
+| 15 Javadoc 标签 | `JavadocType/Method` |
 
 ## 接入步骤
 
 ### 1. 复制规则文件到工程
 
 ```bash
-# 把 checkstyle.xml 放到工程根或 build/ 目录
-cp files/.github/java-quality/checkstyle/checkstyle.xml  your-project/build/checkstyle.xml
+# init 已放入工程的稳定路径，不再复制第二份
+.github/java-quality/checkstyle/checkstyle.xml
 ```
 
-### 2. 加 Maven 插件（见 maven-snippets/pom-plugins.xml 的 checkstyle 段）
+### 2. 接入 `maven-snippets/quality-profile.xml`
 
 ### 3. 跑
 

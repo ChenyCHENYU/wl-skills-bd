@@ -1,0 +1,32 @@
+package {{rootPackage}}.api.dto.{{module}};
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+{{#createImports}}
+import {{.}};
+{{/createImports}}
+
+/**
+ * 新增{{apiDesc}}请求 DTO。
+ * <p>不含主键、租户、软删、版本和审计字段。
+ *
+ * @author wl-skills-bd codegen
+ * @since 1.0.0
+ */
+@Getter
+@Setter
+@ToString
+@Schema(description = "新增{{apiDesc}}请求")
+public class {{Entity}}CreateDTO {
+
+    {{#createFields}}
+    {{#validationAnnotations}}
+    {{.}}
+    {{/validationAnnotations}}
+    @Schema(description = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+
+    {{/createFields}}
+}

@@ -1,59 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  wl-skills-bd PMD 规则集（J3）
-  对应 standards/16-performance + standards/17-bug-prevention
-  PMD 7.x 语法（ruleset ref 用 category/java/）
--->
-<ruleset name="wl-skills-bd"
+<ruleset name="wl-skills-bd-pmd7"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+  <description>PMD 7.x 确定性质量门：缺陷、资源、复杂度、性能和坏味道。</description>
 
-  <description>wl-skills-bd 后端静态分析规则（standards/16/17）</description>
-
-  <!-- ===== standards/16 性能 ===== -->
-
-  <!-- 避免在循环中 new 对象 -->
-  <rule ref="category/java/performance.xml/AvoidInstantiatingObjectsInLoops"/>
-
-  <!-- 避免用过时方法（SimplifyStartsWith） -->
-  <rule ref="category/java/performance.xml/SimplifyStartsWith"/>
-
-  <!-- 字符串拼接用 StringBuilder（循环内） -->
-  <rule ref="category/java/performance.xml/UseStringBufferForStringAppends"/>
-
-  <!-- 集合指定初始容量 -->
-  <rule ref="category/java/performance.xml/ByteInstantiation"/>
-  <rule ref="category/java/performance.xml/IntInstantiation"/>
-
-  <!-- ===== standards/17 漏洞防护 ===== -->
-
-  <!-- == 比较 String/包装类（应用 equals） -->
-  <rule ref="category/java/errorprone.xml/ComparisonWithStringCouldBeEqualsIgnoreCase"/>
+  <rule ref="category/java/errorprone.xml/CloseResource"/>
+  <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
+  <rule ref="category/java/errorprone.xml/OverrideBothEqualsAndHashcode"/>
   <rule ref="category/java/errorprone.xml/UseEqualsToCompareStrings"/>
 
-  <!-- 空 catch 块 -->
-  <rule ref="category/java/empty.xml/CatchBlock"/>
-  <rule ref="category/java/empty.xml/EmptyCatchBlock"/>
+  <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+  <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+  <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
 
-  <!-- 覆盖 equals 不覆盖 hashCode -->
-  <rule ref="category/java/errorprone.xml/OverrideBothEqualsAndHashcode"/>
+  <rule ref="category/java/performance.xml/AvoidInstantiatingObjectsInLoops"/>
+  <rule ref="category/java/performance.xml/StringInstantiation"/>
+  <rule ref="category/java/performance.xml/UseStringBufferForStringAppends"/>
 
-  <!-- 资源未关（CloseResource） -->
-  <rule ref="category/java/errorprone.xml/CloseResource"/>
-
-  <!-- ===== standards/15 代码质量 ===== -->
-
-  <!-- 魔法值（数字字面量应提常量） -->
-  <rule ref="category/java/codestyle.xml/LinguisticNaming">
-    <properties>
-      <property name="checkBooleanMethod" value="true"/>
-    </properties>
-  </rule>
-
-  <!-- 未用 import -->
   <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
 
-  <!-- 重复代码（CPD，默认在 pmd:cpd 跑） -->
-
+  <rule ref="category/java/design.xml/CyclomaticComplexity">
+    <properties>
+      <property name="methodReportLevel" value="10"/>
+      <property name="classReportLevel" value="80"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/CognitiveComplexity">
+    <properties>
+      <property name="reportLevel" value="15"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/GodClass"/>
 </ruleset>

@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+{{#pageDtoImports}}
+import {{.}};
+{{/pageDtoImports}}
 
 /**
  * {{apiDesc}}({{Entity}})分页查询 DTO。

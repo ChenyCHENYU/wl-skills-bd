@@ -4,20 +4,26 @@
 >
 > 这是 bd 防"意大利面条代码"的核心物化层。对标 wl-skills-kit 的 `templates/`（45 个 Vue 模板）。
 >
-> **原则**：模板里的每一个写法都遵循 **官方/社区最佳实践 + 团队 standards 规范**（CoreEntity/JhServiceImpl/@Validated/Swagger/审计字段）。生成时只填业务字段，不动结构。
+> **原则**：模板里的每一个写法都遵循团队 standards、实际 jh4j-cloud 基类和 OpenAPI 3 契约。生成时只填契约字段，不自由扩展结构。
 
 ## 模板清单（一文件一角色）
 
 | 模板文件 | 角色 | 对应 Skill | 团队规范依据 |
 |---------|------|-----------|-------------|
 | `Entity.java.tmpl` | 数据库实体 | entity-codegen | standards/07 + CoreEntity |
-| `DTO.java.tmpl` | 请求入参 | entity-codegen | standards/07 + 校验注解 |
+| `CreateDTO.java.tmpl` | 新增入参（不含治理字段） | entity-codegen | standards/07 + 校验注解 |
+| `UpdateDTO.java.tmpl` | 修改入参（id/revision 必填） | entity-codegen | standards/07 + Patch 语义 |
 | `PageDTO.java.tmpl` | 分页查询条件 | entity-codegen | standards/07 |
-| `VO.java.tmpl` | 响应出参 | entity-codegen | standards/07 + Swagger |
+| `VO.java.tmpl` | 详情响应出参 | entity-codegen | standards/07 + OpenAPI 3 |
+| `PageVO.java.tmpl` | 分页列表出参 | entity-codegen | standards/07 + 最小暴露 |
 | `Controller.java.tmpl` | REST 控制器 | service-codegen | standards/04 + 权限 |
 | `Service.java.tmpl` | 业务 Service | service-codegen | standards/05 + JhServiceImpl |
 | `Mapper.java.tmpl` | MyBatis 接口 | mapper-xml-gen | standards/06 + JhBaseMapper |
 | `Mapper.xml.tmpl` | SQL 映射 | mapper-xml-gen | standards/06 + 禁 SELECT \* |
+| `Migration.sql.tmpl` | Flyway 正向迁移 | db-migration | standards/12 + expand/contract |
+| `Rollback.md.tmpl` | 人工恢复说明 | db-migration | standards/12 + 禁自动回滚 DDL |
+| `ServiceTest.java.tmpl` | Service 单测 | unit-test-gen | standards/14 |
+| `ControllerTest.java.tmpl` | Controller 协议测试 | unit-test-gen | standards/14 + ApiResult 2000 |
 
 ## 填空变量约定
 
@@ -35,13 +41,22 @@
 | `{{COLUMN}}` | 数据库列名 | `CATEGORY_CODE` |
 | `{{apiDesc}}` | 接口中文名 | `特征量分类` |
 | `{{permissionPrefix}}` | 权限码前缀 | `mdm_feature_category` |
+| `{{pagePermission}}` 等 | 契约逐操作权限码 | `mdm_feature_category_query_page` |
+
+`voFields`、`pageFields` 与 `displayFields` 均来自契约白名单；VO/PageVO 禁止通过继承 Entity 隐式扩展字段。
 
 ## 使用方式（codegen Skill 引用）
 
-1. Skill 读对应 `.tmpl` 文件
-2. 按占位符替换
-3. 字段块按 Entity 字段循环展开
-4. 生成结果**必须**跑 `wl-skills-bd validate` 校验（P1-B）
+1. 编写并校验 `wl-contract.json`（schema：`.wl-skills-bd/schemas/contract.schema.json`）
+2. 执行 `wl-skills-bd codegen plan wl-contract.json`，评审 14 个模板产物、2 个协作契约产物与 `planHash`
+3. 执行 `wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm`
+4. 执行 `wl-skills-bd validate`、Java/Maven 质量门和数据库人工 diff
+
+协作产物不使用 Java 模板，但与源码处于同一个 codegen 计划：`docs/contracts/{contractId}.backend-contract.json` 供机器消费，`{contractId}.api.md` 供 `wl-skills-kit` 和人工评审；两者机器类型均为 `wl-api-contract`。
+
+Service 与 ServiceTest 的 `<wl-custom>` 区用于补全 export、relation 和非确定性业务命令。生成器按 region name 保留区内内容，区外仍严格受管；不得删除、改名或嵌套标记。详情见 `.github/guides/frontend-backend-contract.md`。
+
+模板由内置严格渲染器消费：缺变量、未闭合 section、非标量变量均直接失败。生成状态保存在 `.wl-skills-bd/.state/codegen-manifest.json`；本地修改会形成冲突并让整次 apply 零写入，只有显式 `--force` 才会在备份后覆盖。
 
 ## 与 standards 的绑定
 

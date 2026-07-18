@@ -1,0 +1,17 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "gitee"]
+	url = git@gitee.com:ycyplus163/wl-skills-bd.git
+	fetch = +refs/heads/*:refs/remotes/gitee/*
+[branch "main"]
+	remote = gitee
+	merge = refs/heads/main
+	vscode-merge-base = gitee/main
+[remote "github"]
+	url = git@github.com:ChenyCHENYU/wl-skills-bd.git
+	fetch = +refs/heads/*:refs/remotes/github/*

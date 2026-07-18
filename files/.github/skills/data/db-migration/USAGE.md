@@ -1,61 +1,60 @@
-# 使用指南：DDL 与数据迁移（db-migration）
+# 使用指南：db-migration
 
-> ⚠️ 当前 SKILL.md 仍为骨架，触发时按 **standards/12（含 §0.5 物理库归属）** 落地。MCP DB 工具待集成。
+> CREATE/ALTER/索引 已由契约 codegen 自动生成（v0.9）。包不连接数据库或执行 DDL。复杂回填和跨库数据迁移仍需人工设计。
 
-## 触发词
+## 新资源 CREATE
 
-```
-建表 / DDL / 表结构变更 / 字段新增 / 迁移脚本 / 回滚脚本
-```
+在 `wl-contract.json` 中明确数据库类型、dbCluster（cx/non_cx/pt）、迁移版本、验证 SQL、恢复策略和字段，再执行：
 
-## 典型场景
-
-### 场景 A：新表建表（最常见）
-
-```
-用户：给特征量分类建表 MDM_FEATURE_CATEGORY
-AI：  → 读 standards/12（字段类型/审计字段/索引/注释）
-      → ★ 选库决策（§0.5：产销库/非产销库/平台库/MDM Oracle 特例）
-      → 产出 reports/DDL_PREVIEW_{ts}.md
-      → 🔴 等用户人工确认后才生成 V{ts}__create_xxx.sql + 回滚脚本
+```bash
+wl-skills-bd codegen validate wl-contract.json
+wl-skills-bd codegen plan wl-contract.json
+wl-skills-bd db preview wl-contract.json          # 只读预览 DDL + Expand-Contract 阶段
 ```
 
-### 场景 B：存量表加字段
+计划会包含正向 `V...__create_*.sql` 和 `db/rollback-manual/*.md`。恢复文件是审批材料，不进入 Flyway V location，不保证数据无损逆转。
 
-```
-用户：给 MDM_FEATURE_CATEGORY 加个 STATUS 字段
-AI：  → 生成 ALTER TABLE + 回滚（DROP COLUMN）
-      → 🔴 人工确认
+## ALTER TABLE（v0.9 已自动生成）
+
+契约声明 `alter{}` 字段后，codegen 自动生成 ALTER 迁移 SQL（add/drop/modify）+ Rollback.md 含 Expand-Contract 阶段标注：
+
+```json
+{
+  "alter": {
+    "version": "20260719_100000",
+    "rollbackStrategy": "...",
+    "verificationSql": ["SELECT ..."],
+    "operations": [
+      { "type": "add", "field": { "name": "priority", "column": "PRIORITY", ... } },
+      { "type": "modify", "column": "REMARK", "dbType": "VARCHAR2(500 CHAR)", ... }
+    ]
+  }
+}
 ```
 
-### 场景 C：方言差异
+生成的 migration 文件名：`V{version}__alter_{table}_{add_modify}.sql`，不再生成 CREATE TABLE。
+
+## 复杂回填/跨库迁移（仍需人工）
+
+至少评审：锁表窗口、存量数据量、默认值与 NULL 策略、兼容发布顺序、索引代价、分批/幂等条件、验证 SQL、失败后的 roll-forward 或数据恢复。推荐 expand → 双读/双写或回填 → 验证 → contract 的分阶段迁移，不自动生成 DROP 型回滚。
+
+## 方言边界
 
 | 维度 | Oracle | MySQL |
-|------|--------|-------|
-| 自增 | SEQUENCE + 触发器 | AUTO_INCREMENT |
-| 注释 | `COMMENT ON COLUMN` 单独语句 | `COMMENT '...'` 行内 |
-| VARCHAR | `VARCHAR2(N CHAR)` | `VARCHAR(N)` |
+|---|---|---|
+| 字符串 | `VARCHAR2(N CHAR)` | `VARCHAR(N)` |
+| 自增 | 团队序列/主键策略 | 团队主键策略或 AUTO_INCREMENT |
+| 注释 | 独立 `COMMENT ON` | 列/表定义内 COMMENT |
+| 布尔 | 数字/字符约定 | TINYINT/数字约定 |
 
-## 红线
+以契约 Profile 与 standards/12 为准，禁止把一种方言的 SQL 直接复制到另一种数据库。
 
-- 🔴 **必须人工确认** DDL_PREVIEW 才执行（防误建表/选错库）
-- 🔴 选库决策必填（三库归属表 + MDM Oracle 特例）
-- 🔴 必含回滚脚本
-- 🔴 含审计字段（COMPANY_ID/IS_DELETE/REVISION/create*/update*）
-- 🔴 含索引 + 注释
+## 验收
 
-## 预期产物
+1. 人工评审目标库、SQL、索引和恢复策略；
+2. 在受控测试环境执行正向脚本；
+3. 执行契约中的 verification SQL 和业务回归；
+4. 由 DBA/CD 审批生产执行；
+5. 失败时按已审批方案处置并留审计记录。
 
-```
-db/migration/V{ts}__create_{table}.sql
-db/migration/V{ts}__rollback.sql
-reports/DDL_PREVIEW_{ts}.md      ← 含选库决策，人工确认用
-```
-
-## FAQ
-
-**Q：为什么必须人工确认？**
-A：DDL 不可逆（DROP TABLE 数据没了），且选错库是生产事故。参考 kit 同款红线。
-
-**Q：MCP DB 工具什么时候上？**
-A：roadmap。当前手抄 DDL（读 Entity 反向生成）。
+任何步骤都不得因“AI 已生成”而跳过。

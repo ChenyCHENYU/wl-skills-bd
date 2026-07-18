@@ -3,13 +3,14 @@
 /**
  * beRulesTools — MCP 工具：包装 lib/be-rules.js
  *
- * 暴露 wls_be_validate（扫描工程输出 B1~B8 偏差）。
+ * 暴露 wls_be_validate（扫描工程输出 B1~B12 偏差）。
  * 对标 kit 的 mcp/tools/projectTools.js，但后端无需网关，只读扫描。
  */
 
-const path = require("path");
 const fs = require("fs");
 const { runBeRules } = require("../../lib/be-rules");
+const { normalizeRel, resolveWithin } = require("../../lib/manifest");
+const { projectRoot } = require("../project-root");
 
 const RULE_DESC = {
   B1: "Controller 接口缺 @PreAuthorize（越权风险）",
@@ -26,15 +27,13 @@ const RULE_DESC = {
   B12: "业务/接口方法缺 Javadoc",
 };
 
-function resolveProjectRoot() {
-  return process.env.WL_PROJECT_ROOT || process.cwd();
-}
-
 function handleValidate(args) {
-  const target = resolveProjectRoot();
-  let scanRoot = target;
-  if (args.path) {
-    scanRoot = path.isAbsolute(args.path) ? args.path : path.join(target, args.path);
+  const target = projectRoot();
+  let scanRoot;
+  try {
+    scanRoot = args.path ? resolveWithin(target, args.path) : target;
+  } catch (error) {
+    return { text: `❌ ${error.message}`, isError: true, structuredContent: { ok: false, error: "path-outside-project" } };
   }
   if (!fs.existsSync(scanRoot)) {
     return {
@@ -44,18 +43,14 @@ function handleValidate(args) {
     };
   }
 
-  const relScan = args.path
-    ? path.isAbsolute(args.path)
-      ? path.relative(target, args.path) || undefined
-      : args.path
-    : undefined;
+  const relScan = args.path ? normalizeRel(args.path) : undefined;
 
-  const { issues, stats } = runBeRules(target, { scanRel: relScan });
+  const { issues, suppressed, stats } = runBeRules(target, { scanRel: relScan, quick: args.quick === true });
 
   if (issues.length === 0) {
     return {
-      text: "✅ 未发现 B1~B8 确定性违规。\n注：本工具覆盖框架级注解/SQL/目录密度；命名/架构分层请配合 Checkstyle + ArchUnit。",
-      structuredContent: { ok: true, error: 0, warn: 0, total: 0 },
+      text: "✅ 未发现 B1~B12 违规。\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。",
+      structuredContent: { ok: true, ...stats, issues: [], suppressed: suppressed.length },
     };
   }
 
@@ -90,6 +85,8 @@ function handleValidate(args) {
       warn: stats.warn,
       total: stats.total,
       byRule: stats.byRule,
+      issues: issues.slice(0, 100),
+      suppressed: suppressed.length,
     },
     isError: stats.error > 0,
   };

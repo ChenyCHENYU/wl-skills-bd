@@ -21,7 +21,7 @@
 
 ## 接入步骤（3 步）
 
-### 1. 加依赖（pom.xml，见 maven-snippets/pom-plugins.xml 的 Knife4j 段）
+### 1. 加依赖
 
 ```xml
 <dependency>
@@ -85,15 +85,15 @@ knife4j:
 
 防接口泄露（OWASP：生产环境不应暴露 API 文档）。
 
-## 与 Apifox 同步（roadmap）
+## 导出并核对 OpenAPI
 
 ```bash
 # 导出 OpenAPI 3 JSON（启动后访问）
 curl http://localhost:port/context/v3/api-docs -o openapi.json
-# 手动导入 Apifox（Apifox 原生支持 OpenAPI 3）
+# 可按团队流程导入 API 平台
 ```
 
-> 未来集成 Apifox CLI 自动同步（需团队 Apifox 平台就绪）。
+使用 `wl-skills-bd contract diff wl-contract.json --openapi openapi.json` 核对运行时路由、字段和响应包装。本包不保存 API 平台凭据，也不自动发布到外部平台。
 
 ## 常见问题
 

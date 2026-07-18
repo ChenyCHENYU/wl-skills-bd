@@ -1,232 +1,406 @@
 "use strict";
 
-/**
- * tests/be-rules.test.js — lib/be-rules.js 回归测试
- *
- * 验证确定性规则引擎能正确检出/不误报典型违规。
- * 对标 wl-skills-kit/tests/ast-rules.test.js。
- */
-
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
 const assert = require("assert");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { runBeRules } = require("../lib/be-rules");
 
-function fixture(name, content) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "be-rules-"));
-  fs.mkdirSync(path.join(dir, "controller", "demo"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "service", "demo"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "mapper", "demo"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "resources", "mapper"), { recursive: true });
-  return { dir, name, content };
+function withFixture(files, callback) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-rules-"));
+  try {
+    for (const [rel, content] of Object.entries(files)) {
+      const file = path.join(root, rel);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, content, "utf8");
+    }
+    callback(root);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 }
 
-function write({ dir, name, content }) {
-  fs.writeFileSync(path.join(dir, name), content, "utf8");
+function count(result, rule) {
+  return result.issues.filter((value) => value.rule === rule).length;
 }
 
-function hasRule(issues, rule) {
-  return issues.filter((i) => i.rule === rule);
-}
-
-// ─── B1: Controller 缺 @PreAuthorize ────────────────────────────────────
-
-(function testB1() {
-  const f = fixture(
-    "controller/demo/BadController.java",
-    `package x.controller.demo;
+withFixture({
+  "controller/demo/BadController.java": `package x;
 public class BadController {
     @PostMapping("save")
-    public ApiResult save() { return null; }
+    public Object save() { return null; }
 }`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B1").length > 0, "B1 应检出缺 @PreAuthorize");
-  console.log("  ✔ B1 检出缺 @PreAuthorize");
-})();
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B1"), 1);
+  assert.strictEqual(count(result, "B2"), 1);
+});
 
-// B1 不误报：有 @PreAuthorize 的方法
-(function testB1Ok() {
-  const f = fixture(
-    "controller/demo/GoodController.java",
-    `package x.controller.demo;
-public class GoodController {
-    @PreAuthorize("@pms.hasPermission('x')")
+withFixture({
+  "controller/demo/ClassGuardController.java": `package x;
+@PreAuthorize("@pms.authenticated()")
+public class ClassGuardController {
+    @Operation(summary = "save")
     @PostMapping("save")
-    public ApiResult save() { return null; }
+    public Object save() { return null; }
 }`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.strictEqual(hasRule(issues, "B1").length, 0, "B1 不应误报");
-  console.log("  ✔ B1 不误报合规方法");
-})();
+}, (root) => assert.strictEqual(count(runBeRules(root), "B1"), 0));
 
-// ─── B3: SELECT * ───────────────────────────────────────────────────────
+withFixture({
+  "controller/demo/PartialController.java": `package x;
+public class PartialController {
+    @PostMapping("save")
+    public Object save() { return null; }
+}`,
+  ".be-rules-ignore": "B1:controller/demo/PartialController.java # SEC-123 公开接口已评审\n",
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B1"), 0, "豁免 B1 不能触发 B1");
+  assert.strictEqual(count(result, "B2"), 1, "豁免 B1 不能连带关闭 B2");
+  assert.strictEqual(result.suppressed.length, 1);
+});
 
-(function testB3() {
-  const f = fixture(
-    "resources/mapper/DemoMapper.xml",
-    `<mapper><select id="all">SELECT * FROM t</select></mapper>`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B3").length > 0, "B3 应检出 SELECT *");
-  console.log("  ✔ B3 检出 SELECT *");
-})();
+withFixture({
+  "resources/mapper/StarMapper.xml": `<mapper>
+<!-- SELECT * FROM ignored -->
+<select id="a">SELECT t.* FROM T t WHERE t.COMPANY_ID = #{companyId}</select>
+<select id="b">SELECT COUNT(*) FROM T t WHERE t.COMPANY_ID = #{companyId}</select>
+</mapper>`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B3"), 1, "只报 t.*，不误报注释和 COUNT(*)"));
 
-// ─── B4: ${} 注入 ───────────────────────────────────────────────────────
+withFixture({
+  "resources/mapper/SubstitutionMapper.xml": `<mapper><select id="x">SELECT ID FROM T WHERE ${"${ew.customSqlSegment}"}</select></mapper>`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B4"), 1, "默认基线禁止 MyBatis 文本替换"));
 
-(function testB4() {
-  const f = fixture(
-    "resources/mapper/InjMapper.xml",
-    `<mapper><select id="x">SELECT 1 FROM t WHERE id = ${'$'}{userId}</select></mapper>`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B4").length > 0, "B4 应检出 ${} 注入");
-  console.log("  ✔ B4 检出 ${} 注入");
-})();
+withFixture({
+  "resources/mapper/TenantMapper.xml": `<mapper>
+<select id="bad">SELECT a.ID FROM A a JOIN B b ON a.ID=b.ID</select>
+<select id="good">SELECT a.ID FROM A a WHERE a.COMPANY_ID = #{companyId}</select>
+</mapper>`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B7"), 1, "JOIN 不能绕过租户检查"));
 
-// B4 不误报：MyBatis-Plus 合法用法
-(function testB4Ok() {
-  const f = fixture(
-    "resources/mapper/MpMapper.xml",
-    `<mapper><select id="x">${'$'}{ew.customSqlSegment}</select></mapper>`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.strictEqual(hasRule(issues, "B4").length, 0, "B4 不应误报 MP 合法用法");
-  console.log("  ✔ B4 不误报 MyBatis-Plus 合法用法");
-})();
+withFixture({
+  "config/TenantConfig.java": "class TenantConfig { TenantLineInnerInterceptor interceptor; }",
+  "resources/mapper/TenantMapper.xml": `<mapper><select id="all">SELECT ID FROM T</select></mapper>`,
+  ".wl-skills-bd/rules.local.json": JSON.stringify({ schemaVersion: 1, tenant: { mode: "interceptor", evidence: "config/TenantConfig.java" } }),
+}, (root) => assert.strictEqual(count(runBeRules(root), "B7"), 0));
 
-// ─── B8: 裸 RuntimeException ────────────────────────────────────────────
-
-(function testB8() {
-  const f = fixture(
-    "service/demo/BadServiceImpl.java",
-    `package x.service.demo;
-public class BadServiceImpl {
-    public void save() {
-        if (true) throw new RuntimeException("x");
+withFixture({
+  "service/demo/WriteService.java": `package x;
+public class WriteService {
+    public void updateById(String id) { }
+    public void note() {
+        String text = "throw new RuntimeException(";
+        // throw new RuntimeException("ignored");
     }
 }`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B8").length > 0, "B8 应检出裸 RuntimeException");
-  console.log("  ✔ B8 检出裸 RuntimeException");
-})();
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B5"), 1, "updateById 必须识别为写用例");
+  assert.strictEqual(count(result, "B8"), 0, "字符串和注释不得误报 B8");
+});
 
-// ─── stats 结构 ─────────────────────────────────────────────────────────
+withFixture({
+  "service/demo/TransactionalService.java": `package x;
+@Transactional(rollbackFor = Exception.class)
+public class TransactionalService {
+    /** save */
+    public void saveAll() { }
+}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B5"), 0));
 
-(function testStats() {
-  const f = fixture(
-    "controller/demo/S.java",
-    `package x.controller.demo; public class S { @PostMapping("s") public void s(){} }`,
-  );
-  write(f);
-  const { stats } = runBeRules(f.dir);
-  assert.ok(stats.total >= 0 && typeof stats.byRule === "object");
-  assert.strictEqual(stats.error + stats.warn, stats.total, "error+warn=total");
-  console.log("  ✔ stats 结构正确");
-})();
+withFixture({
+  "service/demo/BadExceptionService.java": `package x;
+public class BadExceptionService {
+    /** save */
+    @Transactional(rollbackFor = Exception.class)
+    public void save() { throw new RuntimeException("x"); }
+}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B8"), 1));
 
-// ─── B9: 类长度 >500 行（上帝类）────────────────────────────────────────
+withFixture({
+  "service/demo/LongService.java": `package x;
+public class LongService {
+    public void complex(int x) {
+${Array.from({ length: 85 }, (_, index) => `        if (x == ${index}) { x++; }`).join("\n")}
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B10"), 1);
+  assert.strictEqual(count(result, "B11"), 1);
+  const quick = runBeRules(root, { quick: true });
+  assert.strictEqual(count(quick, "B10"), 0);
+  assert.strictEqual(count(quick, "B11"), 0);
+});
 
-(function testB9() {
-  const lines = ["package x.service.demo;", "", "public class BigService {"];
-  for (let i = 0; i < 550; i++) lines.push("    private int f" + i + ";");
-  lines.push("}");
-  const f = fixture("service/demo/BigService.java", lines.join("\n"));
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B9").length > 0, "B9 应检出 >500 行的上帝类");
-  console.log("  ✔ B9 检出上帝类（>500 行）");
-})();
-
-// B9 不误报：短类
-(function testB9Ok() {
-  const f = fixture(
-    "service/demo/SmallService.java",
-    "package x.service.demo;\npublic class SmallService {\n    public void save() {}\n}",
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.strictEqual(hasRule(issues, "B9").length, 0, "B9 不应误报短类");
-  console.log("  ✔ B9 不误报短类");
-})();
-
-// ─── B10: 方法长度 >80 行 ───────────────────────────────────────────────
-
-(function testB10() {
-  const body = Array.from({ length: 90 }, (_, i) => "        int x" + i + " = " + i + ";").join("\n");
-  const f = fixture(
-    "service/demo/LongMethodService.java",
-    "package x.service.demo;\npublic class LongMethodService {\n    public void longMethod() {\n" +
-      body +
-      "\n    }\n}",
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B10").length > 0, "B10 应检出 >80 行方法");
-  console.log("  ✔ B10 检出长方法（>80 行）");
-})();
-
-// ─── B11: 圈复杂度 >10 ──────────────────────────────────────────────────
-
-(function testB11() {
-  const branches = Array.from({ length: 12 }, (_, i) => "if (x == " + i + ") y++;").join("\n        ");
-  const f = fixture(
-    "service/demo/ComplexService.java",
-    "package x.service.demo;\npublic class ComplexService {\n    public void complex(int x) {\n        int y = 0;\n        " +
-      branches +
-      "\n    }\n}",
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B11").length > 0, "B11 应检出圈复杂度 >10");
-  console.log("  ✔ B11 检出高圈复杂度（>10）");
-})();
-
-// ─── B12: 业务方法缺 Javadoc ────────────────────────────────────────────
-
-(function testB12() {
-  const f = fixture(
-    "service/demo/NoDocService.java",
-    `package x.service.demo;
+withFixture({
+  "service/demo/NoDocService.java": `package x;
 public class NoDocService {
-    public void save(String dto) {
-        // 无 Javadoc 的写方法
+    @Transactional
+    public void save(String dto) { }
+}`,
+  "mapper/demo/NoDocMapper.java": `package x;
+public interface NoDocMapper {
+    String findById(
+            String id);
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B12"), 2, "Service 与多行 Mapper 方法都要检查 Javadoc");
+});
+
+withFixture({
+  ".be-rules-ignore": "B1:**/*.java\n",
+}, (root) => assert.strictEqual(count(runBeRules(root), "WLS_CONFIG"), 1, "无理由豁免必须失败"));
+
+withFixture({}, (root) => {
+  const result = runBeRules(root, { scanRel: "../outside" });
+  assert.strictEqual(count(result, "WLS_CONFIG"), 1, "扫描路径越界必须失败");
+  assert.strictEqual(result.stats.error, 1);
+  assert.strictEqual(result.stats.total, result.stats.error + result.stats.warn + result.stats.info);
+});
+
+console.log("✅ be-rules：B1~B12、独立豁免、租户证据、误报保护和路径边界通过");
+
+// ─── B13~B19 数据安全规则（v0.10）───
+
+withFixture({
+  "service/demo/RedisNoTtlService.java": `package x;
+public class RedisNoTtlService {
+    private RedisTemplate redis;
+    public void cache(String k, String v) {
+        redis.opsForValue().set(k, v);
+    }
+    public void safeCache(String k, String v) {
+        redis.opsForValue().set(k, v, 30, TimeUnit.MINUTES);
     }
 }`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.ok(hasRule(issues, "B12").length > 0, "B12 应检出缺 Javadoc 的业务方法");
-  console.log("  ✔ B12 检出业务方法缺 Javadoc");
-})();
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B13"), 1, "缺 TTL 的 set 应报 B13");
+});
 
-// B12 不误报：有 Javadoc 的方法
-(function testB12Ok() {
-  const f = fixture(
-    "service/demo/DocedService.java",
-    `package x.service.demo;
-public class DocedService {
-    /**
-     * 保存。
-     * @param dto 参数
-     */
-    public void save(String dto) {
+withFixture({
+  "service/demo/RedisSelfLockService.java": `package x;
+public class RedisSelfLockService {
+    private StringRedisTemplate redis;
+    public boolean lock(String k) {
+        return Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(k, "1"));
     }
 }`,
-  );
-  write(f);
-  const { issues } = runBeRules(f.dir);
-  assert.strictEqual(hasRule(issues, "B12").length, 0, "B12 不应误报有 Javadoc 的方法");
-  console.log("  ✔ B12 不误报有 Javadoc 的方法");
-})();
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B14"), 1, "setIfAbsent 两参数自实现锁应报 B14");
+});
 
-console.log("\n✅ be-rules 测试全部通过");
+withFixture({
+  "service/demo/RedisDangerousService.java": `package x;
+public class RedisDangerousService {
+    public void scan() {
+        Set keys = redisTemplate.keys("*");
+    }
+    public void flush() {
+        redisTemplate.execute("FLUSHDB");
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B15") >= 2, "KEYS * 与 FLUSHDB 都应报 B15");
+});
+
+withFixture({
+  "config/RedisConfig.java": `package x;
+public class RedisConfig {
+    public Object serializer() {
+        return new JdkSerializationRedisSerializer();
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B16"), 1, "JdkSerializationRedisSerializer 应报 B16");
+});
+
+withFixture({
+  "service/demo/PhysicalDeleteService.java": `package x;
+public class PhysicalDeleteService {
+    private BaseMapper mapper;
+    public void purge(String id) {
+        mapper.deleteById(id);
+    }
+    public void batch(java.util.List ids) {
+        mapper.deleteBatchIds(ids);
+    }
+    public void truncate() {
+        jdbcTemplate.execute("TRUNCATE TABLE X");
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B17"), 3, "deleteById/deleteBatchIds/TRUNCATE 都应报 B17");
+});
+
+withFixture({
+  "resources/mapper/NoWhereMapper.xml": `<mapper>
+<update id="resetAll">UPDATE T SET STATUS = 'X'</update>
+<delete id="purgeAll">DELETE FROM T</delete>
+<update id="ok">UPDATE T SET STATUS='X' WHERE ID=#{id}</update>
+</mapper>`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B18"), 2, "无 WHERE 的 update/delete 应报 B18");
+});
+
+withFixture({
+  "service/demo/BatchService.java": `package x;
+public class BatchService {
+    public void batch() {
+        service.saveBatch(list, 5000);
+    }
+    public void defaultBatch() {
+        service.saveBatch(list);
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B19"), 1, "saveBatch(list, 5000) 应报 B19，默认 saveBatch(list) 不报");
+});
+
+withFixture({
+  "service/demo/SafeRedisService.java": `package x;
+public class SafeRedisService {
+    public void cache(RedisTemplate redis, String k, String v) {
+        redis.opsForValue().set(k, v, 30, TimeUnit.MINUTES);
+    }
+    public RLock lock(RedissonClient client, String k) {
+        return client.getLock(k);
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B13"), 0, "带 TTL 的 set 不应报 B13");
+  assert.strictEqual(count(result, "B14"), 0, "Redisson RLock 不应报 B14");
+});
+
+console.log("✅ be-rules v0.10：B13~B19 Redis/敏感写/全表写/批量分批规则通过");
+
+// ─── B14 扩展 + B20~B23 数据安全稳定性规则（v0.11）───
+
+withFixture({
+  "service/demo/LongLockService.java": `package x;
+public class LongLockService {
+    public void longTask(String k) {
+        redisTemplate.opsForValue().setIfAbsent(k, "1", 1, TimeUnit.HOURS);
+    }
+    public void safeLock(String k) {
+        redisTemplate.opsForValue().setIfAbsent(k, "1", 30, TimeUnit.SECONDS);
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B14") >= 1, "setIfAbsent 1 HOURS 应报 B14（长 TTL 缺 watchdog）");
+});
+
+withFixture({
+  "service/demo/TxMqService.java": `package x;
+public class TxMqService {
+    @Transactional(rollbackFor = Exception.class)
+    public void saveAndSend() {
+        baseMapper.insert(entity);
+        rocketMQTemplate.syncSend("topic", "msg");
+    }
+    @Transactional(rollbackFor = Exception.class)
+    public void saveAndHttp() {
+        baseMapper.insert(entity);
+        HttpUtil.createPost(url).body(data).execute();
+    }
+    public void noTx() {
+        rocketMQTemplate.syncSend("topic", "msg");
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B20") >= 2, "@Transactional 内 MQ/HTTP 各 1 个 B20");
+});
+
+withFixture({
+  "service/demo/HttpNoTimeoutService.java": `package x;
+public class HttpNoTimeoutService {
+    public void call() {
+        HttpResponse resp = HttpUtil.createPost(url).body(data).execute();
+    }
+    public void safeCall() {
+        HttpResponse resp = HttpUtil.createPost(url).timeout(5000).body(data).execute();
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B21"), 1, "HttpUtil 无 timeout 应报 B21");
+});
+
+withFixture({
+  "controller/demo/MixedSwaggerController.java": `package x;
+import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+@Api(value = "x")
+@Tag(name = "x")
+public class MixedSwaggerController {
+    @Operation(summary = "save")
+    @org.springframework.web.bind.annotation.PostMapping("save")
+    public Object save() { return null; }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B22") >= 1, "同类混用 Swagger 2 + OpenAPI 3 应报 B22 error");
+});
+
+withFixture({
+  "controller/demo/LegacySwaggerController.java": `package x;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+@Api(value = "x")
+public class LegacySwaggerController {
+    @ApiOperation(value = "save")
+    @org.springframework.web.bind.annotation.PostMapping("save")
+    public Object save() { return null; }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  const b22Issues = result.issues.filter((i) => i.rule === "B22");
+  assert.ok(b22Issues.length >= 1, "纯 Swagger 2 Controller 应报 B22 warn");
+  assert.strictEqual(b22Issues[0].severity, "warn", "纯 Swagger 2 是 warn 不是 error");
+});
+
+withFixture({
+  "service/demo/OverInjectedService.java": `package x;
+public class OverInjectedService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private OrderService orderService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private UserService userService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private ProductService productService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private InventoryService inventoryService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private PromotionService promotionService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private PaymentService paymentService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private LogisticsService logisticsService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private InvoiceService invoiceService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private SmsService smsService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private EmailService emailService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private AuditService auditService;
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B23") >= 1, "11 个 @Autowired 注入应报 B23");
+});
+
+console.log("✅ be-rules v0.11：B14 扩展 + B20~B23 事务内 MQ/HTTP 超时/Swagger 混用/巨型 Service 规则通过");

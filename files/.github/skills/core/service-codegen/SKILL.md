@@ -1,10 +1,11 @@
 ---
 name: service-codegen
 description: |
-  生成 Controller + Service 两层完整代码（团队基线 Service 直继 JhServiceImpl，无独立接口）。
-  含分页/主键查询/新增/修改/删除标准 CRUD，以及状态变更四段式（校验存在→校验状态→构造patch→updateById）。
+  基于 wl-contract.json 生成 Controller + 直接 Service（当前 Profile 直继 JhServiceImpl，无空接口层）。
+  含分页/主键查询/新增/修改/删除标准 CRUD，状态变更四段式（校验存在→校验状态→构造patch→updateById），
+  以及 v0.9 扩展：customOperations 业务命令/状态机/批量、relations 主从关联查询、export 导出。
   读 templates 填空，生成后跑 validate 查 B1/B2/B5。对标 wl-skills-kit/service-codegen 落地深度。
-  典型触发：「生成 Service」「全套 CRUD」「实现业务方法」「写业务逻辑」「生成后端接口」
+  典型触发：「生成 Service」「全套 CRUD」「实现业务方法」「写业务逻辑」「生成后端接口」「业务命令」「状态机」「submit/approve」
 status: ✅ 已落地
 stage: ④ 业务实现
 ---
@@ -23,13 +24,13 @@ stage: ④ 业务实现
 ✅ 已读取 standards/10-transaction.md    → @Transactional 粒度
 ✅ 已读取 standards/11-security-permission.md → 权限码同步
 ✅ 已读取 templates/Controller.java.tmpl + Service.java.tmpl
-✅ Entity/DTO/VO 已存在（否则回退 entity-codegen）
+✅ wl-contract.json 已通过 codegen validate
 ```
 
 ## 前置检查
 
-- [ ] Entity / DTO / VO / PageDTO / PageVO 已存在（否则回退 `entity-codegen`）
-- [ ] `docs/api/{module}.md` 已存在（权限码清单来源）
+- [ ] `wl-contract.json` 已声明模型字段、外部路径和五类权限码
+- [ ] 本次完整 codegen plan 已评审，模型/Service/Mapper/DDL 不会分批漂移
 - [ ] Mapper 接口存在或同步在 ⑤ 生成
 
 ---
@@ -46,7 +47,7 @@ stage: ④ 业务实现
 | `{{entity}}` | camelCase | `mdmFeatureCategory` |
 | `{{requestPath}}` | Controller 路径（驼峰）| `mdmFeatureCategory` |
 | `{{apiDesc}}` | 中文名 | `特征量分类` |
-| `{{apiPath}}` | Swagger 层级 | `主数据/特征量` |
+| `{{apiPath}}` | OpenAPI 分组 | `主数据/特征量` |
 | `{{permissionPrefix}}` | 权限码前缀 | `mdm_feature_category` |
 
 ### 步骤 2：生成 Controller（读模板填空）
@@ -57,36 +58,44 @@ stage: ④ 业务实现
 |------|------|------|-----------|
 | queryPage | POST | `queryPage` | `_query_page` |
 | getById | GET | `getById/{id}` | `_get_by_id` |
-| insert | POST | `save` | `_save` |
+| save | POST | `save` | `_save` |
 | updateById | PUT | `updateById` | `_update_by_id` |
 | deleteById | DELETE | `deleteById/{id}` | `_delete_by_id` |
 
-> **每个方法必须配 @PreAuthorize + @ApiOperation**（validate 的 B1/B2 会查）。
+> **每个方法必须配 @PreAuthorize + @Operation**（validate 的 B1/B2 会查）。
 
 ### 步骤 3：生成 Service（读模板填空）
 
-读 `templates/Service.java.tmpl`。团队基线：**Service 直继 JhServiceImpl，无独立接口**（与 kit 的 Controller→Service(接口)→Impl 三件不同，省一层）。
+读 `templates/Service.java.tmpl`。当前 `jh4j3-openapi3` Profile 使用 **Service 直继 JhServiceImpl，无独立接口**；另一种分层形态应新增兼容性 Profile。
 
 标准 5 方法（模板已固化）：
 
 ```
-queryPage  → baseMapper.queryPage(page, params)       委托 Mapper
-getById    → selectById + ServiceAssert.isNotNull      校验存在
-save       → BeanUtil.copyProperties + IdWorker + insert  写操作加 @Transactional
-updateById → selectById + copyProperties + updateById     写操作加 @Transactional
-deleteById → selectById + setIsDelete(0) + updateById     软删除加 @Transactional
+queryPage  → mapper.queryPage(page, params, AuthUtil.getLoginCompanyId())
+getById    → id + companyId 查询 + ServiceAssert 校验存在
+save       → BeanUtil.copyProperties + EntityUtil.setCreateProp + insert
+updateById → 租户归属查询 + revision + 字段白名单 + updateById
+deleteById → 租户归属查询 + setIsDelete(0) + updateById
 ```
 
-### 步骤 4：业务方法扩展（非 CRUD）
+### 步骤 4：业务方法扩展（customOperations，v0.9 自动生成）
 
-api.md 如有状态变更/业务动作，按**四段式**追加：
+契约声明 `customOperations[]` 时，codegen 按四段式自动生成 Service 方法 + Controller 方法，无需手写：
+
+- `kind=stateTransition`：四段式（校验存在→校验前置→构造 patch→updateById）
+- `kind=command`：同 stateTransition 但可不声明 preconditions
+- `kind=batch`：`(List<String> ids)` 遍历四段式，返回 `{successCount, failureCount, failedIds}`
+
+preconditions 支持六种操作符：equals/notEquals/in/notIn/isNull/notNull。patch 字段值按 Java 类型生成字面量。requestFields 用 @RequestParam（避免独立 RequestDTO）。
+
+未声明 `customOperations` 时，按**四段式**手工追加业务方法；当前 CRUD codegen 不会从字段名猜状态机：
 
 ```
 ① 校验存在：Entity entity = baseMapper.selectById(id);
              ServiceAssert.isNotNull(entity, "xxx不存在");
 ② 校验状态：ServiceAssert.isTrue("DRAFT".equals(entity.getStatus()), "仅待提交可操作");
 ③ 构造 patch：entity.setStatus("APPROVED");
-              EntityUtil.setUpdateProp(entity);
+               EntityUtil.setUpdateProp(entity);
 ④ 持久化：baseMapper.updateById(entity);
 ```
 
@@ -107,7 +116,7 @@ xxx-service/.../service/{module}/{Entity}Service.java     ← extends JhServiceI
 
 **Controller**：
 - `@RestController` + `@Validated` + `@RequestMapping("驼峰")`
-- 每方法 `@PreAuthorize` + `@ApiOperation`（B1/B2 必查）
+- 每方法 `@PreAuthorize` + `@Operation`（B1/B2 必查）
 - 返回 `ApiResult.success(msg, data)`
 - **禁止**写业务逻辑（只调 Service）
 - **禁止**注入 Mapper（必须经 Service，ArchUnit J1 卡控）
@@ -158,7 +167,7 @@ xxx-service/.../service/{module}/{Entity}Service.java     ← extends JhServiceI
    - 接口数: {N}（CRUD {5} + 业务方法 {M}）
    - 权限码已对齐: ✓ / ✗
    - @Transactional 覆盖: {N}/{写方法数}
-   - ★ 生成后自检: wl-skills-bd validate（B1缺@PreAuthorize / B2缺@ApiOperation / B5缺@Transactional / B8裸异常）
+   - ★ 生成后自检: wl-skills-bd validate（B1缺@PreAuthorize / B2缺@Operation / B5缺@Transactional / B8裸异常）
    - 下一步建议: ⑤ mapper-xml-gen
 ```
 

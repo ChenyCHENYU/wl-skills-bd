@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "wl-skills-bd": {
-      "command": "node",
-      "args": ["node_modules/@agile-team/wl-skills-bd/mcp/server.js"]
+      "command": "npx",
+      "args": ["--yes", "@agile-team/wl-skills-bd", "mcp"],
+      "env": { "WL_PROJECT_ROOT": "${workspaceFolder}" }
     }
   }
 }

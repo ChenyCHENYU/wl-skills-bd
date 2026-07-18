@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-backend-contract-v1.json",
+  "title": "wl-skills-bd backend resource contract",
+  "description": "v0.9 扩展：externalId 桥接 design-model、relations 主从关联、customOperations 业务命令/状态机、alter ALTER TABLE、indexes 自定义索引、可选 export 操作。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "contractId", "profile", "rootPackage", "module", "entity", "api", "database", "migration", "fields"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "contractId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,79}$" },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$" },
+    "rootPackage": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)+$" },
+    "module": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+    "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 wl-skills-design 的 design-model.json entity.id，用于跨包稳定 ID 追溯" },
+    "environment": { "enum": ["dev", "sit", "uat", "pre", "prod"], "description": "可选，声明契约适用的环境；不声明则环境无关。声明 prod 时 codegen apply 默认阻断（详见 standards/24 §6）" },
+    "dbCluster": { "enum": ["cx", "non_cx", "pt"], "description": "可选，数据库集群归属：cx=产销库 / non_cx=非产销库 / pt=平台库；doctor 校验与 datasource profile 一致（standards/24 §3.3）" },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "table", "description"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+        "table": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestPath", "externalBasePath", "permissionPrefix", "permissions"],
+      "properties": {
+        "requestPath": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "externalBasePath": { "type": "string", "pattern": "^/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$" },
+        "permissionPrefix": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$" },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["page", "detail", "create", "update", "remove"],
+          "properties": {
+            "page": { "type": "string", "minLength": 1 },
+            "detail": { "type": "string", "minLength": 1 },
+            "create": { "type": "string", "minLength": 1 },
+            "update": { "type": "string", "minLength": 1 },
+            "remove": { "type": "string", "minLength": 1 },
+            "export": { "type": "string", "minLength": 1, "description": "可选，声明后生成 GET /export 接口" }
+          }
+        }
+      }
+    },
+    "database": { "enum": ["oracle", "mysql"] },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "rollbackStrategy", "verificationSql"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]{8}_[0-9]{6}$" },
+        "rollbackStrategy": { "type": "string", "minLength": 20 },
+        "verificationSql": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modelJava": { "$ref": "#/$defs/relativePath" },
+        "serviceJava": { "$ref": "#/$defs/relativePath" },
+        "serviceResources": { "$ref": "#/$defs/relativePath" },
+        "testJava": { "$ref": "#/$defs/relativePath" },
+        "migration": { "$ref": "#/$defs/relativePath" },
+        "rollback": { "$ref": "#/$defs/relativePath" },
+        "collaboration": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "column", "javaType", "dbType", "comment"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+          "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime", "List<String>", "List<Long>"] },
+          "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
+          "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "requiredOnCreate": { "type": "boolean", "default": false },
+          "writable": { "type": "boolean", "default": true },
+          "queryMode": { "enum": ["none", "eq", "like"], "default": "none" },
+          "detail": { "type": "boolean", "default": true },
+          "list": { "type": "boolean", "default": true },
+          "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+          "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 design-model field.id" }
+        }
+      }
+    },
+    "indexes": {
+      "type": "array",
+      "description": "可选，自定义索引。COMPANY_ID+IS_DELETE 联合索引默认生成，无需重复声明。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "columns"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 30 },
+          "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" } },
+          "unique": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "customOperations": {
+      "type": "array",
+      "description": "可选，业务命令/状态机。每个操作按四段式生成 Service 方法（校验存在→校验前置→构造 patch→updateById）。",
+      "items": { "$ref": "#/$defs/customOperation" }
+    },
+    "relations": {
+      "type": "array",
+      "description": "可选，主从关联。当前只支持一对多；从表用独立 contract 描述。",
+      "items": { "$ref": "#/$defs/relation" }
+    },
+    "alter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "可选，ALTER TABLE。声明后 migration 生成 ALTER SQL，不再生成 CREATE TABLE。",
+      "required": ["version", "rollbackStrategy", "verificationSql", "operations"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]{8}_[0-9]{6}$" },
+        "rollbackStrategy": { "type": "string", "minLength": 20 },
+        "verificationSql": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "operations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/alterOperation" } }
+      }
+    }
+  },
+  "$defs": {
+    "stableId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$" },
+    "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "customField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "javaType", "comment"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime"] },
+        "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "required": { "type": "boolean", "default": false },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 }
+      }
+    },
+    "precondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "operator", "value", "message"],
+      "properties": {
+        "field": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "operator": { "enum": ["equals", "notEquals", "in", "notIn", "isNull", "notNull"] },
+        "value": {},
+        "message": { "type": "string", "minLength": 5, "maxLength": 100 }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value"],
+      "properties": {
+        "field": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "value": {}
+      }
+    },
+    "customOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "summary", "method", "path", "permission", "kind"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$", "minLength": 2, "maxLength": 30 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 50 },
+        "method": { "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        "path": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]*(?:/(?:[A-Za-z][A-Za-z0-9]*|\\{[a-z][A-Za-z0-9]*\\}))*$", "description": "相对 requestPath 的路径，如 submit/{id}" },
+        "permission": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$", "minLength": 1 },
+        "kind": { "enum": ["stateTransition", "command", "batch"], "description": "stateTransition=状态机变更；command=业务命令；batch=批量操作（idFrom=body）" },
+        "idFrom": { "enum": ["path", "body", "none"], "description": "默认 stateTransition/command=path（路径含 {id}），batch=body" },
+        "requestFields": { "type": "array", "items": { "$ref": "#/$defs/customField" }, "description": "可选额外请求字段，如 approve 的 opinion" },
+        "preconditions": { "type": "array", "items": { "$ref": "#/$defs/precondition" }, "description": "四段式②：校验前置状态" },
+        "patch": { "type": "array", "items": { "$ref": "#/$defs/patch" }, "description": "四段式③：构造字段变更" },
+        "externalId": { "$ref": "#/$defs/stableId" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "detailEntity", "detailContractId", "joinColumn"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$", "description": "关联属性名，如 items/details" },
+        "type": { "enum": ["one-to-many"], "description": "当前仅支持一对多" },
+        "detailEntity": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+        "detailContractId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,79}$" },
+        "joinColumn": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "从表外键列名" },
+        "cascadeSoftDelete": { "type": "boolean", "default": false, "description": "主表软删时同步软删从表" },
+        "exposeQuery": { "type": "boolean", "default": true, "description": "主 Controller 暴露 queryXxxByParentId 接口" },
+        "externalId": { "$ref": "#/$defs/stableId" }
+      }
+    },
+    "alterOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["add", "drop", "modify"] },
+        "field": { "description": "add 时必填，复用 fields 项结构" },
+        "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "drop/modify 时必填" },
+        "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$", "description": "modify 时必填" },
+        "comment": { "type": "string", "minLength": 1, "maxLength": 100, "description": "modify 时必填" }
+      }
+    }
+  }
+}

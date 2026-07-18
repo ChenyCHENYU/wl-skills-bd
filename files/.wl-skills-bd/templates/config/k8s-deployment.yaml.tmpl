@@ -1,0 +1,79 @@
+# K8s Deployment（L2 部署侧）— 由 wl-skills-bd config migrate 生成
+# 客户：{{customer}} | 环境：{{env}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{project}}
+  namespace: {{k8sNamespace}}
+  labels:
+    app: {{project}}
+    customer: {{customer}}
+    env: {{env}}
+spec:
+  replicas: {{replicas}}
+  strategy:
+    type: {{strategyType}}
+{{#rollingUpdate}}
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+{{/rollingUpdate}}
+  selector:
+    matchLabels:
+      app: {{project}}
+  template:
+    metadata:
+      labels:
+        app: {{project}}
+        customer: {{customer}}
+        env: {{env}}
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: {{imagePullSecret}}
+      containers:
+        - name: {{project}}
+          image: "{{registry}}/{{project}}:{{imageTag}}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{port}}
+          resources:
+            limits:
+              cpu: "{{cpuLimit}}"
+              memory: "{{memoryLimit}}"
+            requests:
+              cpu: "{{cpuRequest}}"
+              memory: "{{memoryRequest}}"
+          readinessProbe:
+            httpGet:
+              port: {{port}}
+              path: /actuator/health
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              port: {{port}}
+              path: /actuator/health
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - configMapRef:
+                name: {{project}}-cm
+            - secretRef:
+                name: {{project}}-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{project}}
+  namespace: {{k8sNamespace}}
+spec:
+  selector:
+    app: {{project}}
+  ports:
+    - port: {{port}}
+      targetPort: {{port}}

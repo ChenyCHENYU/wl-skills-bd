@@ -1,7 +1,8 @@
 package {{rootPackage}}.controller.{{module}};
 
-import {{rootPackage}}.api.dto.{{module}}.{{Entity}}DTO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}UpdateDTO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
 import {{rootPackage}}.service.{{module}}.{{Entity}}Service;
@@ -13,10 +14,28 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+{{#usesPatchMapping}}
+import org.springframework.web.bind.annotation.PatchMapping;
+{{/usesPatchMapping}}
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+{{#usesRequestParam}}
+import org.springframework.web.bind.annotation.RequestParam;
+{{/usesRequestParam}}
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.List;
+{{#importsForRequestFields}}
+import {{.}};
+{{/importsForRequestFields}}
+{{#relationVoImports}}
+import {{.}};
+{{/relationVoImports}}
 
 /**
  * {{apiDesc}}({{Entity}})表控制层。
@@ -26,6 +45,7 @@ import java.util.List;
  * @since 1.0.0
  */
 @Tag(name = "{{apiDesc}}")
+@Validated
 @RestController
 @RequestMapping("{{requestPath}}")
 public class {{Entity}}Controller {
@@ -38,40 +58,78 @@ public class {{Entity}}Controller {
             @Parameter(name = "current", description = "当前页码", example = "1"),
             @Parameter(name = "size", description = "每页记录条数", example = "10")
     })
-    @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_query_page')")
+    @PreAuthorize("@pms.hasPermission('{{pagePermission}}')")
     @PostMapping("queryPage")
-    public ApiResult<JhPage<List<{{Entity}}PageVO>>> query{{Entity}}Page(
-            @Parameter(hidden = true) JhPage page, @RequestBody @Validated {{Entity}}PageDTO params) {
+    public ApiResult<JhPage<{{Entity}}PageVO>> query{{Entity}}Page(
+            @Parameter(hidden = true) JhPage<{{Entity}}PageVO> page,
+            @RequestBody @Validated {{Entity}}PageDTO params) {
         return ApiResult.success("查询成功", {{entity}}Service.query{{Entity}}Page(page, params));
     }
 
     @Operation(summary = "主键查询{{apiDesc}}")
-    @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_get_by_id')")
+    @PreAuthorize("@pms.hasPermission('{{detailPermission}}')")
     @GetMapping("getById/{id}")
     public ApiResult<{{Entity}}VO> getById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
         return ApiResult.success("查询成功", {{entity}}Service.getById(id));
     }
 
     @Operation(summary = "新增{{apiDesc}}")
-    @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_save')")
+    @PreAuthorize("@pms.hasPermission('{{createPermission}}')")
     @PostMapping("save")
-    public ApiResult<String> insert(@RequestBody @Validated {{Entity}}DTO dto) {
+    public ApiResult<String> save(@RequestBody @Validated {{Entity}}CreateDTO dto) {
         return ApiResult.success("新增成功", {{entity}}Service.save(dto));
     }
 
     @Operation(summary = "修改{{apiDesc}}")
-    @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_update_by_id')")
+    @PreAuthorize("@pms.hasPermission('{{updatePermission}}')")
     @PutMapping("updateById")
-    public ApiResult<Void> updateById(@RequestBody @Validated {{Entity}}DTO dto) {
+    public ApiResult<Void> updateById(@RequestBody @Validated {{Entity}}UpdateDTO dto) {
         {{entity}}Service.updateById(dto);
         return ApiResult.success("更新成功", null);
     }
 
     @Operation(summary = "删除{{apiDesc}}")
-    @PreAuthorize("@pms.hasPermission('{{permissionPrefix}}_delete_by_id')")
+    @PreAuthorize("@pms.hasPermission('{{removePermission}}')")
     @DeleteMapping("deleteById/{id}")
     public ApiResult<Void> deleteById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
         {{entity}}Service.deleteById(id);
         return ApiResult.success("删除成功", null);
     }
+{{#exportPresent}}
+
+    @Operation(summary = "导出{{apiDesc}}")
+    @PreAuthorize("@pms.hasPermission('{{exportPermission}}')")
+    @GetMapping("export")
+    public void export(@Parameter(hidden = true) {{Entity}}PageDTO params, javax.servlet.http.HttpServletResponse response) {
+        {{entity}}Service.export(params, response);
+    }
+{{/exportPresent}}
+{{#relations}}
+{{#exposeQuery}}
+
+    @Operation(summary = "按父级查询{{detailEntity}}列表")
+    @PreAuthorize("@pms.hasPermission('{{detailPermission}}')")
+    @GetMapping("query{{detailEntity}}ByParentId/{parentId}")
+    public ApiResult<java.util.List<{{detailEntity}}VO>> query{{detailEntity}}ByParentId(
+            @Parameter(description = "父级主键ID") @PathVariable("parentId") String parentId) {
+        return ApiResult.success("查询成功", {{entity}}Service.query{{detailEntity}}ByParentId(parentId));
+    }
+{{/exposeQuery}}
+{{/relations}}
+{{#customOperations}}
+
+    @Operation(summary = "{{summary}}")
+    @PreAuthorize("@pms.hasPermission('{{permission}}')")
+    @{{httpAnnotation}}("{{path}}")
+    public ApiResult<{{returnType}}> {{methodName}}({{controllerParamsJoined}}) {
+{{#isBatch}}
+        java.util.Map<String, Object> result = {{entity}}Service.{{methodName}}({{serviceArgsJoined}});
+        return ApiResult.success("{{summary}}成功", result);
+{{/isBatch}}
+{{^isBatch}}
+        {{entity}}Service.{{methodName}}({{serviceArgsJoined}});
+        return ApiResult.success("{{summary}}成功", null);
+{{/isBatch}}
+    }
+{{/customOperations}}
 }

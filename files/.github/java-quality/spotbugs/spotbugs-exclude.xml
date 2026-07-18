@@ -10,14 +10,9 @@
     <Source name="~.*generated-sources.*"/>
   </Match>
 
-  <!-- Lombok 生成的 getter/setter/equals/hashCode/toString -->
-  <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,MS_EXPOSE_REP"/>
-  </Match>
-
   <!-- DTO/VO/Entity 的字段直接访问（团队基线允许 Lombok） -->
   <Match>
-    <Class name="~.*\.(DTO|VO|Entity|EO|Query)$"/>
+    <Class name="~.*(?:DTO|VO|Entity|EO|Query)$"/>
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
 

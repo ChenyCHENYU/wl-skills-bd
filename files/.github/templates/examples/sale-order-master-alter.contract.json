@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "contractId": "sale-order-master-alter",
+  "profile": "jh4j3-openapi3",
+  "rootPackage": "com.jhict.sale",
+  "module": "order",
+  "externalId": "SALE_ORDER_MASTER_ALTER",
+  "entity": {
+    "name": "SaleOrderMaster",
+    "table": "SALE_ORDER_MASTER",
+    "description": "销售订单主表"
+  },
+  "api": {
+    "requestPath": "saleOrderMaster",
+    "externalBasePath": "/sale/saleOrderMaster",
+    "permissionPrefix": "sale_order_master",
+    "permissions": {
+      "page": "sale_order_master_query_page",
+      "detail": "sale_order_master_get_by_id",
+      "create": "sale_order_master_save",
+      "update": "sale_order_master_update_by_id",
+      "remove": "sale_order_master_delete_by_id"
+    }
+  },
+  "database": "oracle",
+  "migration": {
+    "version": "20260718_120000",
+    "rollbackStrategy": "应用保持向后兼容；失败时先回滚应用。已有数据时只允许 roll-forward；drop 列前必须备份。",
+    "verificationSql": [
+      "SELECT COUNT(1) FROM SALE_ORDER_MASTER"
+    ]
+  },
+  "fields": [
+    {
+      "name": "orderNo",
+      "column": "ORDER_NO",
+      "javaType": "String",
+      "dbType": "VARCHAR2(64 CHAR)",
+      "comment": "订单编号",
+      "requiredOnCreate": true,
+      "queryMode": "eq",
+      "maxLength": 64
+    },
+    {
+      "name": "customerName",
+      "column": "CUSTOMER_NAME",
+      "javaType": "String",
+      "dbType": "VARCHAR2(200 CHAR)",
+      "comment": "客户名称",
+      "requiredOnCreate": true,
+      "queryMode": "like",
+      "maxLength": 200
+    },
+    {
+      "name": "status",
+      "column": "STATUS",
+      "javaType": "String",
+      "dbType": "VARCHAR2(32 CHAR)",
+      "comment": "订单状态",
+      "queryMode": "eq",
+      "maxLength": 32
+    },
+    {
+      "name": "totalAmount",
+      "column": "TOTAL_AMOUNT",
+      "javaType": "BigDecimal",
+      "dbType": "NUMBER(18,2)",
+      "comment": "订单总金额"
+    },
+    {
+      "name": "priority",
+      "column": "PRIORITY",
+      "javaType": "Integer",
+      "dbType": "NUMBER(10)",
+      "comment": "优先级（本次新增）"
+    },
+    {
+      "name": "remark",
+      "column": "REMARK",
+      "javaType": "String",
+      "dbType": "VARCHAR2(500 CHAR)",
+      "comment": "备注（扩展长度后）"
+    }
+  ],
+  "alter": {
+    "version": "20260719_100000",
+    "rollbackStrategy": "应用保持向后兼容；add 列先回滚应用再 DROP COLUMN；modify 长度回退需评估存量数据；drop 列必须先备份。",
+    "verificationSql": [
+      "SELECT priority, remark FROM SALE_ORDER_MASTER WHERE ROWNUM = 1"
+    ],
+    "operations": [
+      {
+        "type": "add",
+        "field": {
+          "name": "priority",
+          "column": "PRIORITY",
+          "javaType": "Integer",
+          "dbType": "NUMBER(10)",
+          "comment": "优先级（本次新增）"
+        }
+      },
+      {
+        "type": "modify",
+        "column": "REMARK",
+        "dbType": "VARCHAR2(500 CHAR)",
+        "comment": "备注（扩展长度后）"
+      }
+    ]
+  },
+  "indexes": [
+    { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "IS_DELETE", "ORDER_NO"], "unique": true }
+  ]
+}

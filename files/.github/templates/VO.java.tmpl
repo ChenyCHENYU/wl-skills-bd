@@ -1,15 +1,17 @@
 package {{rootPackage}}.api.vo.{{module}};
 
-import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+{{#voImports}}
+import {{.}};
+{{/voImports}}
 
 /**
  * {{apiDesc}}({{Entity}})详情 VO。
- * <p>出参：extends Entity 复用数据库字段，再补展示字段（如外键关联名称、枚举中文、子列表）。
- * <p>VO 只用于返回，**不接受请求**（入参用 DTO）。
+ * <p>VO 与数据库 Entity 解耦，只声明契约允许返回的字段，避免暴露租户、软删和审计内部字段。
+ * <p>VO 只用于返回，不接受请求（入参用 DTO）。
  *
  * @author wl-skills-bd codegen
  * @since 1.0.0
@@ -18,11 +20,18 @@ import lombok.ToString;
 @Setter
 @ToString
 @Schema(description = "{{apiDesc}}VO")
-public class {{Entity}}VO extends {{Entity}} {
+public class {{Entity}}VO {
 
-    {{#displayFields}}
+    @Schema(description = "主键ID")
+    private String id;
+
+    @Schema(description = "乐观锁版本号")
+    private Integer revision;
+
+    {{#detailFields}}
     @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 
-    {{/displayFields}}
+    {{/detailFields}}
+
 }

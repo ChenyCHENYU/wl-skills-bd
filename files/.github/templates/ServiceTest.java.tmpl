@@ -1,0 +1,54 @@
+package {{rootPackage}}.service.{{module}};
+
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
+import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import {{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+/**
+ * {{Entity}}Service 单元测试。
+ *
+ * @author wl-skills-bd codegen
+ */
+@ExtendWith(MockitoExtension.class)
+class {{Entity}}ServiceTest {
+
+    @Mock
+    private {{Entity}}Mapper mapper;
+
+    private {{Entity}}Service service;
+
+    @BeforeEach
+    void setUp() {
+        service = new {{Entity}}Service();
+        ReflectionTestUtils.setField(service, "baseMapper", mapper);
+    }
+
+    @Test
+    void save_shouldReturnGeneratedId() {
+        {{Entity}}CreateDTO dto = new {{Entity}}CreateDTO();
+        {{#testCreateAssignments}}
+        dto.set{{Field}}({{testValue}});
+        {{/testCreateAssignments}}
+        when(mapper.insert(any({{Entity}}.class))).thenAnswer(invocation -> {
+            {{Entity}} entity = invocation.getArgument(0);
+            entity.setId("1000000000000000001");
+            return 1;
+        });
+
+        assertEquals("1000000000000000001", service.save(dto));
+    }
+
+    // <wl-custom name="tests">
+    // 在此区域补充业务命令、导出和关联查询测试；生成器升级时会原样保留。
+    // </wl-custom>
+}

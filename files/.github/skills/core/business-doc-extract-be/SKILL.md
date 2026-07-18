@@ -24,7 +24,7 @@ stage: ②预 业务理解
 
 ## 输入源（优先级）
 
-1. **Controller**：`@ApiOperation` 描述 + 方法名动词
+1. **Controller**：`@Operation` 描述 + 方法名动词
 2. **Service 接口注释**：Javadoc / `@since`
 3. **Entity / 表注释**：字段语义来源
 4. **Mapper XML**：复杂查询揭示统计 / 报表口径

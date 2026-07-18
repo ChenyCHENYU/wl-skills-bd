@@ -1,0 +1,27 @@
+# K8s ConfigMap（L2 部署侧）— 由 wl-skills-bd config migrate 生成
+# 客户：{{customer}} | 环境：{{env}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{project}}-cm
+  namespace: {{k8sNamespace}}
+  labels:
+    app: {{project}}
+    customer: {{customer}}
+    env: {{env}}
+data:
+  APP_NAME: "{{project}}"
+  SERVER_PORT: "{{port}}"
+  PROFILES_ACTIVE: "{{env}}"
+  NACOS_HOST: "{{nacosHost}}"
+  NACOS_USERNAME: "{{nacosUsername}}"
+  NACOS_CONFIG_NAMESPACE: "{{nacosNamespace}}"
+  NACOS_DISCOVERY_NAMESPACE: "{{nacosNamespace}}"
+  DATASOURCE: "{{datasourceType}}"
+  DB_HOST: "{{dbHost}}"
+  DB_PORT: "{{dbPort}}"
+  DB_SID: "{{dbSid}}"
+  DB_USERNAME: "{{dbUsername}}"
+  REDIS_HOST: "{{redisHost}}"
+  REDIS_PORT: "{{redisPort}}"
+  JAVA_OPTS: "{{javaOpts}}"

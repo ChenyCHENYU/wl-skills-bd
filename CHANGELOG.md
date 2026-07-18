@@ -4,6 +4,354 @@
 
 ---
 
+## [0.13.0] - 2026-07-18（任务驱动精准路由与统一安全写链）
+
+### Added
+
+- 新增 standards/26、`lib/task-router.js`、CLI `task` 与只读 MCP `wls_be_task`，识别 new-service/add-api/add-field/add-business-cmd/fix-bug/refactor/audit/config-op 八类任务。
+- B 规则引擎支持任务级规则子集；路由结果同时给出 Skill、Standards、规则与可执行步骤，无匹配时显式失败并保留候选评分证据。
+- 任务路由、规则过滤、CLI 禁写和 MCP 闭合 Schema 纳入正式测试入口；MCP 工具数 11 → 12，standards 25 → 26。
+
+### Changed
+
+- 加接口、字段和业务命令统一通过 `wl-contract.json` 的 `customOperations/relations/export/fields/alter` 表达，再进入 codegen validate/plan/apply、保护区、完成度与 strict contract 闭环。
+- `task` 明确为只读指挥层：CLI `task --apply` 阻断，MCP 不暴露 `apply`；目标文件仅可作为计划上下文。
+- README、AGENTS、内部维护说明及包描述同步 v0.13 的独立边界和安全写语义。
+
+### Removed
+
+- 移除重复的正则/字符串拼接式 patch 写内核。它无法完整表达方法或字段规格，也绕过 planHash、确认、备份、幂等与失败整批回滚，不符合包内统一写操作标准。
+
+### Verification
+
+- 任务路由覆盖八类自然语言、无匹配、候选、规则子集与 CLI/MCP 只读边界。
+- 全量 `npm run verify`、Java 8 编译夹具、跨包 strict 契约握手及 `npm pack --dry-run --ignore-scripts` 作为发布检查。
+
+## [0.12.0] - 2026-07-18（配置分层与多环境管理 + 独立闭环与跨包契约统一）
+
+### 重大改进 A：配置分层工程级闭环（config init/migrate/doctor/fix + troubleshoot）
+
+从规范层（v0.11 standards/24）升级到架构层 + 工具层。任何业务项目套用同一套模式：一处声明（env-matrix）、全工程应用、一键体检、一键迁移、一键排查。
+
+#### Added — standards/25（1 条新规范，24→25）
+
+- **25-config-layering.md**：三层分层模型（L1 代码库占位符 / L2 环境变量 / L3 Nacos 动态）+ 4 条铁律 + env-matrix 单一事实源 + 迁移工作流 + L0~L8 体检 + troubleshoot 故障排查 + 工程闭环图
+
+#### Added — 7 个配置模板 + env-matrix schema
+
+- `templates/config/`：bootstrap.yml / application.yml / .env.example / k8s-configmap / k8s-secret / k8s-deployment / logback-spring.xml
+- `schemas/env-matrix.schema.json`：环境差异矩阵机器契约
+
+#### Added — 6 个核心 lib（配置引擎）
+
+- **lib/config-layering.js**：YAML 解析（零依赖）/ 明文密码扫描 / 占位符检测 / bootstrap 识别 / K8s 清单识别 / 端口检测
+- **lib/env-matrix.js**：矩阵加载 / 校验 / 客户配置提取 / 迁移差异计算 / 迁移计划（planHash）/ 应用 / 迁移报告
+- **lib/config-doctor.js**：L0~L8 全链路体检（10 项）+ 可选连通性探测（TCP socket）
+- **lib/config-probe.js**：DB/Redis/Nacos TCP 探测 + 地址解析
+- **lib/config-init.js**：骨架生成（bootstrap/application/logback + .env.example ×5 + env-matrix + .gitignore）
+- **lib/config-fix.js**：明文密码安全修复 + 复扫验证
+- **lib/troubleshoot.js**：10 类故障诊断树（DB/Redis/Nacos/K8s/端口/Bean/Profile/Flyway/Feign/MQ）
+
+#### Added — CLI + MCP
+
+- `wl-skills-bd config init/migrate/doctor/fix` + `wl-skills-bd troubleshoot`
+- MCP `wls_be_config` + `wls_be_troubleshoot`（9→11 工具）
+
+#### Added — 测试
+
+- `tests/config-layering.test.js`：10 组测试（明文扫描/bootstrap/env-matrix/init/doctor/fix/troubleshoot/probe/端到端）
+
+### 重大改进 B：独立闭环与跨包契约统一
+
+- 内置 `wl-delivery-profile.v1.json`，固定 `jh4j3-openapi3@1.0` 的标准 HTTP 操作、响应外壳、分页与 `revision` 并发约定；项目可独立安装，发现同名项目 Profile 时会做漂移校验。
+- 协作产物统一为 `wl-api-contract`，带 `protocolVersion/source.profile/completion`，可与 `wl-skills-kit` 在没有 `wl-skills-design` 的情况下直接严格核对。
+- 业务骨架完成度：export、关联查询及无确定性 patch 的自定义操作标记为 draft；`inspectImplementation` 同时验证 Service 已去除占位实现且 ServiceTest 存在操作证据。
+- `codegen apply --require-complete` / MCP `requireComplete` 生产就绪门；draft 契约整批零写入。
+- codegen 写入事务日志与失败全量恢复，覆盖源文件、状态文件、临时文件和新建目录。
+- Java 8 扩展编译夹具覆盖 PATCH、body ID、无 ID 骨架、批量、关联与导出。
+
+### Changed
+
+- 自定义操作按 `path/body/none/batch` 生成可编译签名；前置条件改为类型安全 `Objects.equals`，批量操作限制 1000 条并采用全有或全无事务语义。
+- `contract diff --strict` 同时阻断前后端 draft、未决问题、结构差异及降级文本校验 warning；legacy `api.md` 仅保留非严格兼容路径。
+- MCP 与 CLI 复用相同 delivery profile、完成度证据和 strict 语义；MCP 生产写授权参数真正传入 codegen 核心。
+- standards 总数 24 → 25，MCP 工具数 9 → 11。
+
+### Verification
+
+- 标准 CRUD 与全部扩展产物通过真实 Java 8 编译。
+- 契约、协作、事务回滚、CLI、MCP、生产护栏与扩展场景均有回归测试。
+- 配置分层 10 组测试覆盖 init/migrate/doctor/fix/troubleshoot/probe/端到端。
+- `npm run verify`、`npm run verify:quality-maven` 与 `npm pack --dry-run --ignore-scripts` 作为发布检查。
+
+### 工程闭环（配置分层，不是壳子）
+
+```
+config init          → 生成标准骨架（L1 占位符 + L2 .env.example + env-matrix）
+       ↓
+env-matrix.yml       → 声明客户差异（单一事实源）
+       ↓
+config migrate       → 切换客户（生成 L2 .env + K8s + 迁移报告）
+       ↓
+config doctor        → L0~L8 全链路体检（每项失败给"下一步查哪里"）
+       ↓
+config doctor --probe→ 连通性探测（DB/Redis/Nacos TCP 可达）
+       ↓
+config fix           → 安全修复（明文密码改占位符 + 复扫验证）
+       ↓
+troubleshoot "<错误>"→ 故障关键字诊断（错误码→排查步骤）
+```
+
+### Notes
+
+- 边界：bd 不持有 Nacos 写凭据，不读 Nacos 服务端配置内容（SRE 域）；只校验 bootstrap.yml 声明的 dataId 模式合规
+- 连通性探测用 TCP socket（端口可达性），不执行 SQL/PING，不持有真实凭据
+- env-matrix 的 secrets 只写占位（"K8s Secret: xxx/key"），实际值在 K8s Secret/.env，不进 git
+- 内置 10 类故障诊断树覆盖 mdm-service 实证的高频错误
+
+## [0.11.0] - 2026-07-18 (稳定性与多环境护栏：定时任务/分支模型/Swagger 迁移/B20~B23)
+
+### 重大改进：基于 mdm-service 实证反例补齐剩余事故源 + 后端多环境标准化
+
+调研 mdm-service 实际代码发现 4 类未覆盖事故源（长锁无 watchdog、事务内 MQ/HTTP、HttpUtil 无超时、Swagger 2/3 混用）+ 巨型 Service（MdmModelService 3824 行、注入依赖过多）+ 空壳定时任务。同时把《项目开发手册》的多环境/分支/数据库集群约定固化为可执行规范，补齐后端多环境能力（对标前端 wl-skills-kit）。
+
+### Added — 2 条新 standards（22→24）
+
+- **23-scheduled-task.md**：定时任务规范。@Scheduled + cron 外部化、@SchedulerLock（ShedLock）多实例防重复、幂等性（增量/状态机/事件ID 去重）、超时熔断（业务超时 < 锁超时）、失败重试（≤3 次指数退避，Spring Retry）、日志监控、与事务/MQ 关系
+- **24-multi-env.md**：多环境与分支模型规范。5 环境矩阵（dev/sit/uat/pre/prod）+ Nacos namespace 隔离、5 级分支（master/pre/uat/slt/dev + dev-{模块}-{工号}）、环境配置标准结构（bootstrap.yml + nacos dataId）、数据库集群归属（cx/non_cx/pt）、端口分配、配置加密（禁明文密码）、生产只读护栏、CI/CD 流水线模板
+
+### Added — be-rules B20~B23（4 条新规则）+ B14 扩展
+
+| 规则 | 标准 | 检测 | severity |
+|---|---|---|---|
+| B14（扩展）| 20 §3 | setIfAbsent + 长 TTL（>10min）缺 watchdog 续期 | error |
+| B20 | 10 §7 + 22 | @Transactional 方法内调 MQ（rocketMQTemplate/kafkaTemplate/amqpTemplate）/ HTTP（HttpUtil/RestTemplate/HttpClient/WebClient）| error |
+| B21 | 22 §1 | HttpUtil/RestTemplate 裸调用无 timeout | warn |
+| B22 | 13 §8.2 | Swagger 2/OpenAPI 3 混用：同类 @Api+@Tag → error；纯 Swagger 2 → warn | warn |
+| B23 | 02 + 19 | Service 注入依赖 > 10（巨型类信号）| warn |
+
+### Added — contract schema + 验证
+
+- contract schema 新增 `environment`（dev/sit/uat/pre/prod）和 `dbCluster`（cx/non_cx/pt）可选字段
+- contract.js 验证新字段；buildContext 透传
+
+### Added — 生产护栏运行时强制
+
+- codegen.applyPlan 在 `environment=prod` 时默认阻断，返回 `production-write-guard` reason + 零写入
+- 显式授权：`WL_ALLOW_PRODUCTION_WRITES=true`（CLI）或 `allowProductionWrites=true`（MCP）
+- 识别优先级：contract.environment > WL_PROJECT_ENV > SPRING_PROFILES_ACTIVE > config.json > bootstrap.yml
+- 新增 `detectEnvironment` / `isProductionGuardBlocked` 函数
+
+### Added — doctor 环境体检
+
+- 新增 `env-bootstrap` 检测项：bootstrap.yml 存在性 + profiles.active
+- 新增 `env-config` 检测项：profile 白名单（dev/sit/uat/pre/prod）+ 生产授权状态
+- 新增 `env-dbcluster` 检测项：datasource profile 识别 dbCluster（cx/non_cx/pt）
+- 新增 `checkEnvironment` / `readBootstrapProfile` / `detectDbClusterFromDatasource` 函数
+
+### Added — 扩展现有 standards
+
+- **02** 业务中心×端口×数据库集群完整映射表（sale 10000-10099 cx / quality 10100-10199 cx / produce 10200-10299 cx / cost 10300-10339 cx / safe 10400-10499 non_cx / equipment 10500-10599 iot / env 10600-10699 non_cx / logistics 10700-10799 non_cx / energy 10800-10899 non_cx / mdm pt）
+- **12** 数据库集群归属（cx/non_cx/pt → hx_cxdb1/hx_non_cxdb2/hx_ptdb）+ datasource profile 命名约定
+- **13** §8.1 Apifox 集成最佳实践（springdoc 自动生成 OpenAPI 3 JSON，Apifox 定时同步）+ §8.2 Swagger 2/OpenAPI 3 并存策略（新代码 OpenAPI 3，存量允许保留，混用禁止）
+- **18** §0 分支模型（master/pre/uat/slt/dev + dev-{模块}-{工号}）+ 合并铁律
+
+### Added — 测试
+
+- `codegen-production-guard.test.js`：environment 识别优先级、prod 默认阻断、显式授权、零写入全链路
+- `be-rules.test.js` B20~B23 fixture（事务内 MQ/HTTP、HttpUtil 无超时、Swagger 混用、巨型 Service 注入）
+
+### Changed
+
+- standards 总数 22 → 24，版本 v0.10.0 → v0.11.0
+- be-rules B 规则总数 19 → 23
+- README 补 v0.11 能力表、稳定性与多环境护栏段、Swagger 与 Apifox 段
+- AGENTS.md 加 v0.11 约束（长锁/事务内 MQ·HTTP/Swagger 选型/分支模型）
+- catalog.json 补全 B20~B23 规则定义
+- package.json test script 加 codegen-production-guard.test.js
+
+### Verification
+
+- `npm run verify`：版本/计数/Schema/规则/16 个测试套件全绿
+- `be-rules.test.js`：B1~B23 全覆盖（B14 扩展 + B20~B23 新增 6 个 fixture）
+- `codegen-production-guard.test.js`：生产护栏 5 个场景全绿
+- `verify-version`：B 规则计数校验 19→23，standards 22→24
+
+### Notes
+
+- Swagger 2/OpenAPI 3 并存策略基于 mdm-service 全工程 Swagger 2 的现实：不强制迁移，新代码统一 OpenAPI 3 + Apifox 自动同步
+- 生产护栏当前实现在 codegen.applyPlan 层，后续可扩展到 safe-fix.applyFixPlan 和 permissions export
+- mdm-service 实证反例（MdmDataDistributeService 长 TTL 锁、saveDataBatch 事务内发 MQ、HttpUtil 无超时、MdmModelService 3824 行）均已纳入机器兜底
+- 全部基于官方依据：Spring @Scheduled/ShedLock、Spring Cloud OpenFeign、Spring Retry、springdoc-openapi、Apifox、《项目开发手册》
+
+---
+
+## [0.10.0] - 2026-07-18 (数据安全与稳定性护栏：Redis/敏感写/限流熔断)
+
+### 重大改进：把生产事故源从口头规范固化为机器兜底层
+
+补齐数据库/缓存/外部调用的安全边界，避免 AI 生成代码踩 Redis OOM、分布式锁超卖、误删全表、级联雪崩等血泪事故。
+
+### Added — 3 条新 standards（19→22）
+
+- **20-redis-cache.md**：Key 命名（`{env}:{module}:{biz}:{id}`）、TTL 强制、Redisson RLock 分布式锁、缓存三大问题（穿透/击穿/雪崩）、大 Key 禁令、Jackson 序列化（禁 JDK）、禁用命令（KEYS \*/FLUSHDB/FLUSHALL）、Pipeline、Cache-Aside + 双删一致性
+- **21-sensitive-write.md**：写操作分级（L1 自由/L2 审批/L3 双签/L4 DBA+窗口）、批量分批（≤1000）、物理删除/TRUNCATE/DROP 禁令、全表 UPDATE/DELETE 禁令、幂等键（Redis + DB 唯一索引）、跨库写（事务消息/Seata）、灰度发布（Feature Flag）、生产只读护栏、敏感操作二次确认、操作审计
+- **22-resilience.md**：Feign 超时（连接 2s/读 5s）、重试（≤3 次指数退避，写操作禁重试）、熔断（CircuitBreaker 错误率/慢调用阈值）、舱壁隔离（独立线程池）、限流（Sentinel/Resilience4j）、降级（fallbackFactory 带异常）
+
+### Added — be-rules B13~B19（机器兜底，7 条新规则）
+
+| 规则 | 标准 | 检测 | severity |
+|---|---|---|---|
+| B13 | 20 | RedisTemplate set/setIfAbsent 缺 TTL | error |
+| B14 | 20 | setnx/setIfAbsent 自实现锁（非 Redisson RLock）| error |
+| B15 | 20 | KEYS \* / FLUSHDB / FLUSHALL | error |
+| B16 | 20 | JdkSerializationRedisSerializer | warn |
+| B17 | 21 | deleteBatchIds/deleteById/TRUNCATE/DROP TABLE | error |
+| B18 | 21 | Mapper XML update/delete 缺 WHERE | error |
+| B19 | 21 | saveBatch 显式批量 > 1000 | warn |
+
+### Added — ops/data-safety Skill
+
+- SKILL.md + USAGE.md：覆盖 Redis/敏感写/限流熔断的场景对照、生产护栏速查、错误码速查
+- 触发词：Redis/缓存/分布式锁/批量删除/物理删/熔断/限流/Feign 超时/生产只读/二次确认
+
+### Added — 扩展现有 standards
+
+- **11-security-permission.md §9**：敏感操作二次确认（重置密码/批量删除/数据导出/角色权限变更/生产配置修改）
+- **12-database-ddl.md §8.5**：生产 DDL/DML 敏感操作 8 阶段审批流程（申请→评审→DBA 双签→备份→窗口执行→验证→监控→回滚演练）
+
+### Changed
+
+- standards 总数 19 → 22，版本 v0.9.0 → v0.10.0
+- be-rules B 规则总数 12 → 19
+- skills 总数 10 → 11（+data-safety）
+- catalog.json 补全 B13~B19 规则定义
+- AGENTS.md 加 v0.10 强制约束 10/11/12（Redis/敏感写/生产护栏）
+- standards/index.md 新增任务类型 I（数据安全与稳定性审计）
+- be-rules.js 模块导出新检查函数，便于单元复用
+
+### Verification
+
+- `npm run verify`：版本/计数/Schema/规则/15 个测试套件全绿
+- `be-rules.test.js`：B1~B19 全覆盖（B13~B19 新增 8 个 fixture 测试）
+- `verify-version`：B 规则计数校验 12→19
+
+### Notes
+
+- B13~B19 当前**不在 safe-fix 自动修复白名单**（语义敏感，需人工），但全部进入 validate 检测
+- 生产只读护栏当前以规范形式落地；后续可升级为 codegen/MCP 的运行时检查（识别 `environment=production`）
+- 三大规范全部基于官方依据：Redis 官方、Redisson 官方、Spring Data Redis、Spring Cloud OpenFeign、Resilience4j、OWASP、Google SRE
+
+---
+
+## [0.9.0] - 2026-07-18 (业务命令/主从关联/ALTER/索引/导出/kit 兼容)
+
+### 重大改进：从"单实体 CRUD 生成器"升级为"业务后端生成器"
+
+补齐真实业务开发的四类高频场景：业务命令/状态机、主从关联、ALTER TABLE、自定义索引；同时打通前后端协议摩擦（kit api.md 兼容校验）和权限码搬运自动化。
+
+### Added — Schema 扩展（contract.schema.json）
+
+- `customOperations[]`：业务命令/状态机。声明 name/method/path/permission/kind（stateTransition/command/batch）、preconditions（六种操作符）、patch、requestFields；codegen 按四段式机械生成 Service 方法（校验存在→校验前置→构造 patch→updateById），Controller 生成对应 @PreAuthorize + @Operation 方法
+- `relations[]`：一对多主从关联。声明 detailEntity/detailContractId/joinColumn/cascadeSoftDelete/exposeQuery；主 Controller 生成 queryXxxByParentId 接口，manifest 暴露关联契约
+- `alter{}`：ALTER TABLE。声明 version/rollbackStrategy/verificationSql/operations（add/drop/modify）；codegen 生成 ALTER 迁移 SQL（不再生成 CREATE TABLE），Rollback.md 含 Expand-Contract 阶段标注
+- `indexes[]`：自定义索引。声明 name/columns/unique；codegen 渲染到 migration（COMPANY_ID+IS_DELETE 联合索引仍默认生成）
+- `api.permissions.export`（可选）：声明后生成 GET /export Controller + Service 骨架
+- `externalId`（顶层/字段/操作/关联）：跨包稳定 ID 桥接 wl-skills-design 的 design-model.json
+
+### Added — 协作契约扩展（collaboration.js）
+
+- manifest 暴露 `extensionOperations`（export + customOperations）、`relations`、对应 models 与 apiConfig
+- api.md 渲染扩展操作行、主从关联段
+- compareManifest/compareOpenApi/comparePermissions 支持扩展操作核对
+- `compareKitApiMarkdown`：核对 wl-skills-kit 风格 api.md（存在性核对 externalBasePath/详情字段/业务命令/关联实体；命名规范差异不阻断，业务命令缺失报 C405 error）
+- `buildPermissionInventory` + `renderPermissionInventoryMarkdown`：把后端 5 类权限码 + export + customOperations 权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段
+
+### Added — MCP 工具（registry.js，7→9）
+
+- `wls_be_db_preview`：只读预览契约生成的 DDL（CREATE 或 ALTER）、Expand-Contract 阶段标注与自定义索引，不写盘
+- `wls_be_export_permissions`：从后端契约导出权限码为 kit SYS_PERMISSION_INFO.md 片段；默认预览，apply 必须传 confirmApply
+
+### Added — CLI 命令
+
+- `wl-skills-bd db preview <contract>`：只读 DDL 预览
+- `wl-skills-bd permissions export <contract> --output <path>`：导出权限码
+- `wl-skills-bd contract diff --kitApiMd <path>`：kit 风格 api.md 兼容校验
+
+### Added — 规则与体检
+
+- B5 写方法前缀扩展：识别 release/close/cancel/withdraw/convert/changeStatus/publish/archive/restore/print/send/reset/assign/transfer/lock/unlock/audit/verify（覆盖 kit api-contract 全部业务命令命名）
+- doctor 新增 `contract-coverage` 检测项：扫描 CoreEntity 子类与 codegen 状态文件比对，报告无契约 Entity
+- Mapper.xml 新增 `<select id="queryById">` 段（ID+租户安全查询），Mapper.java 新增 queryById 方法声明与 VO import
+- Rollback.md 模板适配 ALTER 场景（变更类型 + Expand-Contract 阶段）
+
+### Added — 示例契约
+
+- `sale-order-master.contract.json`：完整扩展能力示例（indexes/customOperations stateTransition+command+batch/relations/export/externalId）
+- `sale-order-master-alter.contract.json`：ALTER 场景示例（add+modify + 索引）
+
+### Added — 测试
+
+- `tests/contract-extensions.test.js`：全链路验证 indexes/customOperations/relations/export/alter/externalId + kit api.md 兼容 + 权限导出 + 确定性
+
+### Changed
+
+- profile `apiDefaults.export` 声明为可选（声明后 codegen 生成 export 接口）
+- `license` MIT → UNLICENSED（与其他三包对齐，内部资产）
+- package.json description 同步 v0.9.0 能力
+- README/CHANGELOG/_registry/standards/SKILL.md/guides 同步扩展能力
+
+### Verification
+
+- `npm run verify`：版本/计数/Schema/规则/15 个测试套件（含 contract-extensions）
+- `npm run verify:quality-maven`：Java 8 真实 Maven 生命周期
+- Java 8 编译夹具：扩展模板（含 customOperations 四段式/relations/export）通过 javac 真编译
+
+### Notes
+
+- 字典后端不参与：字典是平台接口能力，前端 wl-skills-kit 的 dict-sync MCP 直接调用接口批量生成；后端 Entity 里字典字段就是普通 String
+- 主从关联的从表用独立 contract 描述；主 contract 只声明 relations 引用，codegen 在主表生成 queryXxxByParentId 接口骨架，实际转发逻辑由业务注入从表 Service 补齐
+- customOperations 的批量操作返回 `{successCount, failureCount, failedIds}` 标准结构，前端可统一处理
+
+---
+
+## [0.8.0] - 2026-07-18 (后端工程闭环全面升级)
+
+### Added
+
+- 受管资产生命周期：`init/update/diff/check/clean`、manifest、冲突零写入、覆盖前备份与安装漂移检查；
+- 严格资源契约、兼容性 Profile 与 JSON Schema；契约驱动生成 14 个模板产物和 2 个前后端协作产物；
+- codegen `validate/plan/apply`，SHA-256 `planHash`、显式确认、写前重算、冲突保护、备份与状态管理；
+- 前端 `wl-backend-contract`、运行时 OpenAPI 3、权限清单的 `contract show/diff` 闭环；
+- B1~B12 多格式报告（text/JSON/Markdown/SARIF）和规则配置/抑制证据；
+- B3/B5 条件安全修复：预览、哈希确认、漂移零写入、备份、失败恢复、复扫与 FIX_BE 报告；
+- 7 个 MCP 工具，严格入参 Schema、工作区路径边界、串行写调用和 CLI/MCP 单核心实现；
+- JaCoCo 0.8.15 J8 类级门禁：Service 行/分支 70%/60%，Controller 行 50%；
+- Node 22/24、Windows/Ubuntu CI，Java 8 真实 Maven 质量夹具与 npm 发布内容检查；
+- `.editorconfig`、`.gitattributes` 和本地状态忽略规则。
+
+### Changed
+
+- 默认生成基线收敛为 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、直接 Service、显式租户、软删和 revision 乐观锁；
+- Entity/CoreEntity 边界改为真实六个基础字段，`isDelete/revision` 显式声明；请求拆为 CreateDTO/UpdateDTO/PageDTO，响应拆为 VO/PageVO；
+- Java 质量 Profile 在 Java 8 上真实固定 ArchUnit、Checkstyle、PMD 7、SpotBugs、Spotless 与 JaCoCo；P3C/PMD 6 隔离为非阻断 legacy profile；
+- README、19 条 standards、Skill registry/pipeline、架构 ADR、规则覆盖矩阵、MCP/生成/协作指南按实际实现统一重写；
+- 环境、复杂迁移、业务测试等未实现执行器的能力继续标记骨架，并移除虚构 CLI、自动备份/应用承诺和示例明文凭据；
+- Node 最低版本升级到 22，发版检查必须包含完整包自检和 Java 8 真实 Maven 门禁。
+
+### Removed
+
+- 旧 DTO 单模板、伪 XML Maven 片段、PMD 7 与 P3C 混装配置，以及对 Springfox 批量自动迁移等不安全承诺；
+- 生成链路中的 Controller→Mapper、请求租户字段、物理删除、缺 revision、DDL 自动执行/自动回滚等错误模式。
+
+### Verification
+
+- `npm run verify`；
+- `npm run verify:quality-maven`（Java 8 / Maven 3.9.11 真实执行）；
+- `npm pack --dry-run --ignore-scripts` 发布物审计。
+
+---
+
 ## [0.7.1] - 2026-07-18 (全 Skill USAGE + README 重写 + 冗余清理)
 
 ### Fixed — README 严重滞后（停在 v0.5.0 描述）
@@ -474,6 +822,11 @@
 - 基线项目参考：`mdm-service`（hx_test 分支，jh4j-cloud 3.1.0 + MyBatis-Plus + Oracle）
 - 外部参考（不集成）：`CLAUDE规范文档/后端`（HZERO 体系）；共性已抽到 standards，差异性留给团队基线
 
+[0.12.0]: about:blank
+[0.11.0]: about:blank
+[0.10.0]: about:blank
+[0.9.0]: about:blank
+[0.8.0]: about:blank
 [0.7.1]: about:blank
 [0.7.0]: about:blank
 [0.6.0]: about:blank

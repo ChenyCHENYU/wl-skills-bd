@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-env-matrix-v1.json",
+  "title": "wl-skills-bd environment difference matrix",
+  "description": "单一事实源：记录所有客户×所有环境的配置差异。secrets 只写占位，实际值在 K8s Secret/.env。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "module", "current", "customers"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "project": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$", "description": "工程名，如 wl-mdm" },
+    "module": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$", "description": "业务模块，对应包名末段" },
+    "current": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "description": "当前激活客户，必须在 customers 键中" },
+    "customers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/customer" }
+    }
+  },
+  "$defs": {
+    "customer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nacos", "datasource", "k8s"],
+      "properties": {
+        "nacos": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host", "namespaces"],
+          "properties": {
+            "host": { "type": "string", "minLength": 1 },
+            "username": { "type": "string", "default": "nacos" },
+            "namespaces": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["dev", "sit", "uat", "pre", "prod"],
+              "properties": {
+                "dev": { "type": "string" }, "sit": { "type": "string" },
+                "uat": { "type": "string" }, "pre": { "type": "string" },
+                "prod": { "type": "string" }
+              }
+            }
+          }
+        },
+        "datasource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cluster", "type"],
+          "properties": {
+            "cluster": { "enum": ["cx", "non_cx", "pt"] },
+            "type": { "enum": ["oracle", "mysql"] },
+            "dev": { "$ref": "#/$defs/dbEndpoint" },
+            "sit": { "$ref": "#/$defs/dbEndpoint" },
+            "uat": { "$ref": "#/$defs/dbEndpoint" },
+            "pre": { "$ref": "#/$defs/dbEndpoint" },
+            "prod": { "$ref": "#/$defs/dbEndpoint" }
+          }
+        },
+        "redis": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dev": { "$ref": "#/$defs/redisEndpoint" },
+            "sit": { "$ref": "#/$defs/redisEndpoint" },
+            "uat": { "$ref": "#/$defs/redisEndpoint" },
+            "pre": { "$ref": "#/$defs/redisEndpoint" },
+            "prod": { "$ref": "#/$defs/redisEndpoint" }
+          }
+        },
+        "k8s": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["registry", "namespace", "port"],
+          "properties": {
+            "registry": { "type": "string", "minLength": 1 },
+            "namespace": { "type": "string", "minLength": 1 },
+            "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+            "replicas": { "type": "object", "properties": {
+              "dev": { "type": "integer", "minimum": 1 }, "prod": { "type": "integer", "minimum": 1 }
+            } }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "description": "敏感信息占位，实际值在 K8s Secret/.env，不进 git",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "dbEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "port", "sid", "username"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "sid": { "type": "string", "minLength": 1 },
+        "username": { "type": "string", "minLength": 1 }
+      }
+    },
+    "redisEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "port"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "database": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

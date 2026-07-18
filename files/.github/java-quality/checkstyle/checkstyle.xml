@@ -17,12 +17,22 @@
 
   <!-- 排除生成代码（MyBatis-Plus / Lombok）-->
   <module name="BeforeExecutionExclusionFileFilter">
-    <property name="exclusionPattern" value="[\\/]target[\\/]|generated-sources"/>
+    <property name="fileNamePattern" value="[\\/]target[\\/]|generated-sources"/>
   </module>
 
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
     <message key="containsTab" value="禁止 Tab，统一用空格缩进"/>
+  </module>
+
+  <!-- FileSetCheck 必须直接挂在 Checker 下，不能放入 TreeWalker -->
+  <module name="LineLength">
+    <property name="max" value="120"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+  </module>
+
+  <module name="FileLength">
+    <property name="max" value="500"/>
   </module>
 
   <module name="TreeWalker">
@@ -46,9 +56,9 @@
       <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
     </module>
 
-    <!-- 包名全小写，无下划线（standards/03 R01）-->
+    <!-- 根包小写；业务子域允许 lowerCamelCase，无下划线（standards/02/03）-->
     <module name="PackageName">
-      <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+      <property name="format" value="^[a-z]+(\.[a-z][a-zA-Z0-9]*)*$"/>
     </module>
 
     <!-- 局部变量 / 参数 camelCase -->
@@ -64,19 +74,27 @@
     <!-- 禁 import 通配符 * -->
     <module name="AvoidStarImport"/>
 
-    <!-- 类 Javadoc 强制（standards/15 R23，含 @author）-->
+    <!-- 类 Javadoc 强制（缺失检查与标签检查必须分别配置）-->
+    <module name="MissingJavadocType">
+      <property name="scope" value="public"/>
+      <property name="skipAnnotations" value="Generated"/>
+    </module>
     <module name="JavadocType">
       <property name="authorFormat" value="\S"/>
       <property name="scope" value="public"/>
     </module>
 
-    <!-- public 方法 Javadoc 强制（standards/15 R24）-->
-    <module name="JavadocMethod">
+    <!-- public 方法 Javadoc 强制；OpenAPI/Test/Bean 方法由其机器注解替代重复文档 -->
+    <module name="MissingJavadocMethod">
       <property name="scope" value="public"/>
+      <property name="allowedAnnotations" value="Override,Test,BeforeEach,Bean,Operation"/>
+    </module>
+    <module name="JavadocMethod">
+      <property name="accessModifiers" value="public"/>
       <property name="allowMissingParamTags" value="false"/>
       <property name="allowMissingReturnTag" value="false"/>
-      <!-- 豁免 getter/setter -->
-      <property name="allowMissingThrowsTags" value="false"/>
+      <property name="validateThrows" value="true"/>
+      <property name="allowedAnnotations" value="Override,Test,BeforeEach,Bean,Operation"/>
     </module>
 
     <!-- 大括号强制（if/else/for/while 都要大括号，standards/15）-->
@@ -96,35 +114,13 @@
       <property name="max" value="5"/>
     </module>
 
-    <!-- 一行 ≤ 150 字符 -->
-    <module name="LineLength">
-      <property name="max" value="150"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-    </module>
-
     <!-- 魔法数字（常量提取，standards/15）-->
     <module name="MagicNumber">
       <property name="ignoreNumbers" value="-1, 0, 1, 2"/>
       <property name="ignoreAnnotation" value="true"/>
     </module>
 
-    <!-- ===== 杂项 ===== -->
-    <!-- import 顺序：先 java/javax，再第三方，再自己的 -->
-    <module name="ImportOrder">
-      <property name="groups" value="java,javax,org,com"/>
-      <property name="ordered" value="true"/>
-      <property name="separated" value="true"/>
-      <property name="option" value="above"/>
-      <property name="sortStaticImportsAlphabetically" value="true"/>
-    </module>
-
     <module name="RedundantImport"/>
 
-    <!-- 缩进：4 空格 -->
-    <module name="RegexpSinglelineJava">
-      <property name="format" value="^\t* "/>
-      <property name="message" value="缩进用 4 空格，混合缩进禁止"/>
-      <property name="ignoreComments" value="true"/>
-    </module>
   </module>
 </module>

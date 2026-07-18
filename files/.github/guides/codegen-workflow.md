@@ -1,249 +1,116 @@
-# 后端代码生成闭环（权威文档）
+# 后端代码生成闭环（权威流程）
 
-> 本文档是 **生成后端代码的唯一权威流程**。AI 触发任何 codegen Skill 前必读，用户发起"生成一个菜单/接口"时按本流程闭环。
->
-> 三个闭环：① 生成顺序闭环 ② 验证闭环 ③ 修复闭环。
->
-> 关联：`skills/_pipeline.md`（产物契约）、`standards/index.md`（19 条规范）、`lib/be-rules.js`（B1~B11 执行器）。
+本文是 `wl-skills-bd` 代码生成的唯一执行流程。生成器只消费经过校验的机器契约，不从自然语言或数据库表结构中猜测字段。
 
----
+## 1. 单一输入
 
-## 闭环一：生成顺序（8 阶段，严格不跳级）
+权威输入是后端资源契约 JSON，schema 位于：
 
-### 唯一权威输入
-
-```
-前端 wl-skills-kit 产出: src/views/{module}/api.md
-                          ↓
-后端落地:                docs/api/{module}.md   （api-design-be 评审后的团队契约）
+```text
+.wl-skills-bd/schemas/contract.schema.json
 ```
 
-**铁律**：没有 `api.md` 不生成任何代码。缺则先触发 ② api-design-be（或回退前端补契约）。防 AI 发明字段。
+可从 `.github/templates/examples/feature-category.contract.json` 复制起步。契约必须显式声明：
 
-### 完整流水线
+- 兼容性 profile、根包、业务模块、实体与表；
+- Controller 请求根路径、网关外部路径和五个逐操作权限码；
+- Oracle/MySQL 类型、Java 类型、可写/查询/详情/列表字段白名单；
+- Flyway 版本、只读验证 SQL 和人工恢复策略；
+- 可选的多模块输出目录。
 
-```
-api.md
-  ↓
-②  api-design-be      评审契约 + 落权限码     → docs/api/{module}.md
-  ↓
-③  entity-codegen     Entity/DTO/VO (5文件)   读 templates 填空
-  ↓
-④  service-codegen    Controller+Service (2文件)
-  ↓
-⑤  mapper-xml-gen     Mapper.java+XML (2文件)
-  ↓
-⑥  db-migration       DDL+回滚 (3文件)        🔴 人工确认才执行
-  ↓
-⑦  unit-test-gen      ServiceTest+ControllerTest (2文件)
-  ↓
-⑧  convention-audit-be  全量审计             → AUDIT_BE_{ts}.md
-  ↓
-⑨  code-fix-be        修复 → ★强制复扫        → FIX_BE_{ts}.md
-  ↓
-✅ 可提交（按 18-git-commit）
-```
+已评审需求、前端 `api.md`、可选 design-model 和数据库设计都属于契约的上游依据，不能直接替代机器契约。bd 不依赖 design 或 kit 的产物：没有上游机器文件时，也必须能从评审事实独立形成并验证 `wl-contract.json`。多来源有差异时先评审并修正契约，再生成代码。
 
-### 一个菜单的完整文件清单（以"特征量分类 CRUD"为例，14 文件）
-
-| 阶段 | 模块 | 文件 | 数量 |
-|:---:|------|------|:---:|
-| ③ | entity | `entity/feature/MdmFeatureCategory.java` | 1 |
-| ③ | entity | `dto/feature/MdmFeatureCategoryDTO.java` | 1 |
-| ③ | entity | `dto/feature/MdmFeatureCategoryPageDTO.java` | 1 |
-| ③ | entity | `vo/feature/MdmFeatureCategoryVO.java` | 1 |
-| ③ | entity | `vo/feature/MdmFeatureCategoryPageVO.java` | 1 |
-| ④ | service | `controller/feature/MdmFeatureCategoryController.java` | 1 |
-| ④ | service | `service/feature/MdmFeatureCategoryService.java`（extends JhServiceImpl）| 1 |
-| ⑤ | service | `mapper/feature/MdmFeatureCategoryMapper.java` | 1 |
-| ⑤ | service | `resources/mapper/feature/MdmFeatureCategoryMapper.xml` | 1 |
-| ⑥ | db | `V{ts}__create_mdm_feature_category.sql` + 回滚 + DDL_PREVIEW | 3 |
-| ⑦ | test | `MdmFeatureCategoryServiceTest.java` + `ControllerTest.java` | 2 |
-
-> **团队基线**：Service 直继 `JhServiceImpl<Mapper, Entity>`，**无独立接口层**（省一层）。生成时别自作主张加 `{Entity}Service` 接口 + `impl/` 目录。
-
-### 每阶段的"防胶水"机制
-
-| 阶段 | 读模板 | self_check | 卡点 |
-|:---:|:---:|:---:|------|
-| ③ | `templates/Entity.java.tmpl` 等 | validate B9/B10 | 字段类型映射决策表 |
-| ④ | `templates/Controller.java.tmpl` + `Service.java.tmpl` | validate B1/B2/B5/B8/B9/B10/B11 | 权限码命名、状态变更四段式 |
-| ⑤ | `templates/Mapper.java.tmpl` + `Mapper.xml.tmpl` | validate B3/B4/B7 | 禁 SELECT *、禁 ${} 注入 |
-| ⑥ | `templates/` 无（db-migration 消费 Entity 反向生成）| 人工 | 🔴 选库决策（三库归属）|
-| ⑦ | （骨架阶段）| — | 覆盖红线 |
-
----
-
-## 闭环二：验证（三层兜底，绝不靠 AI 自觉）
-
-### 层 1：生成后即时自检（be-rules B1~B11）
-
-每个 codegen Skill 完成后，**必须**跑：
+## 2. 三段式命令
 
 ```bash
-wl-skills-bd validate src/main/java/.../feature     # 按生成范围
-# 或 MCP: wls_be_validate
+# 只校验，不生成
+wl-skills-bd codegen validate wl-contract.json
+
+# 生成确定性计划，不写盘；JSON 结果便于 CI/MCP 消费
+wl-skills-bd codegen plan wl-contract.json --json
+
+# 只能携带刚刚评审过的 planHash，并显式确认
+wl-skills-bd codegen apply wl-contract.json \
+  --plan-hash <planHash> --confirm
 ```
 
-| 规则 | 查什么 | 级别 |
-|:---:|------|:---:|
-| B1 | Controller 接口缺 @PreAuthorize | error |
-| B2 | Controller 缺 @ApiOperation | warn |
-| B3 | Mapper XML SELECT 星号 | error |
-| B4 | Mapper XML 美元符注入 | error |
-| B5 | 写操作缺 @Transactional | warn |
-| B6 | 单目录文件 >20 | warn/error |
-| B7 | SELECT 缺 COMPANY_ID | warn |
-| B8 | 裸 RuntimeException | warn |
-| **B9** | **类长度 >500（上帝类）** | **error** |
-| **B10** | **方法长度 >80（长方法）** | warn/error |
-| **B11** | **圈复杂度 >10** | warn/error |
+`apply` 会在写入前重新计划。如果契约、模板或目标文件在 plan 后变化，哈希失效并拒绝写入。任何一个目标存在未受管或本地修改时，默认整批零写入。确需覆盖时使用 `--force`，原文件先备份到 `.wl-skills-bd/.state/codegen-backups/`。
 
-有 **error 非 0** → 进闭环三（修复）。warn 可暂存，但建议本批清。
+如果本次不允许存在任何业务占位，可在 apply 增加 `--require-complete`。标准 CRUD 能直接通过；export、relation 或缺少确定性 patch 的自定义操作会以 `contract-incomplete` 零写入，直到换用完整契约或进入“先生成、后在保护区补齐”的流程。
 
-### 层 2：全量审计（convention-audit-be ⑧）
+## 3. 固定产物（16 个）
 
-触发词"后端审计/代码体检"，跑完整 19 条 + be-rules + 委托 Java 工具：
+| 分层 | 产物 |
+|---|---|
+| API model（6） | Entity、CreateDTO、UpdateDTO、PageDTO、VO、PageVO |
+| Web/Service（2） | Controller、直接继承 `JhServiceImpl` 的 Service |
+| Persistence（2） | Mapper.java、Mapper.xml |
+| Database（2） | Flyway `V...sql`、不进入 Flyway 目录的人工恢复说明 |
+| Test（2） | ServiceTest、ControllerTest |
+| Collaboration（2） | 机器可读 backend-contract.json、与 `wl-skills-kit` 对接的 api.md |
+
+生成边界：
+
+- CreateDTO 不含 id、租户、软删、版本和审计字段；UpdateDTO 强制 id/revision，业务字段使用 Patch 语义。
+- VO/PageVO 不继承 Entity；返回字段只能来自契约白名单。详情 VO 固定返回 revision，完成乐观锁读写闭环。
+- Service 从 `AuthUtil` 取租户，写操作检查影响行数，删除使用软删除。
+- 自定义 batch 单次最多 1000 条，先完成全量存在性/前置条件校验，再在同一事务更新，避免捕获异常后提交半批数据。
+- Mapper XML 显式列名、显式租户条件、常驻软删除条件和稳定排序。
+- Flyway 只生成正向版本迁移；恢复说明必须经 DBA/发布审批，不生成自动执行的 `U` 或反向 `V` 脚本。
+
+## 4. 业务扩展保护区
+
+生成器只能从契约确定标准 CRUD 和带实体 patch 的业务命令。export、relation 查询及缺少确定性 patch 的操作会在 Service 中生成 `<wl-custom name="...">` 区域，ServiceTest 中生成 `<wl-custom name="tests">` 区域。
+
+- 只能在开始/结束标记之间补充业务实现和测试，不删除、重命名或嵌套标记；
+- codegen 重新渲染时按 region name 合并现有内容；模板外部变化仍正常升级；
+- 完成度检查要求方法体无 `UnsupportedOperationException/TODO/FIXME`，且 ServiceTest 引用了对应方法；
+- 保护区以外的本地编辑仍按冲突处理，避免生成器猜测 Java 语义。
+
+补齐后用 `contract show` 输出带本地实现证据的协作契约，`completion.contractStatus` 必须为 confirmed。
+
+## 5. 生成后验证
+
+每次生成完成后按顺序执行：
 
 ```bash
-wl-skills-bd validate                  # be-rules 全量
-mvn checkstyle:check                   # J2 命名/风格/Javadoc
-mvn pmd:check                          # J3 + J6 阿里 P3C 54 条
-mvn spotbugs:check                     # J4 字节码
-mvn test -Dtest=LayerRulesTest         # J1 架构分层
-mvn spotless:check                     # J5 格式
+wl-skills-bd validate <本次生成目录> --strict
+mvn test
+mvn verify -Pwl-quality
 ```
 
-输出 `reports/AUDIT_BE_{ts}.md`，按 🔴/🟡/🟢 分级。
+包自身通过 `tests/java-compile-fixture.test.js` 将示例契约的生成结果交给真实 Java 8 编译器，覆盖模型、Controller、Service、Mapper 和两类测试模板。业务项目仍必须使用自己的依赖与 Maven profile 再编译一次。
 
-### 层 3：CI 硬卡（最后一道）
+DDL/数据变更还必须完成：
 
-`mvn clean verify` 自动跑 Checkstyle + PMD/P3C + SpotBugs + ArchUnit + Spotless + 测试，任一违规 build failure。
+1. 人工检查 SQL diff、表归属、类型和治理字段；
+2. 在目标数据库验证只读 SQL；
+3. 完成 DBA/发布审批；
+4. 先部署向后兼容的数据库变更，再部署应用；
+5. 失败时按恢复说明 roll-forward 或人工处置。
 
-### 验证覆盖矩阵（19 条规范 × 执行器）
+## 6. 状态与污染控制
 
-| 规范 | be-rules | Checkstyle J2 | PMD J3 | P3C J6 | SpotBugs J4 | ArchUnit J1 | Spotless J5 |
-|------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 02 分层 | B6 | | | | | **J1** | |
-| 04 Controller | **B1/B2** | | | | | | |
-| 06 Mapper | **B3/B4/B7** | | | | | | |
-| 08 异常 | **B8** | | P3C | | | | |
-| 10 事务 | **B5** | | | | | | |
-| 11 安全 | **B1/B7** | | | | | | |
-| 15 质量 | | **Javadoc** | | **P3C** | | | **J5** |
-| 17 漏洞 | | | | **P3C** | **J4** | | |
-| **19 设计** | **B9/B10/B11** | | | **GodClass/复杂度** | | | |
+生成器仅管理 `.wl-skills-bd/.state/codegen-manifest.json` 中登记的文件。重复生成相同契约和相同工作区状态会得到相同 `planHash`；已删除模板产物只有在内容仍等于上次安装哈希时才会清理，已修改的过期文件会保留并报告。
 
----
+禁止把 `.wl-skills-bd/.state/`、备份目录、生成预览目录或本地覆盖配置提交到业务仓库。
 
-## 闭环三：修复（强制复扫，不可跳过）
+## 7. 前后端握手
 
-### 修复流程
+同一个资源的路径、方法、请求字段、响应字段、分页结构和权限码必须来自同一契约。后端生成后至少同步以下内容给 `wl-skills-kit`：
 
-```
-AUDIT_BE_{ts}.md（违规清单）
-   ↓
-[1] code-fix-be 按严重度选：
-    ├ 🔴 必修（逐项 diff 确认）
-    ├ 🟡 默认修（可批量）
-    └ 🟢 列 backlog（默认不修）
-   ↓
-[2] 修复策略：
-    ├ rule-based（缺注解/SELECT*/长方法）→ 读 templates + 规则生成 patch
-    └ ai-based（语义偏差）→ AI 生成 patch
-   ↓
-[3] 展示 diff，等待用户确认
-   ↓
-[4] 用户 yes → 写入 + 报告标 ✅
-   ↓
-[5] ★ 强制复扫（不可跳过）
-    └ wl-skills-bd validate {涉及文件}
-       ├ error=0 → ✔ 闭环完成，可提交
-       └ 仍有 error → 输出残余，建议继续 code-fix-be
-```
+- 五个操作路径与 HTTP 方法；
+- Create/Update/Page 请求字段；
+- VO/PageVO 返回字段；
+- `ApiResult` 成功码 2000 与分页 `data.records`；
+- 五个权限码和公开接口清单。
 
-### 复扫报告格式
+上述内容已由 `docs/contracts/{contractId}.backend-contract.json` 和 `.api.md` 自动生成，文件名保留兼容性，机器类型统一为 `wl-api-contract`。使用 `wl-skills-bd contract diff --strict` 同时核对页面 api.md、运行时 OpenAPI 3 JSON、权限清单和 completion；完整命令和差异码见 `frontend-backend-contract.md`。
 
-```markdown
-## 🔄 复扫 {时间} | 触发：code-fix 后自动复扫
-
-| 指标 | 修复前 | 修复后 | 变化 |
-|---|---:|---:|---|
-| 🔴 阻断 | {N} | {N} | {-N} ✅ |
-| 🟡 警告 | {N} | {N} | {-N} ✅ |
-
-### 结论
-- ✔ 闭环完成，可安全提交
-- 或：✖ 仍有 {N} 个未解决项
-```
-
-### 修复对照表（常见违规 → 修复方式）
-
-| 违规 | 规则 | 修复 | 依据 |
-|------|:---:|------|------|
-| 缺 @PreAuthorize | B1 | 补 `@PreAuthorize("@pms.hasPermission('xxx')")` | Controller.java.tmpl |
-| 缺 @ApiOperation | B2 | 补 Swagger 注解 | Controller.java.tmpl |
-| SELECT 星号 | B3 | 改 `<include refid="BaseColumns"/>` | Mapper.xml.tmpl |
-| 美元符注入 | B4 | 改 `#{x}` + jdbcType | standards/06 |
-| 缺 @Transactional | B5 | 加 `@Transactional(rollbackFor=Exception.class)` | Service.java.tmpl |
-| 缺 COMPANY_ID | B7 | 补租户条件 | standards/11 §4 |
-| 裸 RuntimeException | B8 | 改 ServiceAssert / ServiceException | standards/08 |
-| **上帝类** | **B9** | **按职责拆分（拆 Service 类）** | standards/19 §6 |
-| **长方法** | **B10** | **提取 private 辅助方法** | standards/19 §3 |
-| **高圈复杂度** | **B11** | **卫语句 / 多态替代 switch** | standards/19 §3 |
-
-### 修复禁区
-
-- **不修业务逻辑**（只修偏差，功能补全是 codegen 职责）
-- **不批量盲改**（每文件首个补丁先 diff 确认范式）
-- **DDL 违规转 ⑥ db-migration**（表结构变更不在 code-fix）
-- **try-catch 吞异常后必须重新抛出**（否则事务不回滚）
-
----
-
-## 与前端的握手闭环
-
-```
-前端 wl-skills-kit 产出 api.md（契约）
-        ↓ 后端消费
-② api-design-be → docs/api/{module}.md（含权限码）
-        ↓ ③④⑤ 生成代码
-后端代码产出
-        ↓ 反向同步（强制）
-前端 SYS_PERMISSION_INFO.md（权限码同步）
-前端 api.md（字段变更回灌）
-```
-
-> **权限码 `{module}_{resource}_{action}` 是前后端唯一握手凭证**。后端生成完必须提示"以下权限码需同步前端：xxx"。
-
----
-
-## AI 生成代码的标准开场（每次触发 codegen 必说）
-
-```
-🚀 已触发 {Skill}/SKILL.md
-✅ 已读取 standards/index.md → 任务类型 {A/B/C}
-✅ 已读取 standards/0X-*.md（本阶段相关规范）
-✅ 已读取 templates/Xxx.java.tmpl（标准骨架）
-✅ 已确认 api.md 存在（契约依据）
-✅ 已确认工程根包 com.jhict.{prod}（包名映射）
-✅ 数据库类型 {Oracle|MySQL}（方言确定）
-⚠️ 即将生成 {N} 个文件，生成后跑 validate 自检
-```
-
----
-
-## 常见误区纠正
-
-| 误区 | 正解 |
-|------|------|
-| "AI 直接按描述生成代码" | ❌ 必须先有 api.md 契约 |
-| "生成完就提交" | ❌ 必须跑 validate + 审计 + 复扫 |
-| "Service 加接口+Impl 两层" | ❌ 团队基线直继 JhServiceImpl，无独立接口 |
-| "COMPANY_ID 手动填" | ❌ 用 EntityUtil 填充器动态取，禁硬编码 |
-| "长方法无所谓" | ❌ B10 卡控 >80 行，必须拆 |
-| "上帝类能跑就行" | ❌ B9 卡控 >500 行，按职责拆 |
-| "修完不用复扫" | ❌ code-fix-be 强制复扫闭环 |
+契约差异未清零时不得以“前端适配一下”或“后端先兼容”绕过评审。
 
 ## 变更记录
-- 2026-07-17 v0.1 初始（三闭环权威文档，整合 _pipeline + _registry + 19 规范 + B1~B11）
+
+- 2026-07-18：扩展为 16 个受管产物；增加网关外部路径、协作 manifest/api.md、OpenAPI/权限差异检查和 revision 读写闭环。
+- 2026-07-18：切换为 schema/profile 驱动的确定性生成；增加 planHash、确认门、冲突零写入、备份与 Java 8 编译夹具。
+- 2026-07-18：增加统一 delivery profile、`wl-api-contract`、业务保护区、实现/测试证据和 `--require-complete` 门。

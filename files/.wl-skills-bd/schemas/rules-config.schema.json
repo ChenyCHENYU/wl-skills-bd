@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-backend-rules-config-v1.json",
+  "title": "wl-skills-bd project-local rule configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "classLines": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "methodLines": { "type": "integer", "minimum": 1, "maximum": 80 },
+        "cyclomaticComplexity": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "directoryWarn": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "directoryError": { "type": "integer", "minimum": 1, "maximum": 30 }
+      }
+    },
+    "tenant": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "explicit" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "evidence"],
+          "properties": {
+            "mode": { "const": "interceptor" },
+            "evidence": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    }
+  }
+}

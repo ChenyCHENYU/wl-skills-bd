@@ -20,7 +20,7 @@
 | Apifox/Postman 导入 | 兼容但降级 | **原生 OpenAPI 3，无损** |
 | 中文 UI | 需自配 | Knife4j 原生中文 |
 
-> **生成代码统一用 OpenAPI 3 注解**（@Tag/@Operation/@Schema）。存量项目用 Springfox 2 的，由 code-fix-be 辅助批量迁移。
+> **生成代码统一用 OpenAPI 3 注解**（@Tag/@Operation/@Schema）。存量 Springfox 2 迁移必须先评估依赖、Profile 和调用方，再按人工评审的专项计划处理；安全修复器不会改文档技术栈。
 
 ---
 
@@ -158,7 +158,7 @@ public class OpenApiConfig {
 
 ---
 
-## 8. 与前端 api.md / Apifox 的同步（roadmap）
+## 8. 与前端 api.md / OpenAPI 的同步
 
 ```
 后端 Controller @Operation/@Schema
@@ -172,8 +172,55 @@ Apifox / Postman（OpenAPI 3 原生支持）
 api.md（前端 wl-skills-kit 消费）
 ```
 
-> **本轮范围**：本地 Knife4j 文档 + OpenAPI 3 JSON 导出能力。
-> **roadmap**：Apifox CLI 自动同步（需团队 Apifox 平台就绪）；api.md 与 openapi.json 双向校验。
+`wl-skills-bd contract diff --strict` 已支持把契约与前端 `wl-api-contract`、运行时 `openapi.json`、权限清单及双方 completion 做确定性核对。Apifox 导入仍由团队平台流程负责，本包不持有平台凭据，也不宣称自动发布。
+
+### 8.1 Apifox 集成最佳实践（v0.11）
+
+Apifox 官方推荐 OpenAPI 3 导入，自动同步文档与 mock。团队基线：
+
+| 方式 | 配置 | 适用 |
+|---|---|---|
+| **Apifox 定时自动同步**（推荐）| 数据源 URL = `${gateway}/v3/api-docs`，频率 5~30 分钟 | 开发/测试环境 |
+| 手动导入 openapi.json | CI 产物下载后手动导入 | 偶发同步 |
+| Apifox CLI | `apifox-cli import --type openapi` | CI 集成 |
+
+```yaml
+# application-uat.yml（为 Apifox 暴露 api-docs）
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false   # 用 Apifox 不用 Swagger UI
+knife4j:
+  production: false
+```
+
+> 生产环境必须关闭 `/v3/api-docs` 与 `/doc.html`（见 §7），Apifox 同步只在 sit/uat 环境进行。
+
+### 8.2 Swagger 2（io.swagger.annotations）与 OpenAPI 3 并存策略（v0.11）
+
+团队允许两种注解共存，但有明确分级：
+
+| 场景 | 注解 | 规则 | B22 |
+|---|---|---|---|
+| **新生成代码** | OpenAPI 3（`@Tag`/`@Operation`/`@Schema`）| 强制 | 违规 error |
+| **存量 Swagger 2 代码** | Swagger 2（`@Api`/`@ApiOperation`/`@ApiModel`）| 允许保留 | warn（迁移指引）|
+| **同类混用** | 同一类同时有 `@Api` 和 `@Tag` | 禁止（文档冗余）| error |
+| **Apifox 导入** | 统一 OpenAPI 3 | springdoc 聚合输出 | — |
+
+> **为什么允许 Swagger 2 保留**：mdm-service 全工程是 Swagger 2，强制迁移成本高且无业务收益。springdoc 1.7.0 能识别 Swagger 2 注解并聚合输出 OpenAPI 3 JSON，Apifox 导入不受影响。新代码统一 OpenAPI 3 即可逐步收敛。
+
+**迁移指引**（存量 → OpenAPI 3）：
+
+1. 评估依赖：springfox 是否还有其他用途（Docket Bean、拦截器）
+2. 引入 springdoc（Spring Boot 2.x 用 1.7.0）：`springdoc-openapi-ui`
+3. 注解替换按 §2 对照表（@Api→@Tag、@ApiOperation→@Operation）
+4. 移除 Docket Bean 配置
+5. 验证 `/v3/api-docs` 输出完整
+6. Apifox 重新同步
+
+> 安全修复器不会改文档技术栈；迁移走专项 PR。
 
 ---
 
@@ -185,6 +232,7 @@ api.md（前端 wl-skills-kit 消费）
 | @Parameter 用 0 次（参数无文档）| 参考项目 | 分页/查询参数必须 @Parameter |
 | Controller 直连 Mapper（跨层）| 参考项目 | 走 Service，见 standards/02 + ArchUnit J1 |
 | group-configs 仅 default 单组 | 参考项目 | 按 modules 拆 group（§5）|
+| **全工程 Swagger 2 注解**（mdm-service）| mdm-service `import io.swagger.annotations.Api` | 新代码用 OpenAPI 3；存量允许保留（B22 warn）；同类混用禁止（B22 error）|
 
 ---
 
@@ -192,9 +240,11 @@ api.md（前端 wl-skills-kit 消费）
 
 Controller 生成后跑 `wl-skills-bd validate`：
 - B2 查接口方法缺 `@Operation`（OpenAPI 3）或 `@ApiOperation`（Springfox 2 兼容存量）
+- B22（v0.11）查同类混用 Swagger 2 与 OpenAPI 3 注解（error）；纯 Swagger 2 存量（warn）
 
 模板（Controller.java.tmpl）已用 OpenAPI 3 注解，填空即合规。
 
 ## 变更记录
+- 2026-07-18 v0.11：新增 §8.1 Apifox 集成最佳实践 + §8.2 Swagger 2/OpenAPI 3 并存策略；B22 分级检测（混用 error / 纯 Swagger 2 warn）。
 - 2026-07-17 v0.7 重写为 OpenAPI 3 + Knife4j 落地（从 Springfox 2 骨架升级）；强制度 🟡建议 → 🔴必遵
 - 2026-05-14 v0.0.1 骨架（Springfox 2，已过时）

@@ -1,85 +1,50 @@
-# 使用指南：受控自动修复（code-fix-be）
+# 使用指南：安全修复闭环
 
-读审计报告修复违规，修复后★强制复扫确认（不可跳过）。
+## 1. 先扫描
 
-## 触发词
-
-```
-修复规范问题 / 按审计报告改 / 修违规 / 批量改 / 整改 / code fix
+```bash
+wl-skills-bd validate src/main --strict
 ```
 
-## 典型场景
+## 2. 只预览白名单修复
 
-### 场景 A：修复 🔴 阻断项（最常见）
-
-```
-用户：修一下刚才审计报告里的 B1（缺 @PreAuthorize）
-AI：  → 读 Controller.java.tmpl + 权限码规则
-      → 生成补丁，展示 diff
-      → 确认后写入
-      → ★ 强制复扫 validate → error=0 → ✔ 闭环完成
+```bash
+wl-skills-bd fix plan src/main --rules B3,B5 --json
 ```
 
-### 场景 B：批量修同一类型违规
+重点检查：
 
-```
-用户：把所有 SELECT 星号都改掉
-AI：  → 读 Mapper.xml.tmpl 的 BaseColumns
-      → 每文件首个补丁先 diff 确认范式
-      → 确认后批量改剩余文件
-      → 复扫
-```
+- `actions[].edits` 是否只改报告位置；
+- B3 是否引用现有 `BaseColumns`；
+- B5 是否使用 Spring Transactional；
+- `manual` 是否完整列出无法安全修改的项；
+- `planHash` 和报告路径。
 
-### 场景 C：修设计级问题（上帝类/长方法）
+## 3. 显式应用
 
-```
-用户：MdmModelService 3373 行怎么改
-AI：  → 按 standards/19 §6 反模式拆分
-      → 建议拆为 MdmModelCrudService / MdmModelImportService / ...
-      → ⚠️ 这是重构，逐个 diff 确认 + 用户审核业务逻辑
+```bash
+wl-skills-bd fix apply src/main --rules B3,B5 \
+  --plan-hash <预览值> --confirm
 ```
 
-## 修复对照表
+文件在预览后发生变化时，旧 hash 自动失效，必须重新预览。工具不接受 `--force`，因为修复覆盖本地漂移没有安全语义。
 
-| 违规 | 规则 | 修复方式 |
-|------|:---:|---------|
-| 缺 @PreAuthorize | B1 | 补 `@PreAuthorize("@pms.hasPermission('xxx')")` |
-| 缺 @Operation | B2 | 补 OpenAPI 3 注解 |
-| SELECT 星号 | B3 | 改 `<include refid="BaseColumns"/>` |
-| 美元符注入 | B4 | 改 `#{x}` + jdbcType |
-| 缺 @Transactional | B5 | 加 `@Transactional(rollbackFor=Exception.class)` |
-| 缺 COMPANY_ID | B7 | 补租户过滤 |
-| 裸 RuntimeException | B8 | 改 ServiceAssert / ServiceException |
-| **上帝类** | **B9** | **按职责拆 Service（重构）** |
-| **长方法** | **B10** | **提取 private 辅助方法** |
-| **高复杂度** | **B11** | **卫语句 / 多态替代 switch** |
-| **缺 Javadoc** | **B12** | **补类/方法 Javadoc** |
+## 4. 查看闭环证据
 
-## 复扫报告格式（每次必出）
+应用后自动生成 `reports/FIX_BE_<hash>.md`，包含：
 
-```markdown
-## 🔄 复扫 {时间}
+- 修改清单；
+- error/warn 前后矩阵；
+- 选中规则残余；
+- 新增回归；
+- 无法自动修复的人工项。
 
-| 指标 | 修复前 | 修复后 | 变化 |
-|---|---:|---:|---|
-| 🔴 阻断 | {N} | {N} | {-N} |
-| 🟡 警告 | {N} | {N} | {-N} |
-
-### 结论
-- ✔ 闭环完成，可安全提交
-- 或：✖ 仍有 {N} 项待处理
-```
+`selectedOk=true` 仅表示本轮选中规则无残余/新增问题；`projectOk=true` 才表示项目全部 B 规则 error 已清零。两者不可混淆。
 
 ## FAQ
 
-**Q：业务逻辑会被改吗？**
-A：不会。code-fix 只修偏差（结构/规范），业务逻辑由 codegen 负责。语义偏差标"人工"不自动修。
+**为什么 B1/B4/B7/B8 不自动修？** 这些规则需要权限码、SQL 语义、租户架构或业务异常约定。机械替换可能把规范问题变成功能或安全事故。
 
-**Q：能跳过复扫吗？**
-A：不能。"强制复扫"是硬约束（对标 kit/code-fix），即使说"不用验证了"也必须跑——这是闭环完整性保障。
+**可以跳过复扫吗？** 不可以。复扫是 apply 内部步骤，不是可关闭选项。
 
-**Q：DDL 类违规怎么办？**
-A：转 ⑥ db-migration（表结构变更不在 code-fix 范围）。
-
-**Q：批改前要每个文件都确认吗？**
-A：每类型首个补丁确认范式后，剩余同类可批量。防批量盲改。
+**备份在哪里？** `.wl-skills-bd/.state/fix-backups/<backupId>/`，按原相对路径保存。

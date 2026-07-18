@@ -1,47 +1,61 @@
-# wl-skills-bd 使用指南（v0.0.1 骨架）
+# wl-skills-bd 使用指南
 
-## 安装到业务工程（骨架阶段：手动）
+## 安装与诊断
 
-```powershell
-# 在业务工程根目录
-xcopy /E /Y D:\office-project\wl\wl-skills-bd\files\.github  .github\
+```bash
+npm install -D @agile-team/wl-skills-bd
+npx wl-skills-bd init --dry-run
+npx wl-skills-bd init
+npx wl-skills-bd check
+npx wl-skills-bd doctor
 ```
 
-> 0.1.x 后通过 `wl-skills-bd init` CLI 安装。
+`init/update` 遇到未受管或本地修改文件默认整批零写入；`--force` 会先备份。`clean` 只删除内容仍等于安装哈希的受管文件。
 
-## 触发 Skill
+建议在业务工程 `.gitignore` 加入：
 
-任何 AI 编辑器（Copilot / Cursor / Claude Code / Cline / Windsurf / Trae / Qoder）打开业务工程后：
+```gitignore
+.wl-skills-bd/.state/
+```
 
-1. 输入触发词（参见 `.github/skills/_registry.md`）
-2. AI 会先输出 Pre-flight 声明
-3. AI 按 standards 生成产物
-4. AI 输出 `next_suggest` 引导下一步
+## 新资源
 
-## 典型场景
+1. 从 `.github/templates/examples/feature-category.contract.json` 复制资源契约；
+2. 明确数据库、`requestPath`、`externalBasePath`、五个权限码和字段白名单；
+3. `codegen validate`；
+4. `codegen plan` 评审 16 个产物；
+5. 携带 planHash 与 `--confirm` 执行 apply；
+6. 若有业务骨架，只在 `<wl-custom>` 保护区补实现和 ServiceTest；
+7. 执行 `contract diff --strict`、validate、Maven test/verify；
+8. DDL 另走 DBA/发布审批。
 
-- **从零做模块**：场景 1（参见 `.github/skills/_best-practices.md`）
-- **加字段**：场景 2
-- **代码体检**：场景 3
-- **接口同步**：场景 4
-- **接手陌生模块**：场景 5
-- **咨询模式**：场景 6（只看不写）
+命令见 `codegen-workflow.md` 和 `frontend-backend-contract.md`。
 
-## 与前端 wl-skills-kit 协作
+## 存量工程审计
 
-| 协作点         | 前端产出                              | 后端消费                        |
-| -------------- | ------------------------------------- | ------------------------------- |
-| 接口契约       | `src/views/{module}/api.md`           | `api-design-be` 读取并 diff     |
-| 业务理解       | `docs/business/{module}.md`           | `service-codegen` 业务背景       |
-| 权限码         | `SYS_PERMISSION_INFO.md`              | `convention-audit-be` 双向对账   |
+```bash
+wl-skills-bd validate . --strict
+wl-skills-bd validate . --format sarif --output reports/backend.sarif
+```
 
-## 常见问题
+规则型且满足严格前置条件的 B3/B5 可进入安全修复：
 
-**Q: AI 跳过了 Pre-flight 声明？**
-A: 在用户消息里加："请先输出 Pre-flight 声明，然后再生成代码"
+```bash
+wl-skills-bd fix plan src/main --rules B3,B5 --json
+wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
+```
 
-**Q: 不同 AI 工具表现不一致？**
-A: 多入口文件（`CLAUDE.md` / `AGENTS.md` 等）会在 0.2.x 由 CLI 自动派生。当前手动同步主 `copilot-instructions.md`。
+其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
 
-**Q: SKILL 内容太薄？**
-A: 0.0.1 骨架阶段。AI 触发时按 **官方/社区最佳实践 + standards 规范** 落地，**不**对齐某个存量项目。如发现明显偏差请反馈到 `kit-internal/` issue。
+## 与前端协作
+
+| 协作点 | 后端产物 | 校验 |
+|---|---|---|
+| URL/字段 | `docs/contracts/*.api.md` + machine block | `contract diff --frontend` |
+| 运行实现 | 测试环境 OpenAPI 3 JSON | `contract diff --openapi` |
+| 权限 | wl-api-contract 权限码 | `contract diff --permissions` |
+| 响应 | code=2000、data.records/data.total | manifest + OpenAPI |
+
+## MCP
+
+`init` 会安装编辑器配置。12 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 只做任务路由，实际写入仍走 codegen/safe-fix/config。

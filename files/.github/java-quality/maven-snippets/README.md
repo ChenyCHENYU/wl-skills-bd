@@ -1,23 +1,20 @@
-# Maven 插件接入片段
+# Maven 质量 profile
 
-本目录的 `pom-plugins.xml` 是**一键接入** wl-skills-bd 全部 Java 检查工具的 Maven 配置片段集合。
+| 文件 | 用途 |
+|---|---|
+| `quality-profile.xml` | Java 8 默认硬门：J1 ArchUnit + J2 Checkstyle + J3 PMD 7 + J4 SpotBugs + J5 Spotless + J8 JaCoCo |
+| `p3c-legacy-profile.xml` | 可选 P3C 存量审计；PMD 6 隔离、非阻断 |
 
-## 用法
+两个文件都是可解析 XML，不是伪装成 `.xml` 的 Markdown。复制其中的 `<profile>` 到父 `pom.xml` 的 `<profiles>` 后执行：
 
-1. 复制 `pom-plugins.xml` 到工程根或 `build/` 目录作为参考
-2. 按需把其中各 `<plugin>` / `<dependency>` 段粘到目标工程的父 `pom.xml`
-3. 对应的规则文件（checkstyle.xml / LayerRulesTest.java）从同级 `../{tool}/` 目录复制
-4. 跑 `mvn clean verify` 验证
+```bash
+mvn verify -Pwl-quality
+```
 
-## 各工具速查
+规则文件直接引用工程内 `.github/java-quality/`，不要另复制到 `build/`。P3C 必须单独运行：
 
-| 工具 | 片段用途 | 详细规则 |
-|------|----------|----------|
-| Checkstyle | 命名/风格（J2） | `../checkstyle/README.md` |
-| ArchUnit | 架构分层（J1） | `../archunit/README.md` |
-| PMD | 静态分析（J3） | `../pmd/README.md` |
-| SpotBugs | 字节码（J4） | `../spotbugs/README.md` |
-| Spotless | 格式（J5） | `../spotless/README.md` |
-| **Knife4j** | **在线文档（J7）** | `../knife4j/README.md` |
+```bash
+mvn pmd:check -Pwl-p3c-legacy
+```
 
-具体配置见 `pom-plugins.xml`。
+不要同时激活 `wl-quality` 和 `wl-p3c-legacy`，因为它们分别运行 PMD 7 和 PMD 6。
