@@ -1,15 +1,17 @@
 ---
 name: unit-test-gen
 description: |
-  根据已确认的业务行为补齐 JUnit 5、Mockito、MockMvc 测试，并通过 JaCoCo J8 覆盖率门禁。
-  典型触发：「生成单测」「补覆盖率」「Controller 测试」「Mock 测试」
-status: 🟡 骨架
+  根据契约 customOperations 生成行为契约测试（正常路径/前置拒绝/状态转移/batch 计数），并通过 JaCoCo J8 覆盖率门禁。
+  v0.16 起提供 test gen/scenarios CLI + wls_be_test MCP，从契约自动生成关键场景测试骨架。
+  测"行为契约"不测"代码镜像"，避免冗余。
+  典型触发：「生成单测」「补覆盖率」「Controller 测试」「Mock 测试」「测试生成」「单测」
+status: ✅ 已落地
 stage: ⑦ 测试
 ---
 
 # unit-test-gen
 
-> 当前没有独立 CLI/MCP 测试生成器。codegen 只提供可编译 smoke 模板；业务断言必须由开发者/AI 基于已确认行为补齐。
+> v0.16 起提供 `wl-skills-bd test gen/scenarios` CLI + `wls_be_test` MCP，从契约 customOperations 自动生成关键场景测试骨架。测"行为契约"不测"代码镜像"，避免冗余。
 
 ## Pre-flight 声明
 

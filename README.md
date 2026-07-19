@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.15.1-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.16.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-27-orange.svg)]()
@@ -20,7 +20,8 @@
 | 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
 | 独立协同（v0.12） | 内置统一 delivery profile；没有 design/kit 也能从评审需求独立生成；有 kit 时用 `wl-api-contract` 严格握手 |
 | 配置分层（v0.12） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix + troubleshoot 故障诊断 |
-| 任务驱动（v0.13） | 8 种任务类型精准触发；只读路由到契约增量、安全写链与规则子集，不建立旁路 patch 引擎 |
+| 任务驱动（v0.13） | 8 种任务类型精准触发（加接口/落库/改bug/审计...）；单点增量编辑 + 规则子集兜底，规范不形同虚设 |
+| 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、服务/API/库表全局去重、codegen 上下文哈希门禁 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度门、受保护业务区、写入失败全量回滚 |
@@ -29,7 +30,7 @@
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
-| AI 接入 | 15 个 MCP 工具，CLI/MCP 复用同一 `lib/` 实现和同一 JSON Schema |
+| AI 接入 | 16 个 MCP 工具，CLI/MCP 复用同一 `lib/` 实现和同一 JSON Schema |
 
 ## 快速开始
 
@@ -187,6 +188,7 @@ mvn verify -Pwl-quality
 | `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show；默认禁止隐式全量扫描 |
 | `wls_be_context` | 否 | 当前模块 + 一跳快照的有界上下文选择，不扫描关联源码 |
 | `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
+| `wls_be_test` | 否 | 行为契约测试生成（gen/scenarios），测行为不测镜像 |
 
 写工具默认停在 plan/preview；apply 必须显式确认。Cursor、VS Code、Kiro、Copilot、Claude Code 和通用 Agents 的配置随 `init` 安装。详见 [MCP 工作流](files/.github/guides/mcp-workflow.md)。
 
@@ -324,6 +326,28 @@ wl-skills-bd task --type add-field --target-file src/main/java/.../Foo.java
 ```
 
 **规范兜底**：加接口/字段/业务命令先更新 `wl-contract.json`，再走 codegen validate/plan/apply 的 `planHash + --confirm + 回滚` 链，最后跑对应规则子集和 `contract diff --strict`。`task --apply` 会被明确拒绝，避免出现第二套无事务写入器。
+
+## 行为契约测试（v0.16）
+
+从契约 customOperations 自动生成关键场景测试，**测行为不测镜像**（避免冗余）。详见 [unit-test-gen](files/.github/skills/test/unit-test-gen/SKILL.md)。
+
+```bash
+# 列出测试场景
+wl-skills-bd test scenarios wl-contract.json
+# → submit（stateTransition）：2 个场景（正常路径 + 前置拒绝）
+# → batchCancel（batch）：2 个场景（全部成功 + 部分失败）
+
+# 生成完整 ServiceTest（含 smoke + 业务行为契约）
+wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java
+```
+
+**生成原则**：
+- ✅ 正常路径：前置满足 → 验证 patch 字段已变更（ArgumentCaptor 捕获持久化状态）
+- ✅ 前置拒绝：状态不满足 → `assertThrows(ServiceException.class)`
+- ✅ batch 计数：验证 successCount/failureCount/failedIds
+- ❌ 不测 DTO getter / 纯转发 / verify setter 调用次数（冗余）
+
+> 复杂 mock（lambdaQuery 链式）用 TODO 引导人工补，因为 Service 用 MyBatis-Plus 的 lambdaQuery 查实体，链式 mock 在测试框架层成本高，留给开发者按真实实现补。
 
 ## 包自身验收
 

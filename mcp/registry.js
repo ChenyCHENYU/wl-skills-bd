@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
-const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot } = require("./tools/lifecycleTools");
+const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const STANDARDS_ROOT = path.join(PACKAGE_ROOT, "files", ".github", "standards");
@@ -280,7 +280,22 @@ const commitTool = {
   handle: handleCommit,
 };
 
-const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool];
+const testTool = {
+  name: "wls_be_test",
+  description: "行为契约测试生成（v0.16）：从契约 customOperations 生成关键场景测试（正常路径/前置拒绝/状态转移/batch 计数）。gen 生成完整 ServiceTest；scenarios 列出场景清单。测行为契约不测代码镜像，避免冗余。",
+  inputSchema: {
+    type: "object",
+    required: ["mode", "contract"],
+    properties: {
+      mode: { type: "string", enum: ["gen", "scenarios"] },
+      contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
+    },
+    additionalProperties: false,
+  },
+  handle: handleTest,
+};
+
+const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool];
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

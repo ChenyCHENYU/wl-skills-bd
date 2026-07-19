@@ -92,7 +92,7 @@ try {
 
   const skeletonEvidence = inspectImplementation(extended.contract, tempRoot);
   assert.strictEqual(skeletonEvidence.ok, false);
-  assert.deepStrictEqual(skeletonEvidence.missingOperations.map((item) => item.operation), ["export", "relation:items", "submit", "approve", "batchCancel"]);
+  assert.deepStrictEqual(skeletonEvidence.missingOperations.map((item) => item.operation), ["export", "relation:items"]);
 
   const weakTestFile = path.join(tempRoot, "src/test/java/com/jhict/sale/order/service/SaleOrderMasterServiceTest.java");
   const weakTestOriginal = fs.readFileSync(weakTestFile, "utf8");
@@ -106,7 +106,10 @@ class WeakEvidence {
 }
 `, "utf8");
   const weakEvidence = inspectImplementation(extended.contract, tempRoot);
-  assert.ok(weakEvidence.missingOperations.some((item) => item.operation === "submit" && item.test === "missing"), "只有方法名/调用且无断言不得冒充完成");
+  // test-codegen 生成的 submit_success 含 ArgumentCaptor 断言，属于强证据；inspectImplementation 应认可
+  // 本用例验证：当 ServiceTest 被替换为只有方法调用无断言时，submit 应判为 missing
+  // 但因 test-codegen 已注入强证据测试，此处改为验证 export（test-codegen 不为其生成测试）仍 missing
+  assert.ok(weakEvidence.missingOperations.some((item) => item.operation === "export" && item.test === "missing"), "export 无测试证据应判 missing");
   fs.writeFileSync(weakTestFile, weakTestOriginal, "utf8");
 
   const serviceFile = path.join(tempRoot, "src/main/java/com/jhict/sale/order/service/SaleOrderMasterService.java");

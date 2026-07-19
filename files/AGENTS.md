@@ -37,6 +37,8 @@ wl-skills-bd contract diff wl-contract.json --frontend <api.md> --openapi <opena
 wl-skills-bd db preview wl-contract.json
 wl-skills-bd permissions export wl-contract.json
 wl-skills-bd validate . --strict           # B1~B23
+wl-skills-bd test gen wl-contract.json    # 行为契约测试（测行为不测镜像）
+wl-skills-bd test scenarios wl-contract.json
 ```
 
-MCP 提供 15 个等价工具；写工具的 confirm 只能在用户评审预览后传递。pre/prod/production 额外需要 `allowProductionWrites=true`。
+MCP 提供 16 个等价工具；写工具的 confirm 只能在用户评审预览后传递。pre/prod/production 额外需要 `allowProductionWrites=true`。

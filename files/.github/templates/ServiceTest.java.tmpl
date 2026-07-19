@@ -3,6 +3,7 @@ package {{rootPackage}}.{{module}}.service;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
 import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
 import {{rootPackage}}.{{module}}.mapper.{{Entity}}Mapper;
+import com.jhict.common.core.exception.ServiceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,11 +12,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
  * {{Entity}}Service 单元测试。
+ *
+ * <p>测试原则（standards/14 + unit-test-gen）：
+ * <ul>
+ *   <li>测"行为契约"（业务规则/状态机/权限/幂等），不测"代码镜像"（getter/setter/纯转发）</li>
+ *   <li>标准 CRUD 的 smoke 测试验证可运行；业务命令测试验证前置校验和状态转移</li>
+ *   <li>断言关注"结果是否正确"，不关注"调用了哪个 mock 方法"</li>
+ * </ul>
  *
  * @author wl-skills-bd codegen
  */
@@ -47,8 +56,5 @@ class {{Entity}}ServiceTest {
 
         assertEquals("1000000000000000001", service.save(dto));
     }
-
-    // <wl-custom name="tests">
-    // 在此区域补充业务命令、导出和关联查询测试；生成器升级时会原样保留。
-    // </wl-custom>
+{{customTestsSection}}
 }

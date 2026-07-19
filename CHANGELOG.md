@@ -4,6 +4,28 @@
 
 ---
 
+## [0.16.0] - 2026-07-19（行为契约测试生成）
+
+### Added
+
+- 新增 `lib/test-codegen.js`：从契约 customOperations 自动生成行为契约测试场景（正常路径/前置拒绝/状态转移/batch 计数）。
+- 新增 CLI `test gen/scenarios` 与 MCP `wls_be_test`（第 16 个工具），支持自然语言生成与场景清单查询。
+- `ServiceTest.java.tmpl` 注入 `customTestsSection`，含 ArgumentCaptor 行为断言引导与测行为原则注释。
+- be-rules 支持 `rules` 参数精准过滤（任务驱动规则子集的基础设施）。
+- 补全 java-compile-fixture stub：ServiceException、ArgumentCaptor、Mockito.verify、Assertions.assertThrows、Executable。
+
+### Changed
+
+- `unit-test-gen` Skill 从 🟡 骨架 升级为 ✅ 已落地（落地度 9 → 10）。
+- 测试原则明确：测"行为契约"（状态机/前置校验/权限/幂等），不测"代码镜像"（getter/纯转发/verify setter 调用次数），避免冗余。
+- MCP 工具数 15 → 16；README/AGENTS/_registry/standards index 同步 v0.16。
+
+### Verification
+
+- `test-codegen.test.js`：5 组（场景矩阵/方法名/行为不镜像/确定性）。
+- java-compile-fixture：标准 CRUD + 扩展（PATCH/body/none/batch/relation/export）含行为契约测试通过 Java 8 真编译。
+- 全量 `npm run verify` 通过。
+
 ## [0.15.1] - 2026-07-19（使用文档与小版本发布）
 
 - 精简并补齐 README、使用指南和 `project-context-governance` USAGE，明确“当前模块 + 命中一跳契约”的日常工作流。

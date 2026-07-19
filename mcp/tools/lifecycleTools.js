@@ -455,4 +455,27 @@ function handleCommit(args) {
   return toolResult(text, result, !result.ok);
 }
 
-module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot };
+function handleTest(args) {
+  const root = projectRoot();
+  let file;
+  try {
+    file = readableProjectFile(root, args.contract, "后端契约");
+  } catch (error) {
+    return blockedResult(error.message, "invalid-input");
+  }
+  const testCodegen = require("../../lib/test-codegen");
+  if (args.mode === "scenarios") {
+    const { loadContract } = require("../../lib/contract");
+    const loaded = loadContract(file, { projectRoot: root });
+    if (!loaded.ok) return blockedResult(`契约校验失败\n${validationText(loaded)}`, "invalid-contract", { errors: loaded.errors });
+    const ops = loaded.contract.customOperations || [];
+    const all = [];
+    for (const op of ops) all.push({ operation: op.name, kind: op.kind, scenarios: testCodegen.buildTestScenarios(op, loaded.contract).map((s) => ({ id: s.id, display: s.displayName, kind: s.kind })) });
+    return toolResult(`业务行为契约测试场景：${all.reduce((a, x) => a + x.scenarios.length, 0)} 个`, { ok: true, operations: all });
+  }
+  const result = testCodegen.generateServiceTest(file, { projectRoot: root });
+  if (!result.ok) return blockedResult(`契约校验失败\n${validationText(result)}`, "invalid-contract", { errors: result.errors });
+  return toolResult(`✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`, { ok: true, scenarioCount: result.scenarioCount, content: result.content });
+}
+
+module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot };

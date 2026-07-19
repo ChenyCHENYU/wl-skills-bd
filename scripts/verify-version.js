@@ -200,6 +200,7 @@ if (exists("mcp/registry.js")) {
       "wls_be_catalog",
       "wls_be_context",
       "wls_be_commit",
+      "wls_be_test",
     ];
     const actualTools = (TOOLS || []).map((tool) => tool.name);
     mcpToolCount = actualTools.length;

@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.15.1",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、契约代码生成、质量门、MCP 与数据安全闭环（v0.15.1：模块增量目录 + 一跳上下文 + 去重门禁 + 提交闭环）",
+  "version": "0.16.0",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、契约代码生成、质量门、MCP 与数据安全闭环（v0.16.0：行为契约测试生成，测行为不测镜像）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
@@ -48,7 +48,7 @@
     "lint:skills": "node scripts/lint-skills.js",
     "verify:quality-config": "node scripts/verify-java-quality.js",
     "verify:quality-maven": "node scripts/verify-java-quality.js --maven",
-    "test": "node tests/be-rules.test.js && node tests/reporters.test.js && node tests/template-engine.test.js && node tests/contract.test.js && node tests/template-contract.test.js && node tests/collaboration.test.js && node tests/installer.test.js && node tests/codegen.test.js && node tests/codegen-production-guard.test.js && node tests/database-safety.test.js && node tests/safe-fix.test.js && node tests/write-chain-safety.test.js && node tests/java-compile-fixture.test.js && node tests/project-catalog.test.js && node tests/commit-policy.test.js && node tests/cli.test.js && node tests/verify-version.test.js && node tests/mcp-registry.test.js && node tests/mcp-server.test.js && node tests/contract-extensions.test.js && node tests/config-layering.test.js && node tests/task-router.test.js",
+    "test": "node tests/be-rules.test.js && node tests/reporters.test.js && node tests/template-engine.test.js && node tests/contract.test.js && node tests/template-contract.test.js && node tests/collaboration.test.js && node tests/installer.test.js && node tests/codegen.test.js && node tests/codegen-production-guard.test.js && node tests/database-safety.test.js && node tests/safe-fix.test.js && node tests/write-chain-safety.test.js && node tests/java-compile-fixture.test.js && node tests/project-catalog.test.js && node tests/commit-policy.test.js && node tests/cli.test.js && node tests/verify-version.test.js && node tests/mcp-registry.test.js && node tests/mcp-server.test.js && node tests/contract-extensions.test.js && node tests/config-layering.test.js && node tests/task-router.test.js && node tests/test-codegen.test.js",
     "verify": "npm run version:verify && npm run lint:skills && npm run verify:quality-config && npm run test",
     "release:check": "npm run verify && npm run verify:quality-maven && npm pack --dry-run --ignore-scripts",
     "prepublishOnly": "npm run release:check"

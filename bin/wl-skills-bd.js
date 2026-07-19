@@ -590,7 +590,8 @@ function help() {
   config       配置分层（v0.12）：init / migrate / doctor / fix
   troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
   task         任务驱动（v0.13）：只读识别任务类型 → skill+规则子集+安全写链步骤
-  mcp          启动 stdio MCP Server
+  test         测试生成（v0.16）：行为契约测试 gen / scenarios（测行为不测镜像）
+  mcp          启动 stdio MCP Server                      
   version      输出版本
 
 通用参数：
@@ -671,6 +672,60 @@ fix 示例：
 
 任务类型：new-service / add-api / add-field / add-business-cmd / fix-bug / refactor / audit / config-op
 `);
+}
+
+function commandTest(args) {
+  const [subcommand = "gen", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  if (subcommand === "gen") {
+    if (!contractArg || contractArg.startsWith("-")) {
+      console.error("test gen 需要契约文件路径");
+      return 1;
+    }
+    const testCodegen = require("../lib/test-codegen");
+    const result = testCodegen.generateServiceTest(contractArg, { projectRoot: root });
+    if (!result.ok) {
+      if (has(allArgs, "--json")) printJson(result);
+      else for (const e of result.errors) console.error(`${e.path}: ${e.message}`);
+      return 1;
+    }
+    if (has(allArgs, "--output")) {
+      const out = option(allArgs, "--output");
+      const dest = resolveWithin(root, out);
+      require("fs").mkdirSync(require("path").dirname(dest), { recursive: true });
+      require("fs").writeFileSync(dest, result.content, "utf8");
+      if (has(allArgs, "--json")) printJson(result);
+      else console.log(`✅ 已生成 ${result.scenarioCount} 个测试场景到 ${out}`);
+    } else if (has(allArgs, "--json")) {
+      printJson(result);
+    } else {
+      console.log(`✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：`);
+      console.log(result.content);
+    }
+    return 0;
+  }
+  if (subcommand === "scenarios") {
+    if (!contractArg || contractArg.startsWith("-")) {
+      console.error("test scenarios 需要契约文件路径");
+      return 1;
+    }
+    const { loadContract } = require("../lib/contract");
+    const testCodegen = require("../lib/test-codegen");
+    const loaded = loadContract(contractArg, { projectRoot: root });
+    if (!loaded.ok) { for (const e of loaded.errors) console.error(`${e.path}: ${e.message}`); return 1; }
+    const ops = loaded.contract.customOperations || [];
+    if (ops.length === 0) { console.log("契约无 customOperations，只有标准 CRUD smoke 测试"); return 0; }
+    console.log(`业务行为契约测试场景（${ops.length} 个操作）：`);
+    for (const op of ops) {
+      const scenarios = testCodegen.buildTestScenarios(op, loaded.contract);
+      console.log(`  ${op.name}（${op.kind}）：${scenarios.length} 个场景`);
+      for (const sc of scenarios) console.log(`    - ${sc.id}：${sc.displayName}`);
+    }
+    return 0;
+  }
+  console.error(`未知 test 子命令：${subcommand}（支持 gen / scenarios）`);
+  return 1;
 }
 
 function commandTask(args) {
@@ -907,6 +962,7 @@ function main(argv = process.argv.slice(2)) {
   if (command === "config") return commandConfig(args);
   if (command === "troubleshoot") return commandTroubleshoot(args);
   if (command === "task") return commandTask(args);
+  if (command === "test") return commandTest(args);
   if (command === "mcp") { require("../mcp/server"); return 0; }
   console.error(`未知命令：${command}`);
   help();

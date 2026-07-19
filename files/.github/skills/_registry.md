@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.15.1）
+# Backend Skills 注册表（v0.16.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 frontmatter 严格一致，改一处必须同步另一处。
@@ -22,7 +22,16 @@
 | Redis / 缓存 / 分布式锁 / 批量删除 / 物理删 / 熔断 / 限流 / Feign 超时 / 生产只读 / 二次确认 | [`ops/data-safety`](ops/data-safety/SKILL.md) | ops 横切 | ✅ 落地 | validate   |
 | 后端环境标准化 / 切华新 / 本地启动配不起来 / K8s 部署清单对齐 | [`ops/standard-env-config-be`](ops/standard-env-config-be/SKILL.md) | ops  | ✅ 落地 | config/troubleshoot |
 
-**落地度**：12 个 Skill 中 **9 已落地**（project-context / api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **2 骨架**（business-doc / unit-test）。
+**落地度**：12 个 Skill 中 **10 已落地**（project-context / api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config / unit-test）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **1 骨架**（business-doc：从旧代码抽取业务文档属 NLP 能力，不在代码生成包边界）。
+
+## v0.16 行为契约测试生成
+
+| 任务 | 工具 | 生成内容 |
+|---|---|---|
+| 生成单测 | `test gen <contract>` / `wls_be_test` | 从 customOperations 生成场景测试（正常路径/前置拒绝/状态转移/batch），用 ArgumentCaptor 验证持久化状态（行为断言）|
+| 列出场景 | `test scenarios <contract>` | 列出所有操作 + 测试场景清单 |
+
+原则：测"行为契约"不测"代码镜像"——不 verify setter/方法调用次数，只断言结果（状态值/计数/异常）。避免冗余。
 
 ## v0.13 任务驱动精准路由
 
