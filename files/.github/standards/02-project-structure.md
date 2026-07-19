@@ -13,9 +13,9 @@
 | 销售管理   | `wl-sale`     | `com.jhict.sale`    | `wl-ui-sale`    | 10000~10099 | cx（产销）|
 | 质量管理   | `wl-quality`  | `com.jhict.quality` | `wl-ui-quality` | 10100~10199 | cx（产销）|
 | 生产订单   | `wl-produce`  | `com.jhict.produce` | `wl-ui-produce` | 10200~10299 | cx（产销）|
-| 成本管理   | `wl-cost`     | `com.jhict.cost`    | `wl-ui-cost`    | 10300~10339 | cx（产销）|
+| 成本管理   | `wl-cost`     | `com.jhict.cost`    | `wl-ui-cost`    | 10300~10399 | cx（产销）|
 | 安全       | `wl-safe`     | `com.jhict.safe`    | `wl-ui-safe`    | 10400~10499 | non_cx（非产销）|
-| 设备管理   | `wl-equipment`| `com.jhict.equipment`| `wl-ui-equipment`| 10500~10599 | iot |
+| 设备管理   | `wl-equipment`| `com.jhict.equipment`| `wl-ui-equipment`| 10500~10599 | 待团队定稿 |
 | 环保管理   | `wl-env`      | `com.jhict.env`     | `wl-ui-env`     | 10600~10699 | non_cx |
 | 计量物流   | `wl-logistics`| `com.jhict.logistics`| `wl-ui-logistics`| 10700~10799 | non_cx |
 | 能源管理   | `wl-energy`   | `com.jhict.energy`  | `wl-ui-energy`  | 10800~10899 | non_cx |
@@ -53,7 +53,7 @@
 
 ## 多模块工程标准
 
-业务服务（如 `xxx-service`）通常拆为 3 个 Maven 模块：
+业务服务（如 `xxx-service`）通常拆为 3 个 Maven 模块。按《项目开发手册》，业务实现层必须以“业务子域”为顶级目录，每个子域内自包含 Controller / Service / Mapper，不允许先按技术层建全局大目录再分子域：
 
 ```
 xxx-service/                           父 POM
@@ -76,11 +76,12 @@ xxx-service/                           父 POM
         ├── annotation/                Service 层自定义注解
         ├── aspect/                    AOP 切面
         ├── config/                    配置类（Swagger / RouteExtraData 等）
-        ├── controller/                REST 控制器（按业务子域分包）
         ├── feign/                     OpenFeign 客户端
         ├── listener/                  消息 / 事件监听
-        ├── mapper/                    MyBatis Mapper 接口（按业务子域分包）
-        ├── service/                   应用 Service；单实现默认直接类，可选 port/impl
+        ├── {businessSubdomain}/       业务子域（如 order / qualityRule）
+        │   ├── controller/            该子域 REST 控制器
+        │   ├── service/               该子域 Service；单实现默认直接类
+        │   └── mapper/                该子域 Mapper 接口
         ├── task/                      定时任务
         └── utils/                     工具类
     └── src/main/resources/
@@ -100,11 +101,11 @@ Controller → Application Service → Mapper → XML
 
 | 层                    | 职责                                                      | 禁止事项                                |
 | --------------------- | --------------------------------------------------------- | --------------------------------------- |
-| `controller/`         | 接收请求、参数预处理、调用 Service、返回 `ApiResult`      | 禁止写业务逻辑、禁止直接调用 Mapper     |
-| `service/`            | 业务编排、事务边界；默认 `XxxService extends JhServiceImpl` | 禁止直接写 SQL、禁止跨模块注入 Mapper |
+| `{subdomain}/controller/` | 接收请求、参数预处理、调用 Service、返回 `ApiResult`      | 禁止写业务逻辑、禁止直接调用 Mapper     |
+| `{subdomain}/service/` | 业务编排、事务边界；默认 `XxxService extends JhServiceImpl` | 禁止直接写 SQL、禁止跨模块注入 Mapper |
 | `service/port/`       | 多实现、策略、远程或跨模块边界的可替换接口（按需）         | 单实现 CRUD 不得为了形式强制建接口 |
 | `service/impl/`       | 仅在存在 port/多实现时使用                                 | 禁止同一子域混用直接类与 interface/impl |
-| `mapper/*Mapper.java` | MyBatis 接口（继承 `JhBaseMapper<T>`），含 `@Param`        | 禁止写业务逻辑                          |
+| `{subdomain}/mapper/*Mapper.java` | MyBatis 接口（继承 `JhBaseMapper<T>`），含 `@Param` | 禁止写业务逻辑 |
 | `mapper/*.xml`        | SQL 语句                                                   | 禁止 `SELECT *`、禁止业务判断           |
 | `api/entity/`         | 数据模型，含 MyBatis-Plus 注解 `@TableName / @TableField` | 禁止业务逻辑、禁止 Spring 注解          |
 | `api/dto/`            | 跨层传输对象                                              | 不映射数据库                            |
@@ -127,10 +128,10 @@ Controller → Application Service → Mapper → XML
 - 依据：避免单目录文件过多导致 AI 检索噪声、人工 review 困难、命名冲突
 
 ```
-controller/feature/                    ← 8 个文件 ✅
-controller/feature/category/           ← 拆分后子域，再控制 ≤20
-controller/modelAttributeMap/          ← 8 个文件 ✅
-controller/某域/                       ← 35 个文件 ❌ 必须拆子域
+feature/controller/                    ← 8 个文件 ✅
+feature/category/controller/           ← 拆分后子域，再控制 ≤20
+modelAttributeMap/controller/          ← 8 个文件 ✅
+某域/controller/                       ← 35 个文件 ❌ 必须拆子域
 ```
 
 ---
@@ -159,6 +160,7 @@ controller/某域/                       ← 35 个文件 ❌ 必须拆子域
 
 ## 变更记录
 
+- 2026-07-18 v0.14.0 修正成本端口上限，将业务实现包统一为“业务子域优先”结构，并将设备数据库归属标记为待团队定稿
 - 2026-07-17 v0.0.5 新增"业务中心 × 工程包名映射"（对齐手册，闭环新建工程包名生成）
 - 2026-07-17 v0.0.4 补充"单目录文件 ≤20"粒度红线（对齐手册）
 - 2026-05-14 v0.0.1 初始化

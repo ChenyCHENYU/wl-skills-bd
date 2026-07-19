@@ -13,6 +13,7 @@ const installer = require("../lib/installer");
 const { resolveWithin, writeTextAtomic } = require("../lib/manifest");
 const { formatReport } = require("../lib/reporters");
 const safeFix = require("../lib/safe-fix");
+const permissionExport = require("../lib/permission-export");
 
 function has(args, flag) {
   return args.includes(flag);
@@ -416,21 +417,154 @@ function commandPermissions(args) {
     console.error("permissions export 需要契约文件路径");
     return 1;
   }
-  const loaded = loadContract(contractArg, { projectRoot: root });
-  if (!loaded.ok) {
-    if (has(allArgs, "--json")) printJson({ ok: false, errors: loaded.errors });
-    else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
+  const plan = permissionExport.buildPermissionExportPlan(contractArg, {
+    projectRoot: root,
+    output: option(allArgs, "--output"),
+  });
+  if (!plan.ok) {
+    if (has(allArgs, "--json")) printJson(plan);
+    else for (const error of plan.errors) console.error(`${error.path}: ${error.message}`);
     return 1;
   }
-  const manifest = collaboration.buildManifest(loaded.contract, loaded.profile, loaded.deliveryProfile);
-  const inventory = collaboration.buildPermissionInventory(manifest);
-  const markdown = collaboration.renderPermissionInventoryMarkdown(inventory);
-  const outputRel = option(allArgs, "--output") || `reports/SYS_PERMISSION_INFO_${inventory.contractId}.md`;
-  const destination = resolveWithin(root, outputRel);
-  writeTextAtomic(destination, markdown);
-  if (has(allArgs, "--json")) printJson({ ok: true, output: outputRel, inventory });
-  else console.log(`✅ 已导出 ${inventory.rows.length} 个权限码到 ${outputRel}`);
-  return 0;
+  if (!has(allArgs, "--confirm")) {
+    const preview = permissionExport.publicPermissionExportPlan(plan);
+    if (has(allArgs, "--json")) printJson(preview);
+    else {
+      console.log(`权限码导出预览：${plan.inventory.rows.length} 个权限码，${plan.action} ${plan.outputRel}`);
+      console.log(`planHash: ${plan.planHash}`);
+    }
+    return 0;
+  }
+  const result = permissionExport.applyPermissionExportPlan(plan, {
+    confirm: true,
+    planHash: option(allArgs, "--plan-hash"),
+    allowProductionWrites: has(allArgs, "--allow-production-writes"),
+  });
+  if (has(allArgs, "--json")) printJson(result);
+  else if (!result.ok) console.error(`权限码导出零写入：${result.reason}`);
+  else console.log(`✅ 已导出 ${result.inventory.rows.length} 个权限码到 ${result.output}`);
+  return result.ok ? 0 : 2;
+}
+
+function commandCatalog(args) {
+  const catalog = require("../lib/project-catalog");
+  const [subcommand = "plan", ...rest] = args;
+  const root = targetRoot(rest);
+  const moduleId = option(rest, "--module");
+  if (subcommand === "show") {
+    let result;
+    if (moduleId) result = catalog.readModuleCatalog(root, moduleId);
+    else {
+      const file = path.join(root, catalog.CATALOG_ROOT, "project-catalog.json");
+      result = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
+    }
+    if (!result) {
+      console.error(moduleId ? `模块目录快照不存在：${moduleId}` : "项目目录快照不存在");
+      return 1;
+    }
+    printJson(result);
+    return 0;
+  }
+  if (subcommand === "check") {
+    if (!moduleId) {
+      console.error("catalog check 必须指定 --module；不会隐式全量扫描");
+      return 1;
+    }
+    const result = catalog.checkModuleFreshness(root, moduleId);
+    if (has(rest, "--json")) printJson(result);
+    else console.log(result.ok ? `✓ ${moduleId} 目录快照新鲜；仅扫描了当前模块` : `✗ ${moduleId} 目录缺失或已过期`);
+    return result.ok ? 0 : 1;
+  }
+  if (!["plan", "apply"].includes(subcommand)) {
+    console.error(`未知 catalog 子命令：${subcommand}（支持 plan/apply/show/check）`);
+    return 1;
+  }
+  const plan = catalog.buildCatalogPlan(root, { module: moduleId, full: has(rest, "--full") });
+  if (!plan.ok) {
+    if (has(rest, "--json")) printJson(plan);
+    else for (const item of plan.errors || []) console.error(`${item.path}: ${item.message}`);
+    return 1;
+  }
+  if (subcommand === "plan" || !has(rest, "--confirm")) {
+    const preview = catalog.publicCatalogPlan(plan);
+    if (has(rest, "--json")) printJson(preview);
+    else {
+      console.log(`目录预览：${plan.mode}；实际扫描 ${plan.scannedModules.join(", ")}；复用快照 ${plan.reusedModules.join(", ") || "无"}`);
+      console.log(`一跳关联：${plan.linkedModules.join(", ") || "无"}；缺失快照：${plan.missingModules.join(", ") || "无"}`);
+      console.log(`变更：${JSON.stringify(plan.summary)}；阻断冲突：${plan.diagnostics.errors.length}`);
+      console.log(`planHash: ${plan.planHash}`);
+    }
+    return plan.blocking ? 2 : 0;
+  }
+  const result = catalog.applyCatalogPlan(plan, {
+    confirm: true,
+    planHash: option(rest, "--plan-hash"),
+    allowProductionWrites: has(rest, "--allow-production-writes"),
+  });
+  if (has(rest, "--json")) printJson(result);
+  else if (result.ok) console.log(`✓ 目录已刷新；实际扫描 ${result.scannedModules.join(", ")}；其他模块只复用快照`);
+  else console.error(`✗ 目录零写入：${result.reason || "validation-failed"}`);
+  return result.ok ? 0 : 2;
+}
+
+function commandContext(args) {
+  const [subcommand = "plan", ...rest] = args;
+  if (subcommand !== "plan") {
+    console.error(`未知 context 子命令：${subcommand}（当前仅支持 plan）`);
+    return 1;
+  }
+  const planner = require("../lib/context-planner");
+  const result = planner.buildContextPlan(targetRoot(rest), {
+    module: option(rest, "--module"),
+    task: option(rest, "--task", ""),
+    keywords: option(rest, "--keywords", ""),
+    maxFiles: option(rest, "--max-files"),
+    maxBytes: option(rest, "--max-bytes"),
+    maxHops: option(rest, "--max-hops"),
+  });
+  if (has(rest, "--json")) printJson(result);
+  else if (!result.ok) {
+    for (const item of result.errors || []) console.error(`${item.path || item.code}: ${item.message}`);
+    if (result.refreshCommand) console.error(`请先执行：${result.refreshCommand}`);
+  } else {
+    console.log(`上下文包：${result.module}；扫描模块 ${result.scanPolicy.scannedModules.join(", ")}`);
+    console.log(`加载一跳快照：${result.scanPolicy.loadedSnapshotModules.join(", ") || "无"}；关联源码目录扫描：否`);
+    console.log(`选择 ${result.selection.selectedFiles} 个文件 / ${result.selection.selectedBytes} bytes；contextHash: ${result.contextHash}`);
+    for (const file of result.selection.files) console.log(`  ${file.role.padEnd(20)} ${file.rel} (${file.reason})`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandCommit(args) {
+  const policy = require("../lib/commit-policy");
+  const [subcommand = "validate", ...rest] = args;
+  const root = targetRoot(rest);
+  let result;
+  if (subcommand === "validate") {
+    const file = option(rest, "--file");
+    const message = option(rest, "--message");
+    if (!file && !message) {
+      console.error("commit validate 必须提供 --file <commit-msg-file> 或 --message <header>");
+      return 1;
+    }
+    result = file ? policy.validateFile(root, file) : policy.validateMessage(root, message);
+  } else if (subcommand === "check") {
+    result = policy.validateRange(root, option(rest, "--range"));
+  } else if (subcommand === "doctor") result = policy.doctor(root);
+  else {
+    console.error(`未知 commit 子命令：${subcommand}（支持 validate/check/doctor）`);
+    return 1;
+  }
+  if (has(rest, "--json")) printJson(result);
+  else if (result.ok) console.log(`✓ commit ${subcommand} 通过${result.checked !== undefined ? `；检查 ${result.checked} 个提交` : ""}`);
+  else {
+    for (const item of result.errors || result.invalid || []) {
+      const details = item.errors ? item.errors.map((entry) => entry.message).join("；") : item.message;
+      console.error(`✗ ${item.sha ? `${item.sha.slice(0, 12)} ` : ""}${details || result.reason}`);
+    }
+    if (result.installCommand) console.error(`本地启用：${result.installCommand}`);
+  }
+  return result.ok ? 0 : 1;
 }
 
 function help() {
@@ -449,6 +583,9 @@ function help() {
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
   db           数据库预览：preview（只读 DDL + Expand-Contract）
   permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
+  catalog      项目目录：plan / apply / show / check（默认仅当前模块）
+  context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
+  commit       提交规范：validate / check / doctor
   fix          安全修复：plan / apply（仅 B3/B5，强制复扫）
   config       配置分层（v0.12）：init / migrate / doctor / fix
   troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
@@ -481,7 +618,14 @@ db 示例：
   wl-skills-bd db preview wl-contract.json
 
 permissions 示例：
-  wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md
+  wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md --json
+  wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md --plan-hash <hash> --confirm
+
+模块目录与上下文示例：
+  wl-skills-bd catalog plan --module order
+  wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
+  wl-skills-bd context plan --module order --task "增加订单接口" --json
+  wl-skills-bd commit check --range origin/main..HEAD
 
 fix 示例：
   wl-skills-bd fix plan src/main --rules B3,B5 --json
@@ -490,28 +634,30 @@ fix 示例：
 配置分层与多环境（v0.12，详见 standards/25）：
 
   wl-skills-bd config init [--project <name>] [--module <name>] [--port <n>]
-                           [--datasource-type oracle|mysql] [--customer <name>] [--confirm]
+                           [--datasource-type oracle|mysql] [--customer <name>] [--plan-hash <hash>] [--confirm]
     生成标准配置骨架：bootstrap.yml + application.yml + logback + .env.example ×5 + env-matrix.yml + .gitignore
 
   wl-skills-bd config migrate --to <customer> [--from <customer>] [--plan|--apply] [--plan-hash <hash>] [--confirm]
     客户迁移：生成 .env + K8s ConfigMap/Secret/Deployment ×5 + 迁移报告
 
   wl-skills-bd config doctor [--probe] [--probe-timeout <ms>] [--target <dir>]
-    配置全链路体检 L0~L8（骨架/明文密码/占位符/矩阵/K8s/端口/一致性/生产护栏）
+    配置全链路体检 L0~L8（骨架/明文密码/占位符/矩阵/K8s/端口/一致性/受保护环境护栏）
     --probe 开启 DB/Redis/Nacos TCP 连通性探测
 
-  wl-skills-bd config fix [--confirm] [--target <dir>]
+  wl-skills-bd config fix [--plan-hash <hash>] [--confirm] [--target <dir>]
     安全修复：明文密码自动改 ${VAR} 占位符 + 复扫验证
 
   wl-skills-bd troubleshoot "<错误关键字>"   # 故障排查导引
   wl-skills-bd troubleshoot --list            # 列出所有诊断项
 
 配置示例：
-  wl-skills-bd config init --project wl-sale --module sale --port 10000 --confirm
+  wl-skills-bd config init --project wl-sale --module sale --port 10000 --json
+  wl-skills-bd config init --project wl-sale --module sale --port 10000 --plan-hash <hash> --confirm
   wl-skills-bd config migrate --to huaxin --plan
   wl-skills-bd config migrate --to huaxin --apply --plan-hash <hash> --confirm
   wl-skills-bd config doctor --probe
-  wl-skills-bd config fix --confirm
+  wl-skills-bd config fix --json
+  wl-skills-bd config fix --plan-hash <hash> --confirm
   wl-skills-bd troubleshoot "Communications link failure"
 
 任务驱动（v0.13，精准触发 + 统一安全写链）：
@@ -600,15 +746,17 @@ function commandConfigInit(args, root) {
     port: option(args, "--port") ? Number(option(args, "--port")) : undefined,
     datasourceType: option(args, "--datasource-type") || option(args, "--datasource"),
     customer: option(args, "--customer"),
+    overwrite: has(args, "--overwrite"),
   });
-  if (has(args, "--dry-run")) {
+  if (has(args, "--dry-run") || !has(args, "--confirm")) {
     printJson(plan);
     return 0;
   }
   const result = configInit.applyInitPlan(plan, {
     projectRoot: root,
     confirm: has(args, "--confirm"),
-    overwrite: has(args, "--overwrite"),
+    planHash: option(args, "--plan-hash"),
+    allowProductionWrites: has(args, "--allow-production-writes"),
     dryRun: has(args, "--dry-run"),
   });
   if (has(args, "--json")) printJson(result);
@@ -656,6 +804,7 @@ function commandConfigMigrate(args, root) {
     projectRoot: root,
     confirm: has(args, "--confirm"),
     planHash: option(args, "--plan-hash"),
+    allowProductionWrites: has(args, "--allow-production-writes"),
   });
   if (has(args, "--json")) printJson(result);
   else if (!result.ok) {
@@ -697,13 +846,22 @@ function commandConfigFix(args, root) {
     else {
       console.log(`config fix 预览：${plan.summary.total} 处明文敏感信息，可修复 ${plan.summary.fixed}`);
       for (const a of plan.actions) console.log(`  ${a.file}: ${a.fixed}/${a.total}`);
+      console.log(`planHash: ${plan.planHash}`);
     }
     return 0;
   }
-  const result = configFix.applyFixPlan(plan, { projectRoot: root, confirm: true });
+  const result = configFix.applyFixPlan(plan, {
+    projectRoot: root,
+    confirm: true,
+    planHash: option(args, "--plan-hash"),
+    allowProductionWrites: has(args, "--allow-production-writes"),
+  });
   if (has(args, "--json")) printJson(result);
   else if (!result.ok) {
-    console.error(`❌ config fix 后仍有 ${result.closure.remaining} 处未修复`);
+    const remaining = result.closure && Number.isInteger(result.closure.remaining)
+      ? `，剩余 ${result.closure.remaining} 处`
+      : "";
+    console.error(`❌ config fix 零写入：${result.reason || "closure-failed"}${remaining}`);
     return 1;
   } else {
     console.log(`✅ config fix 完成：修复 ${result.closure.fixed} 处，剩余 ${result.closure.remaining} 处`);
@@ -742,6 +900,9 @@ function main(argv = process.argv.slice(2)) {
   if (command === "contract") return commandContract(args);
   if (command === "db") return commandDb(args);
   if (command === "permissions") return commandPermissions(args);
+  if (command === "catalog") return commandCatalog(args);
+  if (command === "context") return commandContext(args);
+  if (command === "commit") return commandCommit(args);
   if (command === "fix") return commandFix(args);
   if (command === "config") return commandConfig(args);
   if (command === "troubleshoot") return commandTroubleshoot(args);

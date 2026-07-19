@@ -1,0 +1,55 @@
+package {{rootPackage}}.api.dto.{{module}};
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+{{#requestDtoImports}}
+import {{.}};
+{{/requestDtoImports}}
+{{#requestUsesNotBlank}}
+import javax.validation.constraints.NotBlank;
+{{/requestUsesNotBlank}}
+{{#requestUsesNotEmpty}}
+import javax.validation.constraints.NotEmpty;
+{{/requestUsesNotEmpty}}
+{{#requestUsesNotNull}}
+import javax.validation.constraints.NotNull;
+{{/requestUsesNotNull}}
+{{#requestUsesSize}}
+import javax.validation.constraints.Size;
+{{/requestUsesSize}}
+
+/**
+ * {{summary}}请求 DTO。
+ *
+ * @author wl-skills-bd codegen
+ * @since 1.0.0
+ */
+@Getter
+@Setter
+@ToString
+@Schema(description = "{{summary}}请求")
+public class {{requestDtoName}} {
+{{#hasBodyId}}
+
+    @NotBlank(message = "主键不能为空")
+    @Schema(description = "主键ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String id;
+{{/hasBodyId}}
+{{#hasBodyIds}}
+
+    @NotEmpty(message = "主键集合不能为空")
+    @Size(max = 1000, message = "单批不能超过1000条")
+    @Schema(description = "主键集合", requiredMode = Schema.RequiredMode.REQUIRED)
+    private java.util.List<String> ids;
+{{/hasBodyIds}}
+{{#requestFields}}
+
+    {{#validationAnnotations}}
+    {{.}}
+    {{/validationAnnotations}}
+    @Schema(description = "{{fieldComment}}")
+    private {{fieldType}} {{field}};
+{{/requestFields}}
+}

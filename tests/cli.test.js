@@ -31,6 +31,32 @@ try {
   assert.strictEqual(diff.status, 0, diff.stdout + diff.stderr);
 
   const contract = ".github/templates/examples/feature-category.contract.json";
+  fs.mkdirSync(path.join(root, "contracts", "feature"), { recursive: true });
+  fs.copyFileSync(path.join(root, contract), path.join(root, "contracts", "feature", "feature-category.json"));
+  fs.writeFileSync(path.join(root, ".wl-skills-bd", "catalog.config.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    project: { id: "wl-cli", name: "CLI 测试" },
+    docsRoot: "docs/backend",
+    commit: { types: ["feat", "fix", "docs"], requireDetailSeparator: true, maxHeaderLength: 100 },
+    modules: {
+      feature: { displayName: "特征", contractRoots: ["contracts/feature"], sourceRoots: ["src/main"], upstream: [], downstream: [], owners: ["test-team"] },
+    },
+  }, null, 2)}\n`, "utf8");
+
+  const implicitCatalog = run(["catalog", "plan", "--target", root, "--json"]);
+  assert.strictEqual(implicitCatalog.status, 1, "目录不得隐式全量扫描");
+  const catalogPreview = run(["catalog", "plan", "--module", "feature", "--target", root, "--json"]);
+  assert.strictEqual(catalogPreview.status, 0, catalogPreview.stderr);
+  const catalogPlan = JSON.parse(catalogPreview.stdout);
+  assert.deepStrictEqual(catalogPlan.scannedModules, ["feature"]);
+  const catalogApply = run(["catalog", "apply", "--module", "feature", "--target", root, "--plan-hash", catalogPlan.planHash, "--confirm", "--json"]);
+  assert.strictEqual(catalogApply.status, 0, catalogApply.stderr);
+  const context = run(["context", "plan", "--module", "feature", "--task", "增加特征接口", "--target", root, "--json"]);
+  assert.strictEqual(context.status, 0, context.stderr);
+  assert.deepStrictEqual(JSON.parse(context.stdout).scanPolicy.scannedModules, ["feature"]);
+  const commit = run(["commit", "validate", "--message", "feat(feature): 特征分类-增加幂等校验", "--target", root, "--json"]);
+  assert.strictEqual(commit.status, 0, commit.stderr);
+
   const contractValidation = run(["codegen", "validate", contract, "--target", root, "--json"]);
   assert.strictEqual(contractValidation.status, 0, contractValidation.stderr);
   assert.strictEqual(JSON.parse(contractValidation.stdout).ok, true);
@@ -38,7 +64,7 @@ try {
   const codegenPlan = run(["codegen", "plan", contract, "--target", root, "--json"]);
   assert.strictEqual(codegenPlan.status, 0, codegenPlan.stderr);
   const generatedPlan = JSON.parse(codegenPlan.stdout);
-  assert.strictEqual(generatedPlan.actions.length, 16);
+  assert.strictEqual(generatedPlan.actions.length, 17);
 
   const unconfirmed = run(["codegen", "apply", contract, "--target", root, "--plan-hash", generatedPlan.planHash, "--json"]);
   assert.strictEqual(unconfirmed.status, 2);
@@ -46,7 +72,7 @@ try {
 
   const generated = run(["codegen", "apply", contract, "--target", root, "--plan-hash", generatedPlan.planHash, "--confirm", "--json"]);
   assert.strictEqual(generated.status, 0, generated.stderr);
-  assert.strictEqual(JSON.parse(generated.stdout).applied.length, 16);
+  assert.strictEqual(JSON.parse(generated.stdout).applied.length, 17);
 
   const contractShow = run(["contract", "show", contract, "--target", root, "--format", "json"]);
   assert.strictEqual(contractShow.status, 0, contractShow.stderr);
@@ -58,6 +84,14 @@ try {
   const strictContractDiff = run(["contract", "diff", contract, "--target", root, "--frontend", "docs/contracts/mdm-feature-category.api.md", "--strict", "--json"]);
   assert.strictEqual(strictContractDiff.status, 0, strictContractDiff.stderr);
   assert.strictEqual(JSON.parse(strictContractDiff.stdout).ok, true);
+
+  const permissionPreview = run(["permissions", "export", contract, "--target", root, "--output", "reports/SYS_PERMISSION_INFO.md", "--json"]);
+  assert.strictEqual(permissionPreview.status, 0, permissionPreview.stderr);
+  const permissionPlan = JSON.parse(permissionPreview.stdout);
+  assert.strictEqual(fs.existsSync(path.join(root, "reports", "SYS_PERMISSION_INFO.md")), false, "权限预览不得写文件");
+  const permissionApply = run(["permissions", "export", contract, "--target", root, "--output", "reports/SYS_PERMISSION_INFO.md", "--plan-hash", permissionPlan.planHash, "--confirm", "--json"]);
+  assert.strictEqual(permissionApply.status, 0, permissionApply.stderr);
+  assert.strictEqual(fs.existsSync(path.join(root, "reports", "SYS_PERMISSION_INFO.md")), true);
 
   const fixPlan = run(["fix", "plan", "src/main", "--rules", "B3,B5", "--target", root, "--json"]);
   assert.strictEqual(fixPlan.status, 0, fixPlan.stderr);
@@ -75,7 +109,7 @@ try {
   const doctor = run(["doctor", "--target", root, "--json"]);
   assert.strictEqual(doctor.status, 1, "无 pom 的目录 doctor 必须失败");
 
-  console.log("✅ CLI：安装、检查、契约生成门与 doctor 退出码通过");
+  console.log("✅ CLI：安装、模块目录、一跳上下文、提交校验、契约生成门与 doctor 退出码通过");
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
-const { handleCodegen, handleConfig, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot } = require("./tools/lifecycleTools");
+const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot } = require("./tools/lifecycleTools");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const STANDARDS_ROOT = path.join(PACKAGE_ROOT, "files", ".github", "standards");
@@ -23,6 +23,8 @@ const TEMPLATE_MAP = Object.freeze({
   Rollback: "Rollback.md.tmpl",
   ServiceTest: "ServiceTest.java.tmpl",
   ControllerTest: "ControllerTest.java.tmpl",
+  OperationRequestDTO: "OperationRequestDTO.java.tmpl",
+  DdlPreview: "DdlPreview.md.tmpl",
 });
 
 const validateTool = {
@@ -97,6 +99,7 @@ const fixTool = {
       rules: { type: "array", minItems: 1, items: { type: "string", enum: ["B3", "B5"] } },
       confirmApply: { type: "boolean" },
       planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      allowProductionWrites: { type: "boolean", description: "pre/prod 环境经人工复核后显式放行" },
     },
     additionalProperties: false,
   },
@@ -105,10 +108,10 @@ const fixTool = {
 
 const standardsTool = {
   name: "wls_be_standards",
-  description: "查询 26 条后端规范。无参返回索引；id=01~26 返回指定全文。只读。",
+  description: "查询 27 条后端规范。无参返回索引；id=01~27 返回指定全文。只读。",
   inputSchema: {
     type: "object",
-    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-6])$" } },
+    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-7])$" } },
     additionalProperties: false,
   },
   handle(args) {
@@ -121,7 +124,7 @@ const standardsTool = {
 
 const templatesTool = {
   name: "wls_be_templates",
-  description: "查询 14 个确定性代码/DDL/测试模板。无参返回 README；name 必须来自固定白名单。只读。",
+  description: "查询 16 个确定性代码/DDL/测试模板。无参返回 README；name 必须来自固定白名单。只读。",
   inputSchema: {
     type: "object",
     properties: { name: { type: "string", enum: Object.keys(TEMPLATE_MAP) } },
@@ -150,7 +153,7 @@ const dbPreviewTool = {
 
 const exportPermissionsTool = {
   name: "wls_be_export_permissions",
-  description: "从后端契约导出权限码为 wl-skills-kit 的 SYS_PERMISSION_INFO.md 片段。默认预览；apply 必须传 confirmApply=true 与可选 output。",
+  description: "从后端契约导出权限码为 wl-skills-kit 的 SYS_PERMISSION_INFO.md 片段。默认预览；apply 必须传 planHash + confirmApply=true，写前重算并可回滚。",
   inputSchema: {
     type: "object",
     required: ["contract"],
@@ -158,6 +161,8 @@ const exportPermissionsTool = {
       contract: { type: "string", minLength: 1 },
       output: { type: "string", minLength: 1, description: "项目内相对输出路径，默认 reports/SYS_PERMISSION_INFO_{contractId}.md" },
       confirmApply: { type: "boolean" },
+      planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      allowProductionWrites: { type: "boolean", description: "pre/prod 环境经人工复核后显式放行" },
     },
     additionalProperties: false,
   },
@@ -184,6 +189,7 @@ const configTool = {
       from: { type: "string", description: "migrate 子命令：源客户（默认 env-matrix.current）" },
       planHash: { type: "string", description: "migrate/fix apply 的计划哈希" },
       confirmApply: { type: "boolean", description: "写操作确认" },
+      allowProductionWrites: { type: "boolean", description: "pre/prod 环境经人工复核后显式放行" },
     },
     additionalProperties: false,
   },
@@ -220,7 +226,61 @@ const taskTool = {
   handle: handleTask,
 };
 
-const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool];
+const catalogTool = {
+  name: "wls_be_catalog",
+  description: "模块目录治理。默认必须指定 module，只扫描当前模块契约/源码根并复用其他模块快照；full 仅供显式 CI/初始化。apply 需要同一 planHash 与 confirmApply=true。",
+  inputSchema: {
+    type: "object",
+    required: ["mode"],
+    properties: {
+      mode: { type: "string", enum: ["plan", "apply", "show", "check"] },
+      module: { type: "string", pattern: "^[a-z][a-zA-Z0-9]*$" },
+      full: { type: "boolean" },
+      confirmApply: { type: "boolean" },
+      planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      allowProductionWrites: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  handle: handleCatalog,
+};
+
+const contextTool = {
+  name: "wls_be_context",
+  description: "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件选择、预算和 contextHash。只读。",
+  inputSchema: {
+    type: "object",
+    required: ["module"],
+    properties: {
+      module: { type: "string", pattern: "^[a-z][a-zA-Z0-9]*$" },
+      task: { type: "string" },
+      keywords: { type: "array", items: { type: "string" }, uniqueItems: true },
+      maxFiles: { type: "integer", minimum: 3, maximum: 200 },
+      maxBytes: { type: "integer", minimum: 16384, maximum: 10485760 },
+      maxHops: { type: "integer", minimum: 0, maximum: 1 },
+    },
+    additionalProperties: false,
+  },
+  handle: handleContext,
+};
+
+const commitTool = {
+  name: "wls_be_commit",
+  description: "按 catalog 配置校验 type(scope): 功能点-具体内容。validate 校验单条消息，check 校验 Git range，doctor 检查版本受控 Hook 接入。只读。",
+  inputSchema: {
+    type: "object",
+    required: ["mode"],
+    properties: {
+      mode: { type: "string", enum: ["validate", "check", "doctor"] },
+      message: { type: "string", minLength: 1 },
+      range: { type: "string", minLength: 1 },
+    },
+    additionalProperties: false,
+  },
+  handle: handleCommit,
+};
+
+const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool];
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

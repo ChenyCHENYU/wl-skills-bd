@@ -25,12 +25,14 @@ private Integer revision;
 
 - `XxxCreateDTO`：不含 id、companyId、isDelete、revision、审计字段。
 - `XxxUpdateDTO`：必须含 String id 和 Integer revision，只包含可修改字段。
-- `XxxPageDTO`：查询条件全部可选，不含可信租户字段。
+- `XxxPageDTO`：含受校验的 `current/size` 和可选查询条件，不含可信租户字段；`size` 上限 200。
+- `Xxx{Operation}RequestDTO`：每个自定义命令独立生成，按契约包含 `id` 或 `ids` 及业务请求字段；批量 `ids` 必须非空且最多 1000 条。
 
 存量共享 `XxxDTO` 只属于 `legacy-shared-dto` 兼容模式，新资源不得默认使用。
 
 - String 必填用 `@NotBlank`，非 String 必填用 `@NotNull`。
 - 长度、范围、枚举值在 DTO 上声明 Bean Validation。
+- 契约中的每个顶层业务字段必须显式声明 `writable: true|false`；只有 `true` 的字段可进入 Create/UpdateDTO，禁止依靠默认可写推断越权边界。
 - 密码、token、证件号等敏感字段使用 `@ToString.Exclude`，禁止进入日志。
 
 ## 3. VO
@@ -59,4 +61,5 @@ private Integer revision;
 
 ## 变更记录
 
+- 2026-07-18 v0.14：字段可写性改为显式必填；分页参数纳入 PageDTO；自定义命令生成独立 RequestDTO。
 - 2026-07-18 v0.8：按真实 CoreEntity 校准字段，禁止 VO 继承 Entity，明确 DTO 拆分。

@@ -38,7 +38,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 **要点**：
 
 - `@Mapper` 注解必加
-- 继承 `JhBaseMapper<T>` 获得 MyBatis-Plus 通用 CRUD（`selectById` / `selectList` / `insert` / `updateById` / `deleteById` 等）
+- 继承 `JhBaseMapper<T>` 复用基础读写能力；受管业务更新和删除不得直接调用通用 `updateById/deleteById`，必须走下述原子 Mapper 方法
 - 多参数方法用 `@Param`；租户参数必须由 Service 从 `AuthUtil` 获取，禁止从 DTO 透传
 - 简单条件查询用 `Wrappers.lambdaQuery()`，复杂查询走 XML
 
@@ -149,6 +149,8 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 7. **软删除与租户条件常驻**：所有业务 SELECT/UPDATE/DELETE 必须含 `IS_DELETE = 1` 和 `COMPANY_ID = #{companyId}`，或由 doctor 验证的统一插件注入
 8. **IN 查询**用 `<foreach>`，不用字符串拼接
 9. **批量 UPDATE / INSERT** 必须限定租户、检查影响行数，并维护 `REVISION/UPDATE_*`；物理删除不进入默认模板
+10. **受管 UPDATE/软删必须原子化**：WHERE 同时包含 `ID`、`COMPANY_ID`、`IS_DELETE = 1`、`REVISION = expectedRevision`，SET 中执行 `REVISION = REVISION + 1`；影响行数不是 1 即视为越权/已删除/并发冲突
+11. **动态 WHERE 不算安全边界**：禁止仅依赖 `<where><if .../></where>`，也禁止 `WHERE 1=1/TRUE`；租户和有效标记谓词必须无条件常驻
 
 ---
 
@@ -166,5 +168,6 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
 ## 变更记录
 
+- 2026-07-18 v0.14：受管更新/软删统一显式原子 SQL；补充动态 WHERE、恒真 WHERE 与租户谓词硬门禁。
 - 2026-07-18 v0.8 租户谓词、稳定排序、乐观锁和显式列闭环
 - 2026-05-14 v0.0.1 落地（基于 `MdmFeatureCategoryMapper.xml/.java` + CLAUDE 共性 §八）

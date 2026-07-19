@@ -1,6 +1,6 @@
 # 使用指南：db-migration
 
-> CREATE/ALTER/索引 已由契约 codegen 自动生成（v0.9）。包不连接数据库或执行 DDL。复杂回填和跨库数据迁移仍需人工设计。
+> CREATE、受限 ALTER 和索引由契约 codegen 自动生成。包只写工程内 migration/评审材料，不连接数据库或执行 DDL；复杂回填和跨库数据迁移仍需人工设计。
 
 ## 新资源 CREATE
 
@@ -14,25 +14,42 @@ wl-skills-bd db preview wl-contract.json          # 只读预览 DDL + Expand-Co
 
 计划会包含正向 `V...__create_*.sql` 和 `db/rollback-manual/*.md`。恢复文件是审批材料，不进入 Flyway V location，不保证数据无损逆转。
 
-## ALTER TABLE（v0.9 已自动生成）
+## ALTER TABLE（v0.14 分阶段门禁）
 
-契约声明 `alter{}` 字段后，codegen 自动生成 ALTER 迁移 SQL（add/drop/modify）+ Rollback.md 含 Expand-Contract 阶段标注：
+expand 版本只做兼容扩展：
 
 ```json
 {
   "alter": {
     "version": "20260719_100000",
+    "phase": "expand",
     "rollbackStrategy": "...",
     "verificationSql": ["SELECT ..."],
     "operations": [
-      { "type": "add", "field": { "name": "priority", "column": "PRIORITY", ... } },
-      { "type": "modify", "column": "REMARK", "dbType": "VARCHAR2(500 CHAR)", ... }
-    ]
+      { "type": "add", "field": { "name": "priority", "column": "PRIORITY", "javaType": "Integer", "dbType": "NUMBER(10)", "comment": "优先级" } },
+      { "type": "modify", "column": "REMARK", "fromDbType": "VARCHAR2(200 CHAR)", "dbType": "VARCHAR2(500 CHAR)", "compatibility": "widening", "comment": "备注" }
+    ],
+    "indexes": [{ "name": "IDX_ORDER_PRIORITY", "columns": ["COMPANY_ID", "PRIORITY"] }]
   }
 }
 ```
 
-生成的 migration 文件名：`V{version}__alter_{table}_{add_modify}.sql`，不再生成 CREATE TABLE。
+删除旧列必须放在后续独立 contract 版本，且提供审批号：
+
+```json
+{
+  "alter": {
+    "version": "20260726_100000",
+    "phase": "contract",
+    "approvalRef": "DBA_CHANGE_20260726",
+    "rollbackStrategy": "已完成快照并保留旧应用版本，失败按审批单恢复列与数据",
+    "verificationSql": ["SELECT COUNT(*) FROM SALE_ORDER WHERE LEGACY_FIELD IS NOT NULL"],
+    "operations": [{ "type": "drop", "column": "LEGACY_FIELD" }]
+  }
+}
+```
+
+生成的 migration 文件名为 `V{version}__alter_{table}_*.sql`，并同步生成 Rollback.md 与 DDL_PREVIEW。`verificationSql` 只允许无副作用 SELECT。
 
 ## 复杂回填/跨库迁移（仍需人工）
 
@@ -58,3 +75,7 @@ wl-skills-bd db preview wl-contract.json          # 只读预览 DDL + Expand-Co
 5. 失败时按已审批方案处置并留审计记录。
 
 任何步骤都不得因“AI 已生成”而跳过。
+
+## 变更记录
+
+- 2026-07-18 v0.14：补充 expand/contract 契约示例、approvalRef、widening 和 ALTER 索引边界。

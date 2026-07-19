@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-backend-catalog-config-v1.json",
+  "title": "wl-skills-bd project catalog config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "docsRoot", "modules"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "docsRoot": { "$ref": "#/$defs/relativePath" },
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,15}$" } },
+        "requireDetailSeparator": { "type": "boolean", "default": true },
+        "maxHeaderLength": { "type": "integer", "minimum": 40, "maximum": 200, "default": 100 }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/module" }
+    }
+  },
+  "$defs": {
+    "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["displayName", "contractRoots", "sourceRoots", "upstream", "downstream", "owners"],
+      "properties": {
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "contractRoots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } },
+        "sourceRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } },
+        "upstream": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" } },
+        "downstream": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" } },
+        "owners": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 100 } }
+      }
+    }
+  }
+}

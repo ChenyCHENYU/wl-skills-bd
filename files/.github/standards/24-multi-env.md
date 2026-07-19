@@ -1,10 +1,10 @@
-# 24 · 多环境与分支模型规范（✅ 已落地）
+# 24 · 多环境、配置隔离与受保护环境护栏（✅ 已落地）
 
-> 像 wl-skills-kit 一样，后端必须有标准化的环境分支模型，让同一份代码在不同环境构建出不同配置的应用。本规范把 mdm-service 的实际模式（`wl-mdm-{sit,uat,pre,prod}.yaml` + Nacos namespace）固化为团队基线。
+> 后端必须使用标准化的环境配置模型，让同一份代码在不同环境构建出可追溯、相互隔离的应用。本规范把 mdm-service 的实际模式（`wl-mdm-{sit,uat,pre,prod}.yaml` + Nacos namespace）固化为团队基线。
 >
 > 强制度：🔴 必遵。
 >
-> **依据**：Spring Boot 官方 Profiles、Nacos 官方 Namespace 隔离、《项目开发手册》§"分支及版本管理"。
+> **依据**：Spring Boot 官方 Profiles、Nacos 官方 Namespace 隔离、《项目开发手册》的端口与数据库划分。分支与合并链由团队单独管控，不在 `wl-skills-bd` 内固化。
 
 ---
 
@@ -18,34 +18,7 @@
 | **pre** | pre | pre | pre（生产镜像）| 预发布 | 审批 |
 | **prod** | prod | prod | prod | 生产 | 🔴 阻断 |
 
-> **生产只读护栏**：codegen/safe-fix/permissions apply 在 `prod` 环境默认阻断，需 `WL_ALLOW_PRODUCTION_WRITES=true` 显式授权（详见 §6）。
-
-## 2. 分支模型（《项目开发手册》§"分支及版本管理"）
-
-```
-master（生产，保护）
-  ↑
-pre（预发布，保护）
-  ↑
-uat（验收，保护）
-  ↑
-slt（系统联调）
-  ↑
-dev（开发集成分支）
-  ↑
-dev-{模块}-{工号}（个人开发分支）
-```
-
-| 分支 | 命名 | 权限 | 合并方向 |
-|---|---|---|---|
-| **master** | `master` | 技术经理保护 | pre → master（发布）|
-| **pre** | `pre` | 技术经理保护 | uat → pre |
-| **uat** | `uat` | 技术经理保护 | slt → uat |
-| **slt** | `slt` | 模块负责人 | dev → slt |
-| **dev** | `dev` | 模块负责人 | dev-{模块}-{工号} → dev |
-| **个人** | `dev-{模块}-{工号}` | 个人 | 个人 → dev |
-
-> 禁止跨级合并（如 dev → master 直推）；禁止 master/pre 直接提交，必须走 PR。
+> **受保护环境只读护栏**：codegen/safe-fix/config/permissions apply 在 `pre/prod/production` 默认阻断；只有评审同一 planHash 后才可显式授权工程文件写入（详见 §6）。
 
 ## 3. 环境配置标准结构
 
@@ -114,7 +87,7 @@ spring:
 # ❌ 禁止：明文密码
 spring:
   datasource:
-    password: JinG@ng2025
+    password: DO_NOT_COMMIT
 
 # ✅ Nacos 配置加密 / 环境变量
 spring:
@@ -130,13 +103,14 @@ spring:
 
 > 生产敏感信息用 Nacos 命名空间隔离 + K8s Secret + CI 注入环境变量。
 
-## 6. 生产只读护栏（codegen/MCP/safe-fix）
+## 6. 受保护环境只读护栏（所有工程写工具）
 
 | 工具 | dev/sit | uat | pre/prod |
 |---|---|---|---|
 | `codegen apply` | 确认后写 | 确认后写 | 🔴 阻断 |
 | `safe_fix apply` | 确认后写 | 确认后写 | 🔴 阻断 |
 | `permissions export apply` | 确认后写 | 确认后写 | 🔴 阻断 |
+| `config init/migrate/fix apply` | 确认后写 | 确认后写 | 🔴 阻断 |
 | `db preview` | 只读 | 只读 | 只读 |
 | `validate` | 只读 | 只读 | 只读 |
 
@@ -148,7 +122,7 @@ spring:
 4. `bootstrap.yml` 的 `spring.profiles.active`
 5. 无法识别 → 默认按 `dev` 处理（不阻断）
 
-**显式授权生产写入**：
+**显式授权受保护环境工程写入**：
 
 ```bash
 # 本地显式开启（人工授权，记录审计日志）
@@ -156,7 +130,7 @@ $env:WL_ALLOW_PRODUCTION_WRITES = "true"
 wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm
 ```
 
-> MCP/IDE 场景下，`allowProductionWrites` 参数必须由用户在 plan 评审后显式传递。
+> MCP/IDE 场景下，`allowProductionWrites` 参数必须由用户在 plan 评审后显式传递。该授权不包含数据库、Nacos、K8s、发布或其他外部系统写入。
 
 ## 7. doctor 环境体检
 
@@ -170,7 +144,7 @@ doctor 新增 `env-config` 检测项：
 | 端口在模块范围 | `server.port` 在对应业务中心范围 | 修正端口 |
 | 数据库归属一致 | datasource profile 与契约 dbCluster 一致 | 修正 datasource |
 | 无明文密码 | datasource.password 用 `${...}` 占位 | 改环境变量 |
-| 生产护栏 | 非 prod 或显式授权 | 确认环境 |
+| 受保护环境护栏 | 非 pre/prod，或未开放工程写权限 | 确认环境；操作完成撤销临时授权 |
 
 ## 8. 环境与契约的关系
 
@@ -189,29 +163,29 @@ doctor 新增 `env-config` 检测项：
 - 声明 `dev`：仅 dev 环境生成，code generation 时校验当前环境匹配
 - `dbCluster`：cx/non_cx/pt，doctor 校验与 datasource 一致
 
-## 9. CI/CD 流水线模板
+## 9. CI/CD 环境参数模板
 
 ```yaml
-# Jenkinsfile（按分支触发不同环境）
+# Jenkinsfile（环境由团队流水线显式传入，bd 不推断分支）
+parameters:
+  - choice: { name: TARGET_ENV, choices: [dev, sit, uat, pre, prod] }
 stages:
   - stage: Build
-    branches:
-      dev:       { profile: dev,  namespace: dev }
-      slt:       { profile: sit,  namespace: sit }
-      uat:       { profile: uat,  namespace: uat }
-      pre:       { profile: pre,  namespace: pre }
-      master:    { profile: prod, namespace: prod }
+    environment:
+      WL_PROJECT_ENV: ${TARGET_ENV}
+      PROFILES_ACTIVE: ${TARGET_ENV}
   - stage: Validate
     sh: |
       wl-skills-bd validate . --strict
       wl-skills-bd doctor
   - stage: CodegenCheck（非 prod）
-    when: { branch: not master }
+    when: { expression: "TARGET_ENV != 'prod'" }
     sh: wl-skills-bd codegen plan wl-contract.json --json | jq '.summary | has("conflict") | not'
   - stage: Deploy
-    prod: { manualApproval: true }   # master 必须人工审批
+    prod: { manualApproval: true }
 ```
 
 ## 变更记录
 
-- 2026-07-18 v0.11：新增多环境与分支模型规范，固化 mdm-service 的 Nacos 多 namespace 模式 + 手册分支模型 + 生产只读护栏。
+- 2026-07-18 v0.14：明确分支治理不属于 bd 执行范围，CI 改为显式环境参数；pre/prod/production 与全部工程写工具统一护栏。
+- 2026-07-18 v0.11：新增多环境、Nacos 多 namespace 模式和生产只读护栏。

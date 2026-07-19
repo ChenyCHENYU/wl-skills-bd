@@ -52,11 +52,11 @@ const commonStubs = {
   "com/jhict/common/auth/util/AuthUtil.java": `package com.jhict.common.auth.util; public final class AuthUtil { public static String getLoginCompanyId(){return "company";} }`,
   "com/jhict/common/auth/util/EntityUtil.java": `package com.jhict.common.auth.util; public final class EntityUtil { public static void setCreateProp(Object value){} public static void setUpdateProp(Object value){} }`,
   "com/jhict/common/data/mapper/JhBaseMapper.java": `package com.jhict.common.data.mapper; public interface JhBaseMapper<T> { int insert(T value); int updateById(T value); }`,
-  "com/jhict/common/data/mybatis/entity/JhPage.java": `package com.jhict.common.data.mybatis.entity; public class JhPage<T> {}`,
-  "com/jhict/common/data/service/JhServiceImpl.java": `package com.jhict.common.data.service; import com.jhict.common.data.mapper.JhBaseMapper; import java.util.function.Function; public class JhServiceImpl<M extends JhBaseMapper<T>,T> { protected M baseMapper; protected Query<T> lambdaQuery(){return new Query<T>();} public static class Query<T>{ public Query<T> eq(Function<T,?> getter,Object value){return this;} public T one(){return null;} } }`,
+  "com/jhict/common/data/mybatis/entity/JhPage.java": `package com.jhict.common.data.mybatis.entity; public class JhPage<T> { public void setCurrent(long value){} public void setSize(long value){} }`,
+  "com/jhict/common/data/service/JhServiceImpl.java": `package com.jhict.common.data.service; import com.jhict.common.data.mapper.JhBaseMapper; import java.util.function.Function; public class JhServiceImpl<M extends JhBaseMapper<T>,T> { protected M baseMapper; protected Query<T> lambdaQuery(){return new Query<T>();} public static class Query<T>{ public Query<T> eq(Function<T,?> getter,Object value){return this;} public Query<T> in(Function<T,?> getter,Object value){return this;} public T one(){return null;} public java.util.List<T> list(){return new java.util.ArrayList<T>();} } }`,
   "cn/hutool/core/bean/BeanUtil.java": `package cn.hutool.core.bean; import cn.hutool.core.bean.copier.CopyOptions; public final class BeanUtil { public static void copyProperties(Object from,Object to,String... ignore){} public static void copyProperties(Object from,Object to,CopyOptions options){} }`,
   "cn/hutool/core/bean/copier/CopyOptions.java": `package cn.hutool.core.bean.copier; public class CopyOptions { public static CopyOptions create(){return new CopyOptions();} public CopyOptions setIgnoreNullValue(boolean value){return this;} public CopyOptions setIgnoreProperties(String... names){return this;} }`,
-  "io/swagger/v3/oas/annotations/media/Schema.java": `package io.swagger.v3.oas.annotations.media; public @interface Schema { String description() default ""; RequiredMode requiredMode() default RequiredMode.AUTO; enum RequiredMode { AUTO, REQUIRED, NOT_REQUIRED } }`,
+  "io/swagger/v3/oas/annotations/media/Schema.java": `package io.swagger.v3.oas.annotations.media; public @interface Schema { String description() default ""; String example() default ""; RequiredMode requiredMode() default RequiredMode.AUTO; enum RequiredMode { AUTO, REQUIRED, NOT_REQUIRED } }`,
   "io/swagger/v3/oas/annotations/Operation.java": `package io.swagger.v3.oas.annotations; public @interface Operation { String summary() default ""; }`,
   "io/swagger/v3/oas/annotations/Parameter.java": `package io.swagger.v3.oas.annotations; public @interface Parameter { String name() default ""; String description() default ""; String example() default ""; boolean hidden() default false; }`,
   "io/swagger/v3/oas/annotations/Parameters.java": `package io.swagger.v3.oas.annotations; public @interface Parameters { Parameter[] value(); }`,
@@ -69,7 +69,10 @@ const commonStubs = {
   "javax/annotation/Resource.java": `package javax.annotation; public @interface Resource {}`,
   "javax/servlet/http/HttpServletResponse.java": `package javax.servlet.http; public interface HttpServletResponse {}`,
   "javax/validation/constraints/NotBlank.java": `package javax.validation.constraints; public @interface NotBlank { String message() default ""; }`,
+  "javax/validation/constraints/NotEmpty.java": `package javax.validation.constraints; public @interface NotEmpty { String message() default ""; }`,
   "javax/validation/constraints/NotNull.java": `package javax.validation.constraints; public @interface NotNull { String message() default ""; }`,
+  "javax/validation/constraints/Min.java": `package javax.validation.constraints; public @interface Min { long value(); String message() default ""; }`,
+  "javax/validation/constraints/Max.java": `package javax.validation.constraints; public @interface Max { long value(); String message() default ""; }`,
   "javax/validation/constraints/Size.java": `package javax.validation.constraints; public @interface Size { int max() default 2147483647; String message() default ""; }`,
   "org/apache/ibatis/annotations/Mapper.java": `package org.apache.ibatis.annotations; public @interface Mapper {}`,
   "org/apache/ibatis/annotations/Param.java": `package org.apache.ibatis.annotations; public @interface Param { String value(); }`,
@@ -109,19 +112,21 @@ const commonStubs = {
 };
 
 const modelStubs = {
-  "com/jhict/mdm/api/entity/feature/MdmFeatureCategory.java": `package com.jhict.mdm.api.entity.feature; import com.jhict.common.core.entity.CoreEntity; public class MdmFeatureCategory extends CoreEntity { private Integer isDelete; private Integer revision; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public void setIsDelete(Integer value){isDelete=value;} }`,
+  "com/jhict/mdm/api/entity/feature/MdmFeatureCategory.java": `package com.jhict.mdm.api.entity.feature; import com.jhict.common.core.entity.CoreEntity; public class MdmFeatureCategory extends CoreEntity { private Integer isDelete; private Integer revision; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public Integer getIsDelete(){return isDelete;} public void setIsDelete(Integer value){isDelete=value;} }`,
   "com/jhict/mdm/api/dto/feature/MdmFeatureCategoryCreateDTO.java": `package com.jhict.mdm.api.dto.feature; public class MdmFeatureCategoryCreateDTO { public void setCategoryCode(String value){} public void setCategoryName(String value){} }`,
   "com/jhict/mdm/api/dto/feature/MdmFeatureCategoryUpdateDTO.java": `package com.jhict.mdm.api.dto.feature; public class MdmFeatureCategoryUpdateDTO { public String getId(){return "id";} public Integer getRevision(){return 0;} }`,
-  "com/jhict/mdm/api/dto/feature/MdmFeatureCategoryPageDTO.java": `package com.jhict.mdm.api.dto.feature; public class MdmFeatureCategoryPageDTO {}`,
+  "com/jhict/mdm/api/dto/feature/MdmFeatureCategoryPageDTO.java": `package com.jhict.mdm.api.dto.feature; public class MdmFeatureCategoryPageDTO { public long getCurrent(){return 1L;} public long getSize(){return 20L;} }`,
   "com/jhict/mdm/api/vo/feature/MdmFeatureCategoryVO.java": `package com.jhict.mdm.api.vo.feature; public class MdmFeatureCategoryVO {}`,
   "com/jhict/mdm/api/vo/feature/MdmFeatureCategoryPageVO.java": `package com.jhict.mdm.api.vo.feature; public class MdmFeatureCategoryPageVO {}`,
 };
 
 const extensionModelStubs = {
-  "com/jhict/sale/api/entity/order/SaleOrderMaster.java": `package com.jhict.sale.api.entity.order; import com.jhict.common.core.entity.CoreEntity; public class SaleOrderMaster extends CoreEntity { private Integer isDelete; private Integer revision; private String status; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public void setIsDelete(Integer value){isDelete=value;} public String getStatus(){return status;} public void setStatus(String value){status=value;} }`,
+  "com/jhict/sale/api/entity/order/SaleOrderMaster.java": `package com.jhict.sale.api.entity.order; import com.jhict.common.core.entity.CoreEntity; public class SaleOrderMaster extends CoreEntity { private Integer isDelete; private Integer revision; private String status; private String approvalOpinion; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public Integer getIsDelete(){return isDelete;} public void setIsDelete(Integer value){isDelete=value;} public String getStatus(){return status;} public void setStatus(String value){status=value;} public void setApprovalOpinion(String value){approvalOpinion=value;} }`,
   "com/jhict/sale/api/dto/order/SaleOrderMasterCreateDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterCreateDTO { public void setOrderNo(String value){} public void setCustomerName(String value){} }`,
   "com/jhict/sale/api/dto/order/SaleOrderMasterUpdateDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterUpdateDTO { public String getId(){return "id";} public Integer getRevision(){return 0;} }`,
-  "com/jhict/sale/api/dto/order/SaleOrderMasterPageDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterPageDTO {}`,
+  "com/jhict/sale/api/dto/order/SaleOrderMasterPageDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterPageDTO { public long getCurrent(){return 1L;} public long getSize(){return 20L;} }`,
+  "com/jhict/sale/api/dto/order/SaleOrderMasterApproveRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterApproveRequestDTO { public String getId(){return "id";} public String getOpinion(){return "ok";} }`,
+  "com/jhict/sale/api/dto/order/SaleOrderMasterBatchCancelRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterBatchCancelRequestDTO { public java.util.List<String> getIds(){return java.util.Collections.singletonList("id");} }`,
   "com/jhict/sale/api/vo/order/SaleOrderMasterVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderMasterVO {}`,
   "com/jhict/sale/api/vo/order/SaleOrderMasterPageVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderMasterPageVO {}`,
   "com/jhict/sale/api/vo/order/SaleOrderItemVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderItemVO {}`,
@@ -159,21 +164,6 @@ try {
   extensionContract.customOperations[0].method = "PATCH";
   extensionContract.customOperations[1].idFrom = "body";
   extensionContract.customOperations[1].path = "approve";
-  extensionContract.customOperations[2].requestFields = [
-    { name: "reason", javaType: "String", comment: "作废原因", required: true, maxLength: 200 },
-  ];
-  extensionContract.customOperations.push({
-    name: "rebuildSnapshot",
-    summary: "重建订单快照",
-    method: "POST",
-    path: "rebuildSnapshot",
-    permission: "sale_order_master_rebuild_snapshot",
-    kind: "command",
-    idFrom: "none",
-    requestFields: [
-      { name: "scope", javaType: "String", comment: "重建范围", required: true, maxLength: 32 },
-    ],
-  });
   const extensionContractFile = path.join(extensionRoot, "sale-order.contract.json");
   fs.writeFileSync(extensionContractFile, `${JSON.stringify(extensionContract, null, 2)}\n`, "utf8");
   const extensionPlan = buildPlan(extensionContractFile, { projectRoot: extensionRoot });

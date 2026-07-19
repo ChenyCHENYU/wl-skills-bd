@@ -33,7 +33,7 @@ public String save(XxxCreateDTO dto) {
 
 ## 4. 修改
 
-- UpdateDTO 必须含 id/revision；revision 使用 `@Version` 做乐观锁。
+- UpdateDTO 必须含 id/revision；`@Version` 只保留模型语义，受管写必须使用显式原子 SQL 校验 revision。
 - 先按当前租户查询，再复制允许修改的白名单字段。
 - 禁止覆盖 id、companyId、isDelete、createUserNo、createDateTime。
 - Patch 语义忽略 null；PUT 全量替换必须由契约明确声明。
@@ -71,11 +71,11 @@ public String save(XxxCreateDTO dto) {
 1. **校验存在**：按 id + companyId 查询，ServiceAssert.isNotNull
 2. **校验前置**：按 preconditions（equals/notEquals/in/notIn/isNull/notNull）逐条 ServiceAssert
 3. **构造 patch**：按 patch 字段列表逐字段 setXxx
-4. **持久化**：EntityUtil.setUpdateProp + updateById + 影响行数校验
+4. **持久化**：`EntityUtil.setUpdateProp` + `updateAtomic(entity, companyId, expectedRevision)` + 影响行数校验；SQL 必须同时限定 `ID + COMPANY_ID + IS_DELETE=1 + REVISION` 并原子递增版本
 
-`kind=batch` 时方法签名改为 `(List<String> ids)`，遍历四段式并返回 `{successCount, failureCount, failedIds}`；单次失败不回滚已成功项，由前端按 failedIds 重试。
+`kind=batch` 时由独立 OperationRequestDTO 接收 `ids` 与业务参数。Service 先去重并限制单批最多 1000 条，再一次性按租户加载全部有效记录、校验数量与前置条件，最后逐条执行原子版本写。任一项失败必须抛异常并回滚整批；成功响应固定为 `{successCount, failureCount: 0, failures: []}`，禁止用“部分成功”掩盖未知事务状态。
 
-业务命令命名规范与 wl-skills-kit api-contract 对齐；B5 规则已扩展识别全部业务命令前缀，确保 @Transactional 覆盖。请求字段用 `@RequestParam`（GET/POST 适用），避免生成独立 RequestDTO；批量操作用 `@RequestBody List<String> ids`。
+业务命令命名规范与 wl-skills-kit api-contract 对齐；B5 规则识别全部业务命令前缀，确保 `@Transactional` 覆盖。请求字段必须由独立 OperationRequestDTO 承载并执行 Bean Validation；契约声明的每个请求字段必须被 `patch.fromRequest` 或其他已确认实现消费，防止“接口收了参数但业务未使用”。
 
 ## 9. 机器门禁
 
@@ -86,5 +86,6 @@ public String save(XxxCreateDTO dto) {
 
 ## 变更记录
 
+- 2026-07-18 v0.14：所有受管更新/软删改为租户+有效标记+revision 原子写；命令使用 RequestDTO；批量写失败整批回滚。
 - 2026-07-18 v0.9：新增 §8 业务命令/状态机四段式生成；B5 扩展业务命令前缀识别。
 - 2026-07-18 v0.8：以直接 Service 为默认，统一租户、乐观锁、影响行数和软删除规则。

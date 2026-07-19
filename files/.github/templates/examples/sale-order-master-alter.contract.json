@@ -4,6 +4,7 @@
   "profile": "jh4j3-openapi3",
   "rootPackage": "com.jhict.sale",
   "module": "order",
+  "dbCluster": "cx",
   "externalId": "SALE_ORDER_MASTER_ALTER",
   "entity": {
     "name": "SaleOrderMaster",
@@ -37,6 +38,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(64 CHAR)",
       "comment": "订单编号",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "eq",
       "maxLength": 64
@@ -47,6 +49,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(200 CHAR)",
       "comment": "客户名称",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "like",
       "maxLength": 200
@@ -57,6 +60,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(32 CHAR)",
       "comment": "订单状态",
+      "writable": false,
       "queryMode": "eq",
       "maxLength": 32
     },
@@ -65,7 +69,8 @@
       "column": "TOTAL_AMOUNT",
       "javaType": "BigDecimal",
       "dbType": "NUMBER(18,2)",
-      "comment": "订单总金额"
+      "comment": "订单总金额",
+      "writable": true
     },
     {
       "name": "priority",
@@ -73,6 +78,7 @@
       "javaType": "Integer",
       "dbType": "NUMBER(10)",
       "comment": "优先级（本次新增）"
+      ,"writable": true
     },
     {
       "name": "remark",
@@ -80,10 +86,12 @@
       "javaType": "String",
       "dbType": "VARCHAR2(500 CHAR)",
       "comment": "备注（扩展长度后）"
+      ,"writable": true
     }
   ],
   "alter": {
     "version": "20260719_100000",
+    "phase": "expand",
     "rollbackStrategy": "应用保持向后兼容；add 列先回滚应用再 DROP COLUMN；modify 长度回退需评估存量数据；drop 列必须先备份。",
     "verificationSql": [
       "SELECT priority, remark FROM SALE_ORDER_MASTER WHERE ROWNUM = 1"
@@ -102,12 +110,11 @@
       {
         "type": "modify",
         "column": "REMARK",
+        "fromDbType": "VARCHAR2(200 CHAR)",
         "dbType": "VARCHAR2(500 CHAR)",
-        "comment": "备注（扩展长度后）"
+        "comment": "备注（扩展长度后）",
+        "compatibility": "widening"
       }
     ]
-  },
-  "indexes": [
-    { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "IS_DELETE", "ORDER_NO"], "unique": true }
-  ]
+  }
 }

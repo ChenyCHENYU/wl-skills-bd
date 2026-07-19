@@ -36,7 +36,7 @@ wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
 ```
 
-模型是 16 个整体产物的一部分。评审完整计划后才执行 apply，禁止只手工复制其中一半导致模型与 SQL/接口漂移。
+模型是 `17+N` 个整体产物的一部分。评审完整计划后才执行 apply，禁止只手工复制其中一半导致模型与 SQL/接口漂移。
 
 ## 六个模型的边界
 

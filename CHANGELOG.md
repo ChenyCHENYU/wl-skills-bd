@@ -4,6 +4,56 @@
 
 ---
 
+## [0.15.1] - 2026-07-19（使用文档与小版本发布）
+
+- 精简并补齐 README、使用指南和 `project-context-governance` USAGE，明确“当前模块 + 命中一跳契约”的日常工作流。
+- 补充 Catalog 首次配置、模块刷新、生成验证、提交 Hook 与 CI range 校验示例。
+- 能力、Schema 和执行器保持 0.15.0 兼容；发布补丁版本 0.15.1。
+
+## [0.15.0] - 2026-07-19（模块增量目录、一跳上下文与协作防污染）
+
+### Added
+
+- 新增 `.wl-skills-bd/catalog.config.json` 配置契约与模块/项目/上下文 JSON Schema，统一登记模块边界、契约根、源码根、负责人、上下游和提交策略。
+- 新增 `catalog plan/apply/show/check`：默认必须指定当前模块，只扫描该模块根目录；其他模块复用固定快照；`--full` 仅允许显式治理任务。
+- 新增项目级资源图谱：统计模块、资源、Service/Controller/Mapper、HTTP API、权限码、库集群/表、Flyway 版本与契约关系，并阻断重复身份和多写者污染。
+- 新增 `context plan`：当前模块为事实入口，只加载一跳上下游快照；按任务关键词、文件数和字节预算选择上下文，输出扫描证据与 `contextHash`，不扫描关联模块源码。
+- 新增模块/项目/提交规范的人读文档生成；所有生成文档带用途、受众、范围、来源、哈希、刷新命令与 `editable: false` 注释头。
+- 新增 `commit validate/check/doctor`、版本受控 `.githooks/commit-msg` 和 CI range 校验方案，唯一格式为 `type(scope): 功能点-具体内容`，type/scope 单一来源于 Catalog 配置。
+- 新增 `project-context-governance` Skill、standards/27，以及 `wls_be_catalog`、`wls_be_context`、`wls_be_commit` 三个 MCP 工具（12 → 15）。
+
+### Changed
+
+- codegen 在项目启用 Catalog 后强制执行当前模块新鲜度前置检查，并把模块/一跳快照上下文哈希纳入生成 `planHash`；旧上下文计划自动失效。
+- standards/18 从不可确定执行的全角示例统一为半角 Conventional Commits 格式，同时保留团队手册要求的类型、模块、功能点和具体内容语义。
+- Skills Pipeline 增加生成前“⓪ catalog/context”阶段；design/kit 仍是可选协作输入，不成为 bd 独立闭环的硬依赖。
+
+### Safety and verification
+
+- Catalog 写入采用预览、确认、计划哈希、写前重算、受保护环境护栏、原子写、备份和失败回滚；诊断存在硬冲突时整批零写入。
+- 回归覆盖模块隔离、无隐式全量扫描、关联模块变更不影响当前模块计划、一跳快照、文档头、目录过期阻断、codegen 上下文门、全局去重、提交 range 校验和 15 个 MCP Schema。
+
+## [0.14.0] - 2026-07-18（开发手册覆盖、原子写与数据安全闭环）
+
+### Added
+
+- 新增《项目开发手册》覆盖矩阵，将工程/包名、业务子域、CoreEntity/JhServiceImpl、端口、数据库集群和目录粒度追溯到 standards/contracts/templates/rules/tests；分支治理明确不属于 bd 执行范围。
+- 新增业务命令 `OperationRequestDTO` 和 DDL 风险/审批/验证报告模板；无命令契约现生成 17 个产物，每个 body 命令再加一个 DTO。
+- 新增 `write-guard` 与 `permission-export` 安全写内核，以及 database-safety / write-chain / 完成度突变回归。
+
+### Changed
+
+- Java 实现层改为手册要求的 `{rootPackage}.{module}.controller/service/mapper`；修正成本端口上限为 10399。
+- PageDTO 将 `current/size` 收入 POST body 并限制 1~200；字段 `writable` 改为必须显式声明的 fail-closed 策略，状态字段不再可由通用 UpdateDTO 绕过状态机。
+- 业务命令统一强类型 body，`patch.fromRequest` 强制请求字段被消费；修复 batch `id/ids`、RequestParam/body、raw List/String 和 `failedIds/failures` 漂移，补齐日期及前置条件类型校验。
+- Mapper 生成 `updateAtomic/softDeleteAtomic`，在同一 SQL 中同时约束 `ID + COMPANY_ID + IS_DELETE + REVISION`并递增版本；批量命令从 2N 读写改为去重保序后 1+N 乐观写。
+- MySQL 唯一索引修正为 `UNIQUE KEY`；索引引用列必须存在且不重复，唯一索引禁止包含 `IS_DELETE`以避免重复创建/删除冲突。
+- ALTER 强制 `phase=expand|contract`：expand 只允许可空 add/显式 widening modify，contract 只允许带 `approvalRef` 的 drop。Flyway 版本全局唯一，已存在 migration 不可改写或 stale 删除。
+- codegen/safe-fix/config init/config migrate/config fix/permissions export 统一为 preview → planHash → confirm → 写前重算 → 原子写/备份 → 复验 → 失败回滚；`pre/prod/production` 默认零写入。
+- B17/B18 扩展到 Mapper `<delete>`、JDBC/native SQL、`WHERE 1=1/TRUE`、纯动态 WHERE 和写 SQL 租户谓词；doctor 增加原子租户链、乐观写和 BlockAttack 体检。
+- 业务命令在真实 `@Test` 同时存在服务调用与断言/验证前保持 draft，注释、方法名或空测试不再伪造 confirmed。
+- `prepublishOnly` 升级为 `release:check`，必须同时通过 Node 全量门、Java/Maven 门和 npm pack 审计。已用 `wl-skills-kit` 2.13.0 的真实 strict validator 交叉验证 confirmed/draft 语义。
+
 ## [0.13.0] - 2026-07-18（任务驱动精准路由与统一安全写链）
 
 ### Added

@@ -248,7 +248,7 @@ withFixture({
 </mapper>`,
 }, (root) => {
   const result = runBeRules(root);
-  assert.strictEqual(count(result, "B18"), 2, "无 WHERE 的 update/delete 应报 B18");
+  assert.strictEqual(count(result, "B18"), 3, "无 WHERE 或缺少租户谓词的 update/delete 应报 B18");
 });
 
 withFixture({
@@ -404,3 +404,23 @@ public class OverInjectedService {
 });
 
 console.log("✅ be-rules v0.11：B14 扩展 + B20~B23 事务内 MQ/HTTP 超时/Swagger 混用/巨型 Service 规则通过");
+
+withFixture({
+  "src/main/resources/mapper/DangerMapper.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<mapper namespace="demo.DangerMapper">
+  <update id="wipe">UPDATE DEMO SET STATUS = 0 WHERE 1=1</update>
+  <delete id="physical">DELETE FROM DEMO WHERE COMPANY_ID = #{companyId}</delete>
+</mapper>`,
+  "src/main/java/demo/DangerRepository.java": `package demo;
+class DangerRepository {
+    void wipe(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+        jdbcTemplate.update("DELETE FROM DEMO WHERE 1=1");
+    }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B17") >= 2, "XML <delete> 和 JDBC DELETE FROM 必须识别为物理删除");
+  assert.ok(count(result, "B18") >= 2, "XML/JDBC WHERE 1=1 必须识别为全表写");
+});
+
+console.log("✅ be-rules v0.14：XML/JDBC 物理删除、WHERE 1=1 与跨租户写漏报回归通过");

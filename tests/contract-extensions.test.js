@@ -46,12 +46,12 @@ assert.ok(extendedManifest.completion.skeletonOperations.includes("export"));
 assert.ok(extendedManifest.completion.skeletonOperations.includes("relation:items"));
 assert.strictEqual(extendedManifest.source.profile, "jh4j3-openapi3");
 
-// ─── codegen 扩展契约：16 产物仍生成，但内容含扩展能力 ───
+// ─── codegen 扩展契约：基础产物 + 业务命令 DTO ───
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-extended-"));
 try {
   const plan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
   assert.strictEqual(plan.ok, true, JSON.stringify(plan.errors));
-  assert.strictEqual(plan.actions.length, 16, "扩展契约仍生成 16 个产物");
+  assert.strictEqual(plan.actions.length, 19, "基础 17 产物 + approve/batch 请求 DTO");
   const productionBlocked = applyPlan(plan, { confirm: true, planHash: plan.planHash, requireComplete: true });
   assert.strictEqual(productionBlocked.reason, "contract-incomplete");
   assert.deepStrictEqual(productionBlocked.applied, []);
@@ -60,21 +60,23 @@ try {
   const applied = applyPlan(plan, { confirm: true, planHash: plan.planHash });
   assert.strictEqual(applied.ok, true);
 
-  const controller = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/controller/order/SaleOrderMasterController.java"), "utf8");
+  const controller = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/order/controller/SaleOrderMasterController.java"), "utf8");
   assert.match(controller, /public ApiResult<Void> submit\(/, "Controller 含 submit 方法");
   assert.match(controller, /public ApiResult<java\.util\.Map<String, Object>> batchCancel\(/, "Controller 含 batchCancel 方法");
   assert.match(controller, /public void export\(/, "Controller 含 export 方法");
   assert.match(controller, /querySaleOrderItemByParentId/, "Controller 含 relations 查询方法");
   assert.match(controller, /@PostMapping\("approve\/\{id\}"\)/, "Controller approve 路径正确");
-  assert.match(controller, /@RequestParam\(value = "opinion", required = false\) String opinion/, "Controller approve 含 opinion 参数");
+  assert.match(controller, /SaleOrderMasterApproveRequestDTO request/, "Controller approve 使用强类型请求 DTO");
 
-  const service = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/service/order/SaleOrderMasterService.java"), "utf8");
+  const service = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/order/service/SaleOrderMasterService.java"), "utf8");
   assert.match(service, /public void submit\(String id\)/, "Service submit 四段式");
   assert.match(service, /ServiceAssert\.isTrue\(java\.util\.Objects\.equals\(entity\.getStatus\(\), "DRAFT"\)/, "Service submit 含类型安全的前置状态校验");
   assert.match(service, /entity\.setStatus\("SUBMITTED"\);/, "Service submit 构造 patch");
-  assert.match(service, /public void approve\(String id, .*String opinion\)/, "Service approve 含 opinion");
-  assert.match(service, /public java\.util\.Map<String, Object> batchCancel\(java\.util\.List<String> ids\)/, "Service batchCancel 签名");
-  assert.match(service, /ids\.size\(\) <= 1000, "批量作废：单批不能超过1000条"/);
+  assert.match(service, /public void approve\(String id, SaleOrderMasterApproveRequestDTO request\)/, "Service approve 使用 DTO");
+  assert.match(service, /entity\.setApprovalOpinion\(request\.getOpinion\(\)\)/, "审批意见被显式消费");
+  assert.match(service, /public java\.util\.Map<String, Object> batchCancel\(SaleOrderMasterBatchCancelRequestDTO request\)/, "Service batchCancel 签名");
+  assert.match(service, /ids\.size\(\) <= 1000, "批量作废：去重后单批不能超过1000条"/);
+  assert.match(service, /result\.put\("failures"/, "批量响应与契约 failures 一致");
   assert.match(service, /successCount/, "Service batchCancel 返回 successCount");
 
   const migration = fs.readFileSync(path.join(tempRoot, "src/main/resources/db/migration/V20260718_120000__create_sale_order_master.sql"), "utf8");
@@ -90,25 +92,55 @@ try {
 
   const skeletonEvidence = inspectImplementation(extended.contract, tempRoot);
   assert.strictEqual(skeletonEvidence.ok, false);
-  assert.deepStrictEqual(skeletonEvidence.missingOperations.map((item) => item.operation), ["export", "relation:items"]);
+  assert.deepStrictEqual(skeletonEvidence.missingOperations.map((item) => item.operation), ["export", "relation:items", "submit", "approve", "batchCancel"]);
 
-  const serviceFile = path.join(tempRoot, "src/main/java/com/jhict/sale/service/order/SaleOrderMasterService.java");
+  const weakTestFile = path.join(tempRoot, "src/test/java/com/jhict/sale/order/service/SaleOrderMasterServiceTest.java");
+  const weakTestOriginal = fs.readFileSync(weakTestFile, "utf8");
+  fs.appendFileSync(weakTestFile, `
+// service.submit("1"); 注释不是测试证据
+class WeakEvidence {
+    @Test
+    void submit_withoutAssertion() {
+        service.submit("1");
+    }
+}
+`, "utf8");
+  const weakEvidence = inspectImplementation(extended.contract, tempRoot);
+  assert.ok(weakEvidence.missingOperations.some((item) => item.operation === "submit" && item.test === "missing"), "只有方法名/调用且无断言不得冒充完成");
+  fs.writeFileSync(weakTestFile, weakTestOriginal, "utf8");
+
+  const serviceFile = path.join(tempRoot, "src/main/java/com/jhict/sale/order/service/SaleOrderMasterService.java");
   const completedService = fs.readFileSync(serviceFile, "utf8")
     .replace(/throw new UnsupportedOperationException\("销售订单主表 导出实现需业务补齐：设置响应头并写入输出流"\);/, "response.setStatus(200);")
     .replace(/throw new UnsupportedOperationException\("SaleOrderItem 关联查询需注入对应 Service 并转发；契约 sale-order-item"\);/, "return java.util.Collections.emptyList();");
   fs.writeFileSync(serviceFile, completedService, "utf8");
-  const serviceTestFile = path.join(tempRoot, "src/test/java/com/jhict/sale/service/order/SaleOrderMasterServiceTest.java");
+  const serviceTestFile = weakTestFile;
   const completedTests = fs.readFileSync(serviceTestFile, "utf8").replace(
     /    \/\/ <wl-custom name="tests">[\s\S]*?    \/\/ <\/wl-custom>/,
     `    // <wl-custom name="tests">
     @Test
     void export_shouldWriteResponse() {
-        service.export(null, null);
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.export(null, null));
     }
 
     @Test
     void queryItems_shouldDelegate() {
-        service.querySaleOrderItemByParentId("1");
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.querySaleOrderItemByParentId("1"));
+    }
+
+    @Test
+    void submit_shouldEnforceTransition() {
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.submit("1"));
+    }
+
+    @Test
+    void approve_shouldConsumeRequest() {
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.approve("1", null));
+    }
+
+    @Test
+    void batchCancel_shouldValidateBatch() {
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.batchCancel(null));
     }
     // </wl-custom>`,
   );
@@ -120,7 +152,7 @@ try {
   });
   assert.strictEqual(verifiedManifest.completion.contractStatus, "confirmed");
   const preservedPlan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
-  assert.deepStrictEqual(preservedPlan.summary, { unchanged: 16 }, "受保护实现与测试区不得形成 codegen 污染或升级冲突");
+  assert.deepStrictEqual(preservedPlan.summary, { unchanged: 19 }, "受保护实现与测试区不得形成 codegen 污染或升级冲突");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

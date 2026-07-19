@@ -64,7 +64,7 @@ spring:
 # ❌ L1 代码库硬编码（L0 违规）
 spring:
   datasource:
-    password: JinG@ng2025                             # 明文进 git 历史
+    password: DO_NOT_COMMIT                           # 任意明文 secret 都会进 git 历史
   cloud:
     nacos:
       config:
@@ -205,7 +205,7 @@ wl-skills-bd config doctor --probe    # 连通性探测（DB/Redis/Nacos）
 | **L5** | k8s-manifest | K8s yaml 的 PROFILES_ACTIVE/NAMESPACE 合规 | 补 ConfigMap 字段 |
 | **L6** | port-range | server.port 在模块端口范围 | 修正端口 |
 | **L7** | env-consistency | bootstrap profile = env-matrix.current env = K8s PROFILES_ACTIVE | 三方对齐 |
-| **L8** | production-guard | 非 prod 或显式 WL_ALLOW_PRODUCTION_WRITES | 确认环境 |
+| **L8** | protected-write-guard | 非 pre/prod/production，或评审同一 planHash 后显式授权 | 确认环境与变更计划 |
 
 可选 `--probe`：
 | **P1** | db-probe | DB 端口 TCP 可达 | 检查 DB 地址/网络/防火墙 |
@@ -261,7 +261,7 @@ wl-skills-bd config diff
 
 | 规范 | 25 的边界 |
 |---|---|
-| 24-multi-env | 24 是"规范层"（5 环境/分支），25 是"架构层+工具层"（三层分层/矩阵/体检/迁移）|
+| 24-multi-env | 24 是“5 环境隔离规范层”，25 是“三层配置/矩阵/体检/迁移工具层”；二者均不管理 Git 分支 |
 | 21-sensitive-write | 21 是"代码层"敏感写，25 是"配置层"敏感信息（明文密码）|
 | 12-database-ddl | 12 的 dbCluster 在 25 的 env-matrix.datasource.cluster 固化 |
 | 02-project-structure | 02 的端口范围在 25 的 env-matrix.k8s.port 校验 |
@@ -288,7 +288,7 @@ config diff          → 三方漂移检测（L1↔L2↔L3）
 troubleshoot "<错误>"→ 故障关键字诊断（错误码→排查步骤）
 ```
 
-每一步都有 plan/apply（写操作）、测试、闭环验证。不是壳子。
+所有写步骤（init/migrate/fix）都先生成包含当前文件哈希的 planHash；apply 前重算，只有 `--confirm + --plan-hash` 一致才原子写入，失败自动回滚并复验。`pre/prod/production` 还需显式授权。只读 doctor/troubleshoot 不需要确认。
 
 ---
 
@@ -331,13 +331,14 @@ spring:
   cloud:
     nacos:
       username: ${NACOS_USERNAME:nacos}          # 部分占位 OK
-      password: ${NACOS_PASSWORD:JinG@ng2025}    # ❌ 默认值硬编码密码进 git
+      password: ${NACOS_PASSWORD:DO_NOT_COMMIT}  # ❌ 任意默认密码都会进入 git
 ```
 
-> mdm 的 `password: ${NACOS_PASSWORD:JinG@ng2025}` 是典型反例：默认值泄露密码。正确写法是 `${NACOS_PASSWORD}`（无默认值）或 `${NACOS_PASSWORD:CHANGE_ME}`。
+> `${NACOS_PASSWORD:DO_NOT_COMMIT}` 是典型反例：即使示例值不是实际密码，默认 secret 仍会进入 git。正确写法是 `${NACOS_PASSWORD}`（无默认值）。
 
 ---
 
 ## 变更记录
 
+- 2026-07-18 v0.14：init/migrate/fix 统一 preview→planHash→confirm→原子写→回滚→复验；pre/prod/production 默认阻断。
 - 2026-07-18 v0.12：新增配置分层与多环境管理规范，落地三层分层模型 + env-matrix + config doctor/init/migrate/fix/diff + troubleshoot 工程闭环。

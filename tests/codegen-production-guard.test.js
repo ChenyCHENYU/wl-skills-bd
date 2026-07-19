@@ -29,6 +29,8 @@ withEnv("SPRING_PROFILES_ACTIVE", "prod", () => {
 
 // ─── isProductionGuardBlocked ───
 assert.strictEqual(isProductionGuardBlocked("prod"), true, "prod 默认阻断");
+assert.strictEqual(isProductionGuardBlocked("production"), true, "production 别名也必须阻断");
+assert.strictEqual(isProductionGuardBlocked("pre"), true, "pre 预发布环境默认阻断");
 assert.strictEqual(isProductionGuardBlocked("dev"), false, "dev 不阻断");
 assert.strictEqual(isProductionGuardBlocked(null), false, "无环境不阻断");
 assert.strictEqual(isProductionGuardBlocked("prod", true), false, "MCP 显式授权后不阻断");
@@ -81,4 +83,4 @@ try {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }
 
-console.log("✅ codegen 生产护栏：environment 识别、prod 默认阻断、WL_ALLOW_PRODUCTION_WRITES 显式授权、零写入通过");
+console.log("✅ codegen 受保护环境护栏：environment 识别、pre/prod 默认阻断、显式授权与零写入通过");

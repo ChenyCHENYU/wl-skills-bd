@@ -24,7 +24,7 @@ withRoot((root) => {
     "spring:",
     "  cloud:",
     "    nacos:",
-    "      password: JinG@ng2025           # 明文密码",
+    "      password: exampleHardcodedSecret42! # 明文密码",
     "      username: nacos",
     "      config:",
     "        server-addr: ${NACOS_HOST}",
@@ -34,7 +34,7 @@ withRoot((root) => {
   ].join("\n"));
   const files = configLayering.listConfigFiles(root);
   const issues = configLayering.scanPlaintextSecrets(files);
-  const nacosPwd = issues.find((i) => i.key.includes("password") && i.value === "JinG@ng2025");
+  const nacosPwd = issues.find((i) => i.key.includes("password") && i.value === "exampleHardcodedSecret42!");
   assert.ok(nacosPwd, "nacos.password 明文应被检测");
   const dbPwd = issues.find((i) => i.key.endsWith("datasource.password"));
   assert.ok(!dbPwd, "${DB_PASSWORD} 占位符不应报");
@@ -217,7 +217,7 @@ withRoot((root) => {
   });
   assert.strictEqual(plan.ok, true);
   assert.ok(plan.actions.length >= 8, "bootstrap+application+logback+5×env+matrix+gitignore");
-  const applied = configInit.applyInitPlan(plan, { projectRoot: root, confirm: true, overwrite: false });
+  const applied = configInit.applyInitPlan(plan, { projectRoot: root, confirm: true, planHash: plan.planHash });
   assert.strictEqual(applied.ok, true);
   assert.ok(fs.existsSync(path.join(root, "src/main/resources/bootstrap.yml")), "生成 bootstrap.yml");
   assert.ok(fs.existsSync(path.join(root, "src/main/resources/application.yml")), "生成 application.yml");
@@ -242,7 +242,7 @@ console.log("✅ config-init：骨架生成（bootstrap/application/env×5/matri
 withRoot((root) => {
   // 先 init
   const initPlan = configInit.buildInitPlan(root, { project: "wl-test", module: "test", port: 9101, datasourceType: "mysql", customer: "internal" });
-  configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true });
+  configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true, planHash: initPlan.planHash });
   // 故意加明文密码
   fs.appendFileSync(path.join(root, "src/main/resources/bootstrap.yml"), "\nspring:\n  redis:\n    password: plaintext123\n");
 
@@ -274,7 +274,8 @@ withRoot((root) => {
   ].join("\n"));
   const plan = configFix.buildFixPlan(root);
   assert.ok(plan.summary.total >= 2, `至少 2 处明文，实际 ${plan.summary.total}`);
-  const applied = configFix.applyFixPlan(plan, { projectRoot: root, confirm: true });
+  assert.strictEqual(configFix.applyFixPlan(plan, { projectRoot: root, confirm: true }).reason, "plan-hash-mismatch");
+  const applied = configFix.applyFixPlan(plan, { projectRoot: root, confirm: true, planHash: plan.planHash });
   assert.strictEqual(applied.ok, true);
   assert.strictEqual(applied.closure.remaining, 0, "复扫应 0 剩余");
   const fixed = fs.readFileSync(bootstrap, "utf8");
@@ -338,7 +339,7 @@ console.log("✅ config-probe：TCP 探测 + 地址解析通过");
 withRoot((root) => {
   // init
   const initPlan = configInit.buildInitPlan(root, { project: "wl-prod", module: "mdm", port: 9101, datasourceType: "mysql", customer: "internal" });
-  configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true });
+  configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true, planHash: initPlan.planHash });
 
   // 手动补一个 huaxin 客户到 matrix（用纯缩进格式，parseYamlToObject 支持）
   const matrixFile = path.join(root, ".wl-skills-bd", "env-matrix.yml");

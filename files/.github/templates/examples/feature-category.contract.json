@@ -4,6 +4,7 @@
   "profile": "jh4j3-openapi3",
   "rootPackage": "com.jhict.mdm",
   "module": "feature",
+  "dbCluster": "pt",
   "entity": {
     "name": "MdmFeatureCategory",
     "table": "MDM_FEATURE_CATEGORY",
@@ -37,6 +38,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(64 CHAR)",
       "comment": "分类编码",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "like",
       "maxLength": 64
@@ -47,6 +49,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(200 CHAR)",
       "comment": "分类名称",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "like",
       "maxLength": 200
@@ -57,6 +60,7 @@
       "javaType": "Integer",
       "dbType": "NUMBER(10)",
       "comment": "排序号",
+      "writable": true,
       "queryMode": "none"
     }
   ]

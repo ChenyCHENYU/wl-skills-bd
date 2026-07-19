@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "id": "wl-sale",
+    "name": "销售业务后端"
+  },
+  "docsRoot": "docs/backend",
+  "commit": {
+    "types": ["feat", "fix", "perf", "refactor", "docs", "test", "style", "build", "ci", "chore", "revert"],
+    "requireDetailSeparator": true,
+    "maxHeaderLength": 100
+  },
+  "modules": {
+    "order": {
+      "displayName": "销售订单",
+      "contractRoots": ["contracts/order"],
+      "sourceRoots": ["src/main/java/com/jhict/sale/order", "src/main/resources/mapper/order"],
+      "upstream": ["customer"],
+      "downstream": ["billing"],
+      "owners": ["sale-order-team"]
+    },
+    "customer": {
+      "displayName": "客户主数据",
+      "contractRoots": ["contracts/customer"],
+      "sourceRoots": ["src/main/java/com/jhict/sale/customer", "src/main/resources/mapper/customer"],
+      "upstream": [],
+      "downstream": ["order"],
+      "owners": ["sale-customer-team"]
+    },
+    "billing": {
+      "displayName": "结算",
+      "contractRoots": ["contracts/billing"],
+      "sourceRoots": ["src/main/java/com/jhict/sale/billing", "src/main/resources/mapper/billing"],
+      "upstream": ["order"],
+      "downstream": [],
+      "owners": ["sale-billing-team"]
+    }
+  }
+}

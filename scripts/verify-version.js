@@ -197,6 +197,9 @@ if (exists("mcp/registry.js")) {
       "wls_be_config",
       "wls_be_troubleshoot",
       "wls_be_task",
+      "wls_be_catalog",
+      "wls_be_context",
+      "wls_be_commit",
     ];
     const actualTools = (TOOLS || []).map((tool) => tool.name);
     mcpToolCount = actualTools.length;
@@ -246,6 +249,8 @@ const TEMPLATES = [
   "Rollback.md.tmpl",
   "ServiceTest.java.tmpl",
   "ControllerTest.java.tmpl",
+  "OperationRequestDTO.java.tmpl",
+  "DdlPreview.md.tmpl",
 ];
 const tmplDir = path.join(ROOT, "files", ".github", "templates");
 const actualTemplates = fs.readdirSync(tmplDir).filter((file) => file.endsWith(".tmpl"));
@@ -308,6 +313,11 @@ const REQUIRED_EXIST = [
   "files/.wl-skills-bd/schemas/contract.schema.json",
   "files/.wl-skills-bd/schemas/collaboration-contract.schema.json",
   "files/.wl-skills-bd/schemas/rules-config.schema.json",
+  "files/.wl-skills-bd/schemas/catalog-config.schema.json",
+  "files/.wl-skills-bd/schemas/module-catalog.schema.json",
+  "files/.wl-skills-bd/schemas/project-catalog.schema.json",
+  "files/.wl-skills-bd/schemas/context-plan.schema.json",
+  "files/.githooks/commit-msg",
   "files/.github/guides/frontend-backend-contract.md",
   "files/.github/guides/mcp-workflow.md",
   "files/.github/java-quality/jacoco/README.md",

@@ -11,7 +11,6 @@
 服务名称：{service-name}
 审计范围：{package / module / 全量}
 审计时间：{yyyy-MM-dd HH:mm}
-Git 分支 ：{branch-name}
 规范版本：wl-skills-bd v{x.x.x}（17 条 standards）
 ```
 

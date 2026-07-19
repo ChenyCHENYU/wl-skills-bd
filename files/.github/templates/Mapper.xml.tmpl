@@ -5,7 +5,7 @@
   规则：禁 SELECT 星号 / 禁 ${} 注入 / 软删除条件常驻（standards/06）
 -->
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="{{rootPackage}}.mapper.{{module}}.{{Entity}}Mapper">
+<mapper namespace="{{rootPackage}}.{{module}}.mapper.{{Entity}}Mapper">
 
     <!-- 显式列出字段，禁止 SELECT *（standards/06）-->
     <sql id="BaseColumns">
@@ -58,5 +58,37 @@
           AND t.COMPANY_ID = #{companyId}
           AND t.ID = #{id}
     </select>
+
+    <!-- 所有业务更新必须在同一条 SQL 中同时约束 ID、租户、有效标记和版本号。 -->
+    <update id="updateAtomic">
+        UPDATE {{table}}
+        <set>
+            {{#columns}}
+            <if test="entity.{{field}} != null">
+                {{COLUMN}} = #{entity.{{field}}},
+            </if>
+            {{/columns}}
+            UPDATE_USER_NO = #{entity.updateUserNo},
+            UPDATE_DATE_TIME = #{entity.updateDateTime},
+            REVISION = REVISION + 1
+        </set>
+        WHERE ID = #{entity.id}
+          AND COMPANY_ID = #{companyId}
+          AND IS_DELETE = 1
+          AND REVISION = #{expectedRevision}
+    </update>
+
+    <!-- 团队软删除口径：1=有效、0=删除；禁止物理 DELETE。 -->
+    <update id="softDeleteAtomic">
+        UPDATE {{table}}
+        SET IS_DELETE = 0,
+            UPDATE_USER_NO = #{entity.updateUserNo},
+            UPDATE_DATE_TIME = #{entity.updateDateTime},
+            REVISION = REVISION + 1
+        WHERE ID = #{entity.id}
+          AND COMPANY_ID = #{companyId}
+          AND IS_DELETE = 1
+          AND REVISION = #{entity.revision}
+    </update>
 
 </mapper>

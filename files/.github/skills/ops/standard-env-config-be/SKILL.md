@@ -25,9 +25,9 @@ risk: 🟡 中风险
 |---|---|---|
 | 配置与明文凭据体检 | `wl-skills-bd config doctor` | 只读 |
 | DB/Redis/Nacos 端口探测 | `wl-skills-bd config doctor --probe` | 只读；仅 TCP，不鉴权 |
-| 生成标准骨架 | `wl-skills-bd config init ...` | 默认计划；`--confirm` 后写入 |
+| 生成标准骨架 | `wl-skills-bd config init ...` | 默认计划；apply 需相同 planHash + `--confirm` |
 | 客户/环境迁移 | `wl-skills-bd config migrate --to <customer> --plan` | apply 需相同 planHash + `--confirm` |
-| 明文密码改占位符 | `wl-skills-bd config fix` | 默认预览；`--confirm` 后写入并复扫 |
+| 明文密码改占位符 | `wl-skills-bd config fix` | 默认预览；apply 需相同 planHash + `--confirm`，写后复扫 |
 | 常见启动/部署故障 | `wl-skills-bd troubleshoot "<错误>"` | 只读 |
 
 ## 强制边界
@@ -35,7 +35,8 @@ risk: 🟡 中风险
 - L1 代码仓库只存 `${VAR}` 占位符；真实 secret 仅在 K8s Secret/Nacos/CI/受控 `.env`。
 - 不读取或修改 Nacos 服务端内容，不持有数据库/K8s/Nacos 写凭据，不自动部署。
 - `env-matrix.yml` 是客户×环境差异的单一事实源；bootstrap、K8s 与矩阵必须一致。
-- migrate 必须先 plan，apply 前重算并核对 planHash；失败不得留下半套文件。
+- init/migrate/fix 必须先 plan，plan 纳入当前文件哈希；apply 前重算并核对 planHash，原子写失败必须回滚，不能留下半套文件。
+- `pre/prod/production` 默认阻断上述写入；显式授权仅覆盖工程文件，不覆盖 Nacos/K8s/数据库外部写入。
 - 所有报告脱敏；不得在日志、Markdown、命令示例或测试夹具中写入真实 token/密码。
 - 结束前运行 `config doctor`；未全绿项必须给出证据、影响和人工下一步，不得宣称完成。
 

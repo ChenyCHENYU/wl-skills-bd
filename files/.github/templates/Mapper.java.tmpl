@@ -1,4 +1,4 @@
-package {{rootPackage}}.mapper.{{module}};
+package {{rootPackage}}.{{module}}.mapper;
 
 import com.jhict.common.data.mapper.JhBaseMapper;
 import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
@@ -50,5 +50,29 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
      */
     {{Entity}}VO queryById(
             @Param("id") String id,
+            @Param(COMPANY_ID_KEY) String companyId);
+
+    /**
+     * 租户 + 有效标记 + 乐观锁原子更新。
+     *
+     * @param entity 待更新实体及审计字段
+     * @param companyId 当前登录公司
+     * @param expectedRevision 客户端读取到的版本号
+     * @return 受影响行数；只能为 0 或 1
+     */
+    int updateAtomic(
+            @Param("entity") {{Entity}} entity,
+            @Param(COMPANY_ID_KEY) String companyId,
+            @Param("expectedRevision") Integer expectedRevision);
+
+    /**
+     * 租户 + 有效标记 + 乐观锁原子软删除。
+     *
+     * @param entity 当前实体（携带 ID、版本及更新审计字段）
+     * @param companyId 当前登录公司
+     * @return 受影响行数；只能为 0 或 1
+     */
+    int softDeleteAtomic(
+            @Param("entity") {{Entity}} entity,
             @Param(COMPANY_ID_KEY) String companyId);
 }

@@ -1,7 +1,7 @@
 ---
 name: db-migration
 description: |
-  数据库 DDL 与数据迁移生成。CREATE TABLE / ALTER TABLE（v0.9 自动生成）/ expand-contract / 有界数据回填 + 人工回退方案。
+  数据库 DDL 与数据迁移生成。CREATE TABLE / 分阶段 ALTER TABLE / 索引 / DDL 预览，以及复杂回填的人工设计门。
   生成后输出 reports/DDL_PREVIEW_{ts}.md 等待人工确认，AI 不直接执行。
   典型触发：「建表」「DDL」「ALTER TABLE」「加字段」「索引」「数据迁移」
 status: 🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）
@@ -25,6 +25,8 @@ risk: 🔴 高风险（必经人工确认）
 
 - [ ] Entity 已存在（建表场景）或字段映射已明确（ALTER 场景）
 - [ ] 业务唯一键已确认（用于建唯一索引）
+- [ ] database/dbCluster/Flyway version/verificationSql/rollbackStrategy 已明确
+- [ ] ALTER 已选择 `phase=expand|contract`；contract 已取得可追溯 approvalRef
 
 ## 产物
 
@@ -45,11 +47,12 @@ reports/DDL_PREVIEW_{yyyymmdd_HHmm}.md                    ← 人工确认材料
 - 每列 `COMMENT ON COLUMN`
 - 表 `COMMENT ON TABLE`
 
-**ALTER TABLE 注意**：
+**ALTER TABLE 分阶段硬门**：
 
-- 新增字段：是否必填？若必填且有存量数据，需要回填脚本
-- 删除字段：必须先备份 → DROP；ROLLBACK 要能 ADD 回来（含数据回填）
-- 修改字段类型：先评估存量数据兼容性
+- `expand`：只允许新增可空列、当前版本新索引，或同时声明 `fromDbType` 与 `compatibility=widening` 的类型扩容；禁止 drop、NOT NULL 新列和收窄类型
+- `contract`：只允许 drop，并必须提供 `approvalRef`；不得与 expand 操作混在同一 Flyway 版本
+- ALTER 新索引只能放 `alter.indexes`，禁止复用顶层 `indexes` 重建存量索引
+- Flyway version 全工程唯一；同版本已存在且内容不同即冲突，受管旧 migration 不会当“陈旧文件”删除
 
 **人工回退方案必须说明**：
 
@@ -76,7 +79,9 @@ AI 不会直接执行任何 DDL。
 
 ## 约束
 
-- 一切 DDL 必有恢复方案；禁止把反向 SQL 命名为 Flyway `V...__rollback.sql`
+- 一切 DDL 必有恢复/roll-forward 方案；禁止把反向 SQL 命名为 Flyway `V...__rollback.sql`
+- verificationSql 只允许单条无注释、无锁、无副作用的 SELECT；禁止分号、FOR UPDATE、SLEEP/BENCHMARK 和序列取值
+- 唯一索引不得把 `IS_DELETE` 当作重复软删解决方案；索引列必须存在且不得重复
 - VARCHAR2 必用 `CHAR` 语义
 - 索引名 `IDX_{T}_xxx` / `UK_{T}_xxx`，不允许默认名
 - 触发器 / 序列 / 外键由 DBA 评审后决定（团队基线**不推荐**外键约束）
@@ -91,3 +96,7 @@ AI 不会直接执行任何 DDL。
    - 预览报告: reports/DDL_PREVIEW_{ts}.md
    - 下一步: 🔴 人工评审后由 DBA / CD 执行
 ```
+
+## 变更记录
+
+- 2026-07-18 v0.14：ALTER expand/contract 强制分阶段；增加审批、只读校验 SQL、索引与 Flyway 不可变门禁。

@@ -1,0 +1,35 @@
+# DDL 变更预览：{{contractId}}
+
+> - 迁移文件：`{{migrationFile}}`
+> - 变更类型：`{{migrationKind}}`
+> - 阶段：`{{migrationPhase}}`
+> - 风险等级：`{{ddlRiskLevel}}`
+{{#ddlApprovalRef}}
+> - 审批单：`{{ddlApprovalRef}}`
+{{/ddlApprovalRef}}
+
+本报告只用于评审，`wl-skills-bd` 不连接数据库、不执行 SQL。执行前必须由应用负责人与 DBA 核对表量、锁影响、窗口、备份和回滚策略。
+
+## 正向 SQL
+
+```sql
+{{migrationSql}}
+```
+
+## 执行后只读验证
+
+{{#verificationSql}}
+- `{{.}}`
+{{/verificationSql}}
+
+## 回滚/恢复策略
+
+{{rollbackStrategy}}
+
+## 人工确认清单
+
+- [ ] Flyway 版本全局唯一，未改写任何已应用 migration。
+- [ ] SQL 目标库与 `dbCluster` 归属一致。
+- [ ] expand 变更先部署兼容应用；contract 变更已有审批单且备份可用。
+- [ ] 已评估 DDL 锁表时长、超时、索引空间和主从延迟。
+- [ ] 执行人将在变更后运行全部验证 SQL 并保留证据。

@@ -62,6 +62,7 @@ const WRITE_SKILLS = [
   "core/service-codegen/SKILL.md",
   "core/mapper-xml-gen/SKILL.md",
   "core/convention-audit-be/SKILL.md",
+  "core/project-context-governance/SKILL.md",
   "core/business-doc-extract-be/SKILL.md",
   "data/db-migration/SKILL.md",
   "ops/code-fix-be/SKILL.md",

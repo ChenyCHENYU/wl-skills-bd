@@ -107,8 +107,13 @@ wl-skills-bd contract diff wl-contract.json \
 `externalBasePath` 必填且必须以 `/requestPath` 结尾。生成器不猜网关拓扑。权限码由 bd 契约确定，可导出为 kit 权限清单片段：
 
 ```bash
+# 预览：零写入并取得 planHash
 wl-skills-bd permissions export wl-contract.json \
-  --output reports/SYS_PERMISSION_INFO.md
+  --output reports/SYS_PERMISSION_INFO.md --json
+
+# 评审后使用同一 planHash 原子写入
+wl-skills-bd permissions export wl-contract.json \
+  --output reports/SYS_PERMISSION_INFO.md --plan-hash <hash> --confirm
 ```
 
 ## 7. 发布闭环

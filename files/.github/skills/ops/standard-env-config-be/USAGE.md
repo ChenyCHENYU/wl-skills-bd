@@ -33,8 +33,8 @@ spring:
         password: ${NACOS_PASSWORD}
 
 # ❌ 明文密码（config-secret error）
-# password: JinG@ng2025
-# password: ${NACOS_PASSWORD:JinG@ng2025}   # 默认值泄露
+# password: DO_NOT_COMMIT
+# password: ${NACOS_PASSWORD:DO_NOT_COMMIT} # 任意默认 secret 都会泄露
 ```
 
 ## 验收（config doctor 全绿）
@@ -47,10 +47,12 @@ spring:
 - 端口在模块范围（sale 10000-10099 等）
 - 三方一致（bootstrap profile = env-matrix current = K8s PROFILES_ACTIVE）
 - 连通性（可选 --probe）：DB/Redis/Nacos TCP 可达
+- init/migrate/fix 的 apply 均使用刚生成的 planHash + confirm；pre/prod/production 另需显式授权
 
-详见 [standards/25 配置分层](../../standards/25-config-layering.md) 和 [standards/24 多环境](../../standards/24-multi-env.md)。
+详见 [standards/25 配置分层](../../../standards/25-config-layering.md) 和 [standards/24 多环境](../../../standards/24-multi-env.md)。
 
 ## 变更记录
 
+- 2026-07-18 v0.14：所有配置写命令统一 planHash/原子写/回滚/受保护环境护栏。
 - 2026-07-18 v0.12：本 Skill 目标已由 `config` 命令族落地；USAGE 改为指向 config 等价命令。
 - 2026-07-17：骨架 USAGE（占位符示例 + 验收清单）。

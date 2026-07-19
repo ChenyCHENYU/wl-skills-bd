@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agile-team.example/schemas/wl-backend-contract-v1.json",
   "title": "wl-skills-bd backend resource contract",
-  "description": "v0.9 扩展：externalId 桥接 design-model、relations 主从关联、customOperations 业务命令/状态机、alter ALTER TABLE、indexes 自定义索引、可选 export 操作。",
+  "description": "v0.14 安全契约：显式字段写策略、强类型业务命令 DTO、原子版本写、Expand/Contract DDL 和 Flyway 不可变门。",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "contractId", "profile", "rootPackage", "module", "entity", "api", "database", "migration", "fields"],
@@ -78,7 +78,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "column", "javaType", "dbType", "comment"],
+        "required": ["name", "column", "javaType", "dbType", "comment", "writable"],
         "properties": {
           "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
           "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
@@ -86,7 +86,7 @@
           "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
           "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
           "requiredOnCreate": { "type": "boolean", "default": false },
-          "writable": { "type": "boolean", "default": true },
+          "writable": { "type": "boolean", "default": false, "description": "必须显式声明；状态/审批等命令字段应为 false" },
           "queryMode": { "enum": ["none", "eq", "like"], "default": "none" },
           "detail": { "type": "boolean", "default": true },
           "list": { "type": "boolean", "default": true },
@@ -111,7 +111,7 @@
     },
     "customOperations": {
       "type": "array",
-      "description": "可选，业务命令/状态机。每个操作按四段式生成 Service 方法（校验存在→校验前置→构造 patch→updateById）。",
+      "description": "可选，业务命令/状态机。请求字段必须被 patch.fromRequest 显式消费，写入使用租户+有效标记+版本原子 SQL。",
       "items": { "$ref": "#/$defs/customOperation" }
     },
     "relations": {
@@ -123,12 +123,15 @@
       "type": "object",
       "additionalProperties": false,
       "description": "可选，ALTER TABLE。声明后 migration 生成 ALTER SQL，不再生成 CREATE TABLE。",
-      "required": ["version", "rollbackStrategy", "verificationSql", "operations"],
+      "required": ["version", "phase", "rollbackStrategy", "verificationSql", "operations"],
       "properties": {
         "version": { "type": "string", "pattern": "^[0-9]{8}_[0-9]{6}$" },
+        "phase": { "enum": ["expand", "contract"], "description": "expand 只允许 add/modify；contract 只允许 drop" },
+        "approvalRef": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{5,63}$", "description": "contract 阶段必填的 DBA/变更审批单" },
         "rollbackStrategy": { "type": "string", "minLength": 20 },
         "verificationSql": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-        "operations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/alterOperation" } }
+        "operations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/alterOperation" } },
+        "indexes": { "$ref": "#/$defs/indexes", "description": "ALTER 本版本新增的索引；禁止用顶层 indexes 重复创建存量索引" }
       }
     }
   },
@@ -161,11 +164,16 @@
     "patch": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["field", "value"],
+      "required": ["field"],
       "properties": {
         "field": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
-        "value": {}
-      }
+        "value": {},
+        "fromRequest": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" }
+      },
+      "oneOf": [
+        { "required": ["value"], "not": { "required": ["fromRequest"] } },
+        { "required": ["fromRequest"], "not": { "required": ["value"] } }
+      ]
     },
     "customOperation": {
       "type": "object",
@@ -205,10 +213,40 @@
       "additionalProperties": false,
       "properties": {
         "type": { "enum": ["add", "drop", "modify"] },
-        "field": { "description": "add 时必填，复用 fields 项结构" },
+        "field": { "$ref": "#/$defs/alterField", "description": "add 时必填；expand 新增列必须允许 NULL" },
         "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "drop/modify 时必填" },
+        "fromDbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$", "description": "modify 时必填，用于评审变更前类型" },
         "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$", "description": "modify 时必填" },
-        "comment": { "type": "string", "minLength": 1, "maxLength": 100, "description": "modify 时必填" }
+        "comment": { "type": "string", "minLength": 1, "maxLength": 100, "description": "modify 时必填" },
+        "compatibility": { "const": "widening", "description": "modify 只允许显式声明扩容" }
+      }
+    },
+    "alterField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "column", "javaType", "dbType", "comment"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime", "List<String>", "List<Long>"] },
+        "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
+        "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "requiredOnCreate": { "const": false },
+        "queryMode": { "enum": ["none", "eq", "like"] },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 }
+      }
+    },
+    "indexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "columns"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 64 },
+          "columns": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" } },
+          "unique": { "type": "boolean", "default": false }
+        }
       }
     }
   }

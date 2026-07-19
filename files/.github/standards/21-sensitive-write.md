@@ -58,7 +58,8 @@ mapper.deletePhysical(id);
 // ✅ 团队基线：软删（IS_DELETE = 0）
 entity.setIsDelete(0);
 EntityUtil.setUpdateProp(entity);
-baseMapper.updateById(entity);
+int affected = baseMapper.updateAtomic(entity, companyId, expectedRevision);
+ServiceAssert.isTrue(affected == 1, "写入失败：记录不存在、无权限或版本冲突");
 ```
 
 | 操作 | 团队基线 | 例外 |
@@ -149,17 +150,18 @@ public ApiResult<String> save(@RequestBody @Validated DTO dto) {
 - 开关变化生效 < 1 分钟（配置中心）
 - 开关维度：用户、租户、百分比
 
-## 8. 生产只读护栏（codegen/MCP 默认阻断）
+## 8. 受保护环境只读护栏（codegen/MCP 默认阻断）
 
-| 工具 | 生产环境 | 启用方式 |
+| 工具 | pre/prod/production | 启用方式 |
 |---|---|---|
 | `wls_be_codegen apply` | 阻断 | `allowProductionWrites: true`（本地显式） |
 | `wls_be_export_permissions apply` | 阻断 | 同上 |
 | `wls_be_safe_fix apply` | 阻断 | 同上 |
+| `config init/migrate/fix apply` | 阻断 | 同上；仍需 confirm + 当前 planHash |
 | `wl-skills-bd db preview` | 只读 | 无需确认 |
 | `wl-skills-bd validate` | 只读 | 无需确认 |
 
-> 识别生产环境的依据：`environment=production` / 网关带 `prod` 标识 / `.wl-skills-bd/config.json` 的 `environment` 字段。任何写工具默认零写入，必须人工显式开启 `allowProductionWrites`。
+> 环境取值来自显式参数、`WL_PROJECT_ENV` 或 `.wl-skills-bd/config.json`。任何工程文件写工具在 `pre/prod/production` 默认零写入；授权前必须审查同一内容生成的 planHash。授权仅覆盖本地工程文件，不授权数据库执行、部署或外部系统写入。
 
 ## 9. 敏感操作二次确认（扩展 11）
 
@@ -214,7 +216,7 @@ public void deleteById(String id) {
     ServiceAssert.isNotNull(e, "记录不存在");
     e.setIsDelete(0);
     EntityUtil.setUpdateProp(e);
-    int affected = baseMapper.updateById(e);
+    int affected = baseMapper.softDeleteAtomic(e, AuthUtil.getLoginCompanyId());
     ServiceAssert.isTrue(affected == 1, "删除失败");
     operationLogService.log("DELETE", e); // REQUIRES_NEW 独立事务
 }
@@ -225,4 +227,5 @@ baseMapper.deleteBatchIds(ids);
 
 ## 变更记录
 
+- 2026-07-18 v0.14：B17/B18 扩展到 Mapper XML、JDBC/native SQL、恒真/动态 WHERE 和租户谓词；pre/prod/production 全写工具统一 planHash 护栏。
 - 2026-07-18 v0.10：新增敏感写规范，落地 B17~B19 机器兜底 + 生产只读护栏 + 二次确认。

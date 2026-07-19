@@ -4,6 +4,7 @@
   "profile": "jh4j3-openapi3",
   "rootPackage": "com.jhict.sale",
   "module": "order",
+  "dbCluster": "cx",
   "externalId": "SALE_ORDER_MASTER",
   "entity": {
     "name": "SaleOrderMaster",
@@ -39,6 +40,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(64 CHAR)",
       "comment": "订单编号",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "eq",
       "maxLength": 64,
@@ -50,6 +52,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(200 CHAR)",
       "comment": "客户名称",
+      "writable": true,
       "requiredOnCreate": true,
       "queryMode": "like",
       "maxLength": 200
@@ -60,6 +63,7 @@
       "javaType": "String",
       "dbType": "VARCHAR2(32 CHAR)",
       "comment": "订单状态",
+      "writable": false,
       "queryMode": "eq",
       "maxLength": 32
     },
@@ -68,11 +72,21 @@
       "column": "TOTAL_AMOUNT",
       "javaType": "BigDecimal",
       "dbType": "NUMBER(18,2)",
-      "comment": "订单总金额"
+      "comment": "订单总金额",
+      "writable": true
+    },
+    {
+      "name": "approvalOpinion",
+      "column": "APPROVAL_OPINION",
+      "javaType": "String",
+      "dbType": "VARCHAR2(500 CHAR)",
+      "comment": "审批意见",
+      "writable": false,
+      "maxLength": 500
     }
   ],
   "indexes": [
-    { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "IS_DELETE", "ORDER_NO"], "unique": true },
+    { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "ORDER_NO"], "unique": true },
     { "name": "IDX_ORDER_STATUS", "columns": ["COMPANY_ID", "IS_DELETE", "STATUS"] }
   ],
   "customOperations": [
@@ -102,7 +116,10 @@
       "preconditions": [
         { "field": "status", "operator": "equals", "value": "SUBMITTED", "message": "仅已提交可审批" }
       ],
-      "patch": [{ "field": "status", "value": "APPROVED" }],
+      "patch": [
+        { "field": "status", "value": "APPROVED" },
+        { "field": "approvalOpinion", "fromRequest": "opinion" }
+      ],
       "externalId": "OP_APPROVE"
     },
     {

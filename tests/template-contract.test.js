@@ -26,6 +26,8 @@ const required = [
   "Rollback.md.tmpl",
   "ServiceTest.java.tmpl",
   "ControllerTest.java.tmpl",
+  "OperationRequestDTO.java.tmpl",
+  "DdlPreview.md.tmpl",
 ];
 
 for (const name of required) {
@@ -56,6 +58,7 @@ assert.match(service, /EntityUtil\.setCreateProp\(entity\)/);
 assert.doesNotMatch(service, /IdWorker|deleteBatchIds/, "默认模板禁止重复生成 ID 或物理删除");
 assert.match(service, /inserted == 1/);
 assert.match(service, /updated == 1/);
+assert.doesNotMatch(service, /baseMapper\.updateById/, "写操作不得依赖未验证的插件式乐观锁");
 assert.match(service, /<wl-custom name="export">/);
 assert.match(service, /<wl-custom name="relation:\{\{name\}\}">/);
 
@@ -64,6 +67,7 @@ assert.match(serviceTest, /<wl-custom name="tests">/);
 
 const mapperXml = read("Mapper.xml.tmpl");
 assert.match(mapperXml, /COMPANY_ID\s*=\s*#\{companyId\}/);
+assert.match(mapperXml, /AND IS_DELETE = 1[\s\S]*AND REVISION = #\{expectedRevision\}/, "原子更新必须同时约束有效标记和版本");
 const executableMapperXml = mapperXml.replace(/<!--[\s\S]*?-->/g, "");
 assert.doesNotMatch(executableMapperXml, /SELECT\s+\*/i);
 

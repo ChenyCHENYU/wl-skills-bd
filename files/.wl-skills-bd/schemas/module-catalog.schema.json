@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-backend-module-catalog-v1.json",
+  "title": "wl-skills-bd module catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "project", "module", "scope", "resources", "services", "apis", "databases", "relations", "dependencies", "diagnostics", "sourceEvidence", "sourceHash", "catalogHash"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "wl-backend-module-catalog" },
+    "project": { "type": "object" },
+    "module": { "type": "object" },
+    "scope": { "type": "object" },
+    "resources": { "type": "array" },
+    "services": { "type": "array" },
+    "apis": { "type": "array" },
+    "databases": { "type": "array" },
+    "relations": { "type": "array" },
+    "dependencies": { "type": "object" },
+    "diagnostics": { "type": "object" },
+    "sourceEvidence": { "type": "array" },
+    "sourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "catalogHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

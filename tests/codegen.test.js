@@ -14,9 +14,9 @@ const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-codegen
 try {
   const plan = buildPlan(contractFile, { projectRoot: tempRoot });
   assert.strictEqual(plan.ok, true);
-  assert.strictEqual(plan.actions.length, 16);
+  assert.strictEqual(plan.actions.length, 17);
   assert.strictEqual(plan.completion.contractStatus, "confirmed");
-  assert.deepStrictEqual(plan.summary, { add: 16 });
+  assert.deepStrictEqual(plan.summary, { add: 17 });
   assert.strictEqual(buildPlan(contractFile, { projectRoot: tempRoot }).planHash, plan.planHash, "相同输入必须得到相同 planHash");
 
   assert.strictEqual(applyPlan(plan, { planHash: plan.planHash }).reason, "confirm-required");
@@ -25,11 +25,11 @@ try {
 
   const applied = applyPlan(plan, { confirm: true, planHash: plan.planHash, requireComplete: true });
   assert.strictEqual(applied.ok, true);
-  assert.strictEqual(applied.applied.length, 16);
+  assert.strictEqual(applied.applied.length, 17);
   assert.strictEqual(fs.existsSync(path.join(tempRoot, STATE_REL)), true);
 
   const stablePlan = buildPlan(contractFile, { projectRoot: tempRoot });
-  assert.deepStrictEqual(stablePlan.summary, { unchanged: 16 });
+  assert.deepStrictEqual(stablePlan.summary, { unchanged: 17 });
   assert.strictEqual(buildPlan(contractFile, { projectRoot: tempRoot }).planHash, stablePlan.planHash);
 
   const modified = stablePlan.actions.find((item) => item.rel.endsWith("Controller.java"));
@@ -79,4 +79,4 @@ try {
   fs.rmSync(rollbackRoot, { recursive: true, force: true });
 }
 
-console.log("✅ codegen：16 产物、确定性、确认门、冲突保护、强制备份与失败整批回滚通过");
+console.log("✅ codegen：17 产物、确定性、确认门、冲突保护、强制备份与失败整批回滚通过");

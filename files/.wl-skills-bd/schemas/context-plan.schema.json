@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-backend-context-plan-v1.json",
+  "title": "wl-skills-bd bounded context plan",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "kind", "project", "module", "scanPolicy", "authority", "limits", "selection", "linked", "diagnostics", "contextHash"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "wl-backend-context-plan" },
+    "module": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+    "scanPolicy": {
+      "type": "object",
+      "required": ["mode", "scannedModules", "loadedSnapshotModules", "maxHops", "linkedSourceDirectoriesScanned"],
+      "properties": {
+        "mode": { "const": "current-module-plus-one-hop-snapshots" },
+        "scannedModules": { "type": "array", "minItems": 1, "maxItems": 1 },
+        "loadedSnapshotModules": { "type": "array", "uniqueItems": true },
+        "maxHops": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "linkedSourceDirectoriesScanned": { "const": false }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "required": ["files", "selectedFiles", "selectedBytes", "omittedFiles"],
+      "properties": {
+        "files": { "type": "array" },
+        "selectedFiles": { "type": "integer", "minimum": 0 },
+        "selectedBytes": { "type": "integer", "minimum": 0 },
+        "omittedFiles": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "contextHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

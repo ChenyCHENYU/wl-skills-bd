@@ -184,7 +184,11 @@ function handleFix(args) {
     ].join("\n");
     return previewResult(text, preview);
   }
-  const result = safeFix.applyFixPlan(plan, { confirm: true, planHash: args.planHash });
+  const result = safeFix.applyFixPlan(plan, {
+    confirm: true,
+    planHash: args.planHash,
+    allowProductionWrites: args.allowProductionWrites === true,
+  });
   if (!result.ok) return blockedResult(`安全修复零写入：${result.reason}`, result.reason, {
     currentPlanHash: result.expectedPlanHash || plan.planHash,
     manual: result.manual,
@@ -256,24 +260,19 @@ function handleExportPermissions(args) {
   } catch (error) {
     return blockedResult(error.message, "invalid-input");
   }
-  const loaded = loadContract(file, { projectRoot: root });
-  if (!loaded.ok) return blockedResult(`契约校验失败\n${validationText(loaded)}`, "invalid-contract", { errors: loaded.errors });
-  const manifest = collaboration.buildManifest(loaded.contract, loaded.profile);
-  const inventory = collaboration.buildPermissionInventory(manifest);
-  const markdown = collaboration.renderPermissionInventoryMarkdown(inventory);
+  const permissionExport = require("../../lib/permission-export");
+  const plan = permissionExport.buildPermissionExportPlan(file, { projectRoot: root, output: args.output });
+  if (!plan.ok) return blockedResult(`契约校验失败\n${validationText(plan)}`, "invalid-contract", { errors: plan.errors });
   if (args.confirmApply !== true) {
-    return previewResult(`权限码导出预览：${inventory.rows.length} 个权限码。确认后传 confirmApply: true 写入 ${args.output || "reports/SYS_PERMISSION_INFO_{contractId}.md"}。`, { inventory, markdown, output: args.output || null });
+    return previewResult(`权限码导出预览：${plan.inventory.rows.length} 个权限码。确认后携带 planHash=${plan.planHash} 并传 confirmApply: true。`, permissionExport.publicPermissionExportPlan(plan));
   }
-  const outputRel = args.output || `reports/SYS_PERMISSION_INFO_${inventory.contractId}.md`;
-  const { resolveWithin, writeTextAtomic } = require("../../lib/manifest");
-  let destination;
-  try {
-    destination = resolveWithin(root, outputRel);
-  } catch (error) {
-    return blockedResult(error.message, "invalid-input");
-  }
-  writeTextAtomic(destination, markdown);
-  return completedResult(`✅ 已导出 ${inventory.rows.length} 个权限码到 ${outputRel}`, { output: outputRel, inventory });
+  const result = permissionExport.applyPermissionExportPlan(plan, {
+    confirm: true,
+    planHash: args.planHash,
+    allowProductionWrites: args.allowProductionWrites === true,
+  });
+  if (!result.ok) return blockedResult(`权限码导出零写入：${result.reason}`, result.reason, result);
+  return completedResult(`✅ 已导出 ${result.inventory.rows.length} 个权限码到 ${result.output}`, result);
 }
 
 function handleConfig(args) {
@@ -296,11 +295,18 @@ function handleConfig(args) {
       port: typeof args.port === "number" ? args.port : undefined,
       datasourceType: args.datasourceType,
       customer: args.customer,
+      overwrite: args.overwrite === true,
     });
     if (args.confirmApply !== true) {
-      return previewResult(`config init 预览：将生成 ${plan.actions.length} 个配置文件。确认后传 confirmApply: true。`, { actions: plan.actions.map((a) => ({ rel: a.rel, kind: a.kind, env: a.env })) });
+      return previewResult(`config init 预览：将生成 ${plan.actions.length} 个配置文件。确认后携带 planHash=${plan.planHash} 并传 confirmApply: true。`, { planHash: plan.planHash, actions: plan.actions.map((a) => ({ rel: a.rel, kind: a.kind, env: a.env, currentHash: a.currentHash })) });
     }
-    const result = configInit.applyInitPlan(plan, { projectRoot: root, confirm: true, overwrite: args.overwrite === true });
+    const result = configInit.applyInitPlan(plan, {
+      projectRoot: root,
+      confirm: true,
+      planHash: args.planHash,
+      allowProductionWrites: args.allowProductionWrites === true,
+    });
+    if (!result.ok) return blockedResult(`config init apply 失败：${result.reason}`, result.reason, result);
     return completedResult(`✅ config init 完成：${result.applied.filter((a) => a.result === "created").length} 创建`, result);
   }
   if (subcommand === "migrate") {
@@ -311,7 +317,12 @@ function handleConfig(args) {
     if (args.confirmApply !== true) {
       return previewResult(`config migrate 预览：${plan.from} → ${plan.to}，${plan.diffs.length} 项差异，${plan.actions.length} 个文件。planHash: ${plan.planHash}`, envMatrix.publicMigrationPlan(plan));
     }
-    const result = envMatrix.applyMigrationPlan(plan, { projectRoot: root, confirm: true, planHash: args.planHash });
+    const result = envMatrix.applyMigrationPlan(plan, {
+      projectRoot: root,
+      confirm: true,
+      planHash: args.planHash,
+      allowProductionWrites: args.allowProductionWrites === true,
+    });
     if (!result.ok) return blockedResult(`config migrate apply 失败：${result.reason}`, result.reason);
     return completedResult(`✅ config migrate 完成：${plan.from} → ${plan.to}，生成 ${result.applied.length} 个文件`, result);
   }
@@ -319,9 +330,14 @@ function handleConfig(args) {
     const configFix = require("../../lib/config-fix");
     const plan = configFix.buildFixPlan(root);
     if (args.confirmApply !== true) {
-      return previewResult(`config fix 预览：${plan.summary.total} 处明文敏感信息，可修复 ${plan.summary.fixed}`, plan);
+      return previewResult(`config fix 预览：${plan.summary.total} 处明文敏感信息，可修复 ${plan.summary.fixed}。planHash: ${plan.planHash}`, plan);
     }
-    const result = configFix.applyFixPlan(plan, { projectRoot: root, confirm: true });
+    const result = configFix.applyFixPlan(plan, {
+      projectRoot: root,
+      confirm: true,
+      planHash: args.planHash,
+      allowProductionWrites: args.allowProductionWrites === true,
+    });
     return completedResult(`✅ config fix 完成：修复 ${result.closure.fixed}，剩余 ${result.closure.remaining}`, result);
   }
   return blockedResult(`未知 config 子命令：${subcommand}（支持 doctor/init/migrate/fix）`, "invalid-input");
@@ -370,4 +386,73 @@ function handleTask(args) {
   return blockedResult("task 需要 input（自然语言）或 type（指定）参数，或 list=true", "invalid-input");
 }
 
-module.exports = { handleCodegen, handleConfig, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot };
+function handleCatalog(args) {
+  const catalog = require("../../lib/project-catalog");
+  const root = projectRoot();
+  if (args.mode === "show") {
+    if (args.module) {
+      const value = catalog.readModuleCatalog(root, args.module);
+      if (!value) return blockedResult(`模块目录快照不存在：${args.module}`, "catalog-missing");
+      return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", catalog: value });
+    }
+    const file = path.join(root, catalog.CATALOG_ROOT, "project-catalog.json");
+    if (!fs.existsSync(file)) return blockedResult("项目目录快照不存在", "catalog-missing");
+    const value = JSON.parse(fs.readFileSync(file, "utf8"));
+    return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", catalog: value });
+  }
+  if (args.mode === "check") {
+    if (!args.module) return blockedResult("catalog check 必须指定当前 module", "module-required");
+    const result = catalog.checkModuleFreshness(root, args.module);
+    return toolResult(result.ok ? `✓ ${args.module} 目录快照新鲜；只扫描当前模块` : `✗ ${args.module} 目录缺失或过期`, result, !result.ok);
+  }
+  const plan = catalog.buildCatalogPlan(root, { module: args.module, full: args.full === true });
+  if (!plan.ok) return blockedResult((plan.errors || []).map((item) => `${item.path}: ${item.message}`).join("\n"), "catalog-plan-invalid", plan);
+  const preview = catalog.publicCatalogPlan(plan);
+  if (args.mode === "plan") {
+    return toolResult(`目录预览：扫描 ${plan.scannedModules.join(", ")}；复用快照 ${plan.reusedModules.join(", ") || "无"}\nplanHash: ${plan.planHash}`, preview, plan.blocking);
+  }
+  if (args.confirmApply !== true) return blockedResult("catalog apply 必须传 confirmApply=true", "confirm-required", { currentPlanHash: plan.planHash });
+  const result = catalog.applyCatalogPlan(plan, {
+    confirm: true,
+    planHash: args.planHash,
+    allowProductionWrites: args.allowProductionWrites === true,
+  });
+  if (!result.ok) return blockedResult(`Catalog 零写入：${result.reason}`, result.reason, result);
+  return completedResult(`✓ Catalog 已刷新；实际扫描 ${result.scannedModules.join(", ")}；其他模块只复用快照`, result);
+}
+
+function handleContext(args) {
+  const result = require("../../lib/context-planner").buildContextPlan(projectRoot(), {
+    module: args.module,
+    task: args.task,
+    keywords: args.keywords,
+    maxFiles: args.maxFiles,
+    maxBytes: args.maxBytes,
+    maxHops: args.maxHops,
+  });
+  if (!result.ok) return blockedResult((result.errors || []).map((item) => `${item.path || item.code}: ${item.message}`).join("\n"), result.reason, result);
+  return toolResult(
+    `上下文包：${result.module}；扫描模块 ${result.scanPolicy.scannedModules.join(", ")}；加载一跳快照 ${result.scanPolicy.loadedSnapshotModules.join(", ") || "无"}；选择 ${result.selection.selectedFiles} 个文件`,
+    result,
+  );
+}
+
+function handleCommit(args) {
+  const policy = require("../../lib/commit-policy");
+  const root = projectRoot();
+  let result;
+  if (args.mode === "validate") {
+    if (!args.message) return blockedResult("commit validate 必须提供 message", "message-required");
+    result = policy.validateMessage(root, args.message);
+  } else if (args.mode === "check") {
+    if (!args.range) return blockedResult("commit check 必须提供 range", "range-required");
+    result = policy.validateRange(root, args.range);
+  } else result = policy.doctor(root);
+  const failures = result.errors || result.invalid || [];
+  const text = result.ok
+    ? `✓ commit ${args.mode} 通过${result.checked !== undefined ? `；检查 ${result.checked} 个提交` : ""}`
+    : failures.map((item) => item.errors ? item.errors.map((entry) => entry.message).join("；") : item.message).join("\n") || result.reason;
+  return toolResult(text, result, !result.ok);
+}
+
+module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTroubleshoot };

@@ -1,127 +1,66 @@
-# 18 · Git 提交信息与分支模型规范（✅ 已落地）
+<!--
+document-meta:
+  purpose: 定义后端项目唯一的提交标题格式、配置来源和本地与 CI 的执行边界
+  audience: backend-developers-and-maintainers
+  source-of-truth: .wl-skills-bd/catalog.config.json
+  maintained-by: wl-skills-bd
+-->
 
-> 依据：《项目开发手册》§"代码提交" / §"分支及版本管理"。本规范约束**提交信息格式 + 分支模型**。
->
-> 强制度：🔴 必遵。`code-fix-be` 完成整改后、`convention-audit-be` 审计时一并对照。
+# 18 · Git 提交信息规范（已落地）
 
----
+> 本规范包含团队开发手册要求的“类型、模块、功能点、具体内容”，但将分隔符统一为工具链可确定校验的半角 Conventional Commits 格式。分支、合并链、仓库保护与发布分支仍由团队单独治理。
 
-## 0. 分支模型（《项目开发手册》§"分支及版本管理"，详见 standards/24 §2）
+## 1. 唯一格式
 
+```text
+type(scope): 功能点-具体内容
 ```
-master（生产，保护）← pre（预发布，保护）← uat（验收，保护）← slt（联调）← dev ← dev-{模块}-{工号}
+
+- `type`：小写类型，白名单来自 `.wl-skills-bd/catalog.config.json` 的 `commit.types`。
+- `scope`：必须是 `catalog.config.json` 中登记的模块 ID，不接受任意文本。
+- `功能点-具体内容`：两侧均非空；默认必须使用半角 `-` 分隔。
+- `type`、括号、冒号和空格必须使用半角字符；不再同时接受全角变体。
+- 标题长度默认不超过 100 字符，可在配置允许范围内调整。
+
+合法示例：
+
+```text
+feat(order): 订单创建-增加请求幂等校验
+fix(customer): 客户查询-修复租户条件遗漏
+docs(billing): 结算对账-补充人工恢复说明
 ```
 
-| 分支 | 命名 | 权限 | 合并方向 |
-|---|---|---|---|
-| master | `master` | 技术经理保护 | pre → master（发布）|
-| pre | `pre` | 技术经理保护 | uat → pre |
-| uat | `uat` | 技术经理保护 | slt → uat |
-| slt | `slt` | 模块负责人 | dev → slt |
-| dev | `dev` | 模块负责人 | dev-{模块}-{工号} → dev |
-| 个人 | `dev-{模块}-{工号}` | 个人 | — |
+## 2. 类型与 scope
 
-**合并铁律**：
-- 禁止跨级合并（如 dev → master 直推）
-- master/pre 禁止直接提交，必须走 PR
-- 个人分支定期从 dev rebase，避免长期分叉
+默认类型为 `feat`、`fix`、`perf`、`refactor`、`docs`、`test`、`style`、`build`、`ci`、`chore`、`revert`。项目可以删减或评审后扩展，执行器只认配置中的值。
+
+scope 不再从包名、分支或个人记忆推断。模块新增、拆分、合并时，先更新项目 Catalog 配置并评审关系，再使用新的 scope。
+
+## 3. 执行闭环
 
 ```bash
-# 个人分支创建
-git checkout dev
-git pull
-git checkout -b dev-sale-EX26071
+# 单条消息或 Git commit-msg 文件
+wl-skills-bd commit validate --message "feat(order): 订单创建-增加幂等校验"
+wl-skills-bd commit validate --file .git/COMMIT_EDITMSG
 
-# 合并回 dev（PR）
-git push origin dev-sale-EX26071
-# 在 GitLab/GitHub 创建 PR：dev-sale-EX26071 → dev
+# 本地 Hook 状态
+git config core.hooksPath .githooks
+wl-skills-bd commit doctor
+
+# CI 权威校验；range 基线由流水线提供
+wl-skills-bd commit check --range origin/main..HEAD
 ```
 
----
+本地 Hook 可被 `--no-verify` 绕过，只负责即时反馈。CI range 校验才是不可跳过的合并门禁。本包提供校验器和版本受控 Hook，不固化分支名称、不自动提交。
 
-## 1. 格式
+## 4. 提交质量
 
-```
-【类型code】（【模块名】）：【功能点】-【具体内容】
-```
-
-- 全角【】为占位提示符，实际提交时**替换为真实值**（不带方括号）
-- `类型code` 全小写，见下表
-- `模块名` 与工程包名一致（如 `mdm` / `sale` / `quality` / `produce` / `cost` / `safe`）
-- `功能点` 简述本次提交涉及的特性或文件域
-- `具体内容` 描述本 commit 实际做了什么
-
-### 示例
-
-```
-feat（mdm）：模型属性管理-新增特征量分类 CRUD
-fix（sale）：销售订单-修复分页 total 为 0 的 bug
-perf（quality）：质检任务-批量校验改用线程池
-docs（produce）：生产订单-补充 README 启动说明
-```
-
-> 手册原例格式同为 `【类型code】（【模块名】）：【功能点】-【具体内容】`，例如"生产订单模块新增利库功能"对应：
-> ```
-> feat（produce）：生产订单-新增利库功能
-> ```
-
----
-
-## 2. 类型 code 清单
-
-| 类型 code | 名称 | 含义说明 |
-| --------- | ---- | -------- |
-| `feat`     | 新功能 | 新增功能、接口、组件、页面等 |
-| `fix`      | 修复   | 修复 bug、异常、数据错误等 |
-| `perf`     | 优化   | 性能优化、体验优化、代码精简等 |
-| `docs`     | 文档   | 仅修改文档（README、注释、说明） |
-| `style`    | 格式   | 仅调整代码格式（不影响逻辑） |
-| `revert`   | 回滚   | 回滚之前的错误提交 |
-
-> 对齐业界 Conventional Commits；新增类型须先评审，禁止自造。
-
----
-
-## 3. 正反对照
-
-```
-✅ feat（mdm）：系统授权-新增批量授权导入
-✅ fix（quality）：质检规则-修复正则校验空指针
-✅ perf（sale）：订单列表-预编译正则并加索引
-
-❌ 更新了代码                       （缺类型、缺模块、缺结构）
-❌ fix(mdm): xxx                    （半角括号、英文冒号，与手册格式不符）
-❌ feat：新增功能                    （缺模块名与具体内容）
-❌ 一个提交里混了 feat + fix         （一个 commit 一个意图，混合请拆分）
-```
-
----
-
-## 4. 配套约束
-
-- **一个 commit 一个意图**：新增与修复不要塞进同一提交，便于回溯与 revert
-- **AI 生成代码后提交**：仍由开发人员按本格式撰写；AI 可建议 commit message，但不自动提交
-- **不自动提交**：与 `db-migration`、菜单/字典/权限写操作红线一致，提交动作一律人工执行
-- **分支规范**：见本规范 §0（master/pre/uat/slt/dev 五级 + dev-{模块}-{工号} 个人分支），与 standards/24 §2 一致
-
----
-
-## 5. 审计对照（convention-audit-be）
-
-审计时检查最近 N 条 commit message：
-
-| 检查项 | 命中即记录 |
-| ------ | ---------- |
-| 缺类型 code | 违规 |
-| 类型 code 不在 6 种之内 | 违规 |
-| 缺模块名 / 缺结构分隔符 | 违规 |
-| 全英文括号或冒号（与手册格式不符） | 提示 |
-
-> 审计输出到 `reports/AUDIT_BE_*.md` 的"Git 提交规范"小节，不阻断、仅记录与建议。
-
----
+- 一个提交一个意图；功能与无关修复应拆分。
+- 提交标题描述结果，不写“改一下”“更新代码”等无证据内容。
+- AI 可以建议消息，但不得自动提交；提交动作由开发者完成。
+- 生成代码、DDL 或文档时，提交前仍必须完成相应质量与安全闭环。
 
 ## 变更记录
 
-- 2026-07-18 v0.11 新增 §0 分支模型（master/pre/uat/slt/dev + dev-{模块}-{工号}），与 standards/24 §2 一致。
-- 2026-07-17 v0.0.4 新增（对齐《项目开发手册》§"代码提交"）
+- 2026-07-19 v0.15：统一为可执行的 `type(scope): 功能点-具体内容`，scope 接入模块 Catalog，本地 Hook 与 CI range 校验落地。
+- 2026-07-18 v0.14：按团队边界移除分支模型，只保留提交信息规范。

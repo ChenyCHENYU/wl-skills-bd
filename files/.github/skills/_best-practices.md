@@ -6,6 +6,7 @@
 
 ```text
 业务事实/前端 api.md
+  → project-context-governance：当前模块 Catalog + 一跳 Context Plan
   → api-design-be：形成 wl-contract.json
   → codegen validate
   → codegen plan
@@ -15,7 +16,7 @@
   → contract diff
 ```
 
-契约不完整时停止生成，特别是外部路径、权限码、数据库类型、租户、revision 和 DDL 恢复策略。生成 DDL 不等于授权执行数据库变更。
+Catalog 启用时，当前模块目录过期或存在重复 API/权限/服务/表写身份必须停止。关联模块只读一跳快照，不得为了“全面”扫描全仓。契约不完整时同样停止生成，特别是外部路径、权限码、数据库类型、租户、revision 和 DDL 恢复策略。生成 DDL 不等于授权执行数据库变更。
 
 ## 前端接口变更
 
@@ -36,7 +37,7 @@ doctor
 
 ## DDL 或数据迁移
 
-`db-migration` 当前是流程骨架。新资源 codegen 可以生成 CREATE migration 和人工恢复说明；ALTER、回填、expand-contract 仍需 DBA/开发者评审。禁止自动连库、自动执行、自动反向 migration 或把恢复说明冒充可无损回滚。
+`db-migration` 已确定性生成 CREATE、受限分阶段 ALTER、索引、人工恢复说明和 DDL_PREVIEW。复杂回填、跨库迁移和真实数据库执行仍需 DBA/开发者设计与审批。禁止自动连库、自动执行、自动反向 migration 或把恢复说明冒充可无损回滚。
 
 ## 单测补齐
 
@@ -46,7 +47,7 @@ doctor
 
 - 陌生业务先用 `business-doc-extract-be` 只读整理证据，业务方确认后再设计契约；
 - 仅咨询时读取相关 standards，不触发写入；
-- 环境标准化当前没有 CLI/MCP 执行器，只能形成脱敏、人工确认的检查清单和补丁建议。
+- 环境标准化使用 `config init/migrate/doctor/fix` 与 `troubleshoot`；写命令必须以当前文件哈希生成 planHash，并通过 confirm 后原子应用。
 
 ## 通用红线
 

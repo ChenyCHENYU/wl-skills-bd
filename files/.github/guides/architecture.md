@@ -5,15 +5,17 @@
 ```text
 L0  上游事实       已评审需求 / 可选 design-model 或前端契约 / 数据模型 / 现网约束
       │
-L1  机器契约       contract schema + shared delivery profile
+L1  项目上下文     当前模块 Catalog + 一跳快照 + 有界 Context Plan
       │
-L2  确定性生成     14 模板产物 + wl-api-contract JSON/Markdown
+L2  机器契约       contract schema + shared delivery profile
       │
-L3  静态保证       B1~B23 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
+L3  确定性生成     16 模板、17+N 工程/协作产物
       │
-L4  受控变更       install/codegen/safe-fix 的 planHash、确认、备份、复扫
+L4  静态保证       B1~B23 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
       │
-L5  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 与业务重构
+L5  受控变更       install/catalog/codegen/safe-fix 的 planHash、确认、备份、复扫
+      │
+L6  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 与业务重构
 ```
 
 单向依赖原则：上游事实先被收敛成机器契约，代码和协作文档再从契约生成。检查器不偷偷修代码；修复器不猜权限、SQL、租户或业务语义；MCP 只是复用同一 lib 能力，不建立第二套逻辑。
@@ -23,16 +25,17 @@ L5  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 
 | 模块 | 职责 |
 |---|---|
 | `files/.wl-skills-bd/` | profile、兼容矩阵、规则目录、JSON Schema |
-| `files/.github/standards/` | 24 条团队规范 |
+| `files/.github/standards/` | 27 条团队规范 |
 | `files/.github/skills/` | 场景编排与人工判断边界 |
-| `files/.github/templates/` | 14 个严格模板与示例契约 |
+| `files/.github/templates/` | 16 个严格模板与示例契约 |
+| `lib/project-catalog.js` / `context-planner.js` | 模块增量目录、全局去重与一跳上下文选择 |
 | `lib/contract.js` | 契约语义校验与模板上下文 |
-| `lib/codegen.js` | 16 产物计划、状态、冲突和应用 |
+| `lib/codegen.js` | 17+N 产物计划、上下文前置门、状态、冲突和应用 |
 | `lib/collaboration.js` | 前端 manifest/api.md、OpenAPI/权限差异 |
 | `lib/be-rules.js` / `reporters.js` | B1~B23 与多格式报告 |
 | `lib/safe-fix.js` | B3/B5 白名单计划、备份回滚和复扫 |
 | `lib/installer.js` / `doctor.js` | 资产生命周期与环境诊断 |
-| `mcp/` | 9 个工具的 schema、registry 和 stdio 协议适配 |
+| `mcp/` | 15 个工具的 schema、registry 和 stdio 协议适配 |
 
 ## 与 wl-skills-kit 的协作
 

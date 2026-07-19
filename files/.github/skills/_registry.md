@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.13.0）
+# Backend Skills 注册表（v0.15.1）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 frontmatter 严格一致，改一处必须同步另一处。
@@ -14,6 +14,7 @@
 | 生成 Service / 全套 CRUD / 业务命令 / 状态机           | [`core/service-codegen`](core/service-codegen/SKILL.md)                  | ④   | ✅ 落地  | —          |
 | 生成 Mapper / XML / SQL                                 | [`core/mapper-xml-gen`](core/mapper-xml-gen/SKILL.md)                    | ⑤   | ✅ 落地  | —          |
 | 后端规范审计 / 代码体检 / 全量扫描                      | [`core/convention-audit-be`](core/convention-audit-be/SKILL.md)          | ⑧   | ✅ 落地  | validate   |
+| 模块上下文 / 查关联服务 / 生成前去重 / 避免全仓扫描             | [`core/project-context-governance`](core/project-context-governance/SKILL.md) | ⓪ | ✅ 落地 | catalog/context |
 | 抽取业务文档 / 阅读旧代码生成业务说明                  | [`core/business-doc-extract-be`](core/business-doc-extract-be/SKILL.md)  | ②预  | 🟡 骨架  | —          |
 | 建表 / DDL / ALTER TABLE / 字段新增 / 索引            | [`data/db-migration`](data/db-migration/SKILL.md)                        | ⑥   | 🟡 部分  | db_preview |
 | 生成单元测试 / Mock 测试 / Controller 测试            | [`test/unit-test-gen`](test/unit-test-gen/SKILL.md)                      | ⑦   | 🟡 骨架  | —          |
@@ -21,7 +22,7 @@
 | Redis / 缓存 / 分布式锁 / 批量删除 / 物理删 / 熔断 / 限流 / Feign 超时 / 生产只读 / 二次确认 | [`ops/data-safety`](ops/data-safety/SKILL.md) | ops 横切 | ✅ 落地 | validate   |
 | 后端环境标准化 / 切华新 / 本地启动配不起来 / K8s 部署清单对齐 | [`ops/standard-env-config-be`](ops/standard-env-config-be/SKILL.md) | ops  | ✅ 落地 | config/troubleshoot |
 
-**落地度**：11 个 Skill 中 **8 已落地**（api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **2 骨架**（business-doc / unit-test）。
+**落地度**：12 个 Skill 中 **9 已落地**（project-context / api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **2 骨架**（business-doc / unit-test）。
 
 ## v0.13 任务驱动精准路由
 
@@ -81,7 +82,7 @@
 
 ---
 
-## 10 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
+## 12 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
 
 ```
 business-doc-extract-be → api-design-be → entity-codegen → service-codegen

@@ -47,6 +47,9 @@ public class MdmFeatureCategoryController {
 
 - 请求体使用 DTO，禁止直接接收 Entity。
 - 新增、修改 DTO 在确定性 codegen 中分离；存量共享 DTO 仅为兼容模式。
+- 分页的 `current/size` 与查询字段统一放入 `XxxPageDTO` JSON 请求体；不得再通过隐藏 query 参数传递 `JhPage`。
+- 自定义命令统一生成 `Xxx{Operation}RequestDTO`；`id/ids` 与业务请求字段都进入受校验的 JSON 请求体，不使用散落的 `@RequestParam`。
+- 批量命令先去重并限制单批最多 1000 条；任一记录不存在、越权、前置状态冲突或版本冲突时整批事务回滚，不返回“部分成功”假象。
 - 长 ID 始终以 String 对外，避免 JavaScript 精度丢失。
 - 业务响应成功码由 `ApiResult` 统一产生，当前 jh4j-cloud 3.1.0 为 `2000`。
 - 分页泛型必须是 `JhPage<XxxPageVO>`，不得写成 `JhPage<List<XxxPageVO>>`。
@@ -68,4 +71,5 @@ public class MdmFeatureCategoryController {
 
 ## 变更记录
 
+- 2026-07-18 v0.14：分页参数纳入 PageDTO；自定义命令改用独立 RequestDTO；批量命令定义为事务原子语义。
 - 2026-07-18 v0.8：统一 OpenAPI 3、分页泛型、直接 Service 默认模式和契约驱动路径。

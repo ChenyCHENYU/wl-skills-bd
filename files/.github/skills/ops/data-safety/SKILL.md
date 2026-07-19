@@ -22,7 +22,7 @@ risk: 🟡 中风险（写代码需人工确认语义）
 ✅ 已读取 standards/21-sensitive-write.md → 分级/批量/物理删禁令/幂等/生产只读
 ✅ 已读取 standards/22-resilience.md → Feign 超时/重试/熔断/舱壁/限流
 ⚠️ 写代码后必须跑 B13~B19，error 未清零不得提交
-⚠️ 生产环境 codegen/safe-fix/permissions apply 默认阻断
+⚠️ pre/prod/production 的 codegen/safe-fix/config/permissions apply 默认阻断
 ```
 
 ## 覆盖范围（机器兜底）
@@ -96,12 +96,12 @@ ribbon:
   MaxAutoRetriesNextServer: 0
 ```
 
-### 5. 生产只读护栏对照
+### 5. 受保护环境只读护栏对照
 
 ```bash
-# 生产环境默认零写入
+# pre/prod/production 默认零写入
 wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm
-# 输出：❌ 拒绝：environment=production，需 allowProductionWrites: true
+# 输出：❌ 拒绝：受保护环境需先评审同一 planHash，再显式授权
 
 # 本地显式开启（人工授权）
 WL_ALLOW_PRODUCTION_WRITES=true wl-skills-bd codegen apply ...
@@ -141,7 +141,7 @@ service.saveBatch(list, 50000);
 
 ## 接入检查清单（doctor 未来扩展）
 
-- [ ] `.wl-skills-bd/config.json` 声明 `environment` 字段（dev/sit/uat/prod）
+- [ ] `.wl-skills-bd/config.json` 声明 `environment` 字段（dev/sit/uat/pre/prod）
 - [ ] `.wl-skills-bd/redis-persistent-keys.json` 登记持久 Key 白名单
 - [ ] Feign 客户端统一超时配置
 - [ ] Resilience4j/Sentinel 熔断器配置
@@ -149,4 +149,5 @@ service.saveBatch(list, 50000);
 
 ## 变更记录
 
+- 2026-07-18 v0.14：保护范围扩展为 pre/prod/production，并覆盖 config 与 permissions 写链。
 - 2026-07-18 v0.10：新增 data-safety Skill，落地 standards 20/21/22 和 B13~B19。

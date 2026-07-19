@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 {{#pageDtoImports}}
 import {{.}};
 {{/pageDtoImports}}
@@ -20,6 +23,17 @@ import {{.}};
 @ToString
 @Schema(description = "{{apiDesc}}分页查询DTO")
 public class {{Entity}}PageDTO {
+
+    @NotNull(message = "当前页码不能为空")
+    @Min(value = 1, message = "当前页码必须大于等于1")
+    @Schema(description = "当前页码", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    private Long current;
+
+    @NotNull(message = "每页记录条数不能为空")
+    @Min(value = 1, message = "每页记录条数必须大于等于1")
+    @Max(value = 200, message = "每页记录条数不能超过200")
+    @Schema(description = "每页记录条数", requiredMode = Schema.RequiredMode.REQUIRED, example = "20")
+    private Long size;
 
     {{#queryFields}}
     @Schema(description = "{{fieldComment}}")

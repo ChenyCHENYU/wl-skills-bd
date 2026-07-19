@@ -1,16 +1,18 @@
-package {{rootPackage}}.controller.{{module}};
+package {{rootPackage}}.{{module}}.controller;
 
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}UpdateDTO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
 import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
-import {{rootPackage}}.service.{{module}}.{{Entity}}Service;
+import {{rootPackage}}.{{module}}.service.{{Entity}}Service;
+{{#customRequestDtos}}
+import {{rootPackage}}.api.dto.{{module}}.{{requestDtoName}};
+{{/customRequestDtos}}
 import com.jhict.common.core.entity.ApiResult;
 import com.jhict.common.data.mybatis.entity.JhPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -24,15 +26,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-{{#usesRequestParam}}
-import org.springframework.web.bind.annotation.RequestParam;
-{{/usesRequestParam}}
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-{{#importsForRequestFields}}
-import {{.}};
-{{/importsForRequestFields}}
 {{#relationVoImports}}
 import {{.}};
 {{/relationVoImports}}
@@ -54,15 +50,13 @@ public class {{Entity}}Controller {
     private {{Entity}}Service {{entity}}Service;
 
     @Operation(summary = "查询{{apiDesc}}分页")
-    @Parameters({
-            @Parameter(name = "current", description = "当前页码", example = "1"),
-            @Parameter(name = "size", description = "每页记录条数", example = "10")
-    })
     @PreAuthorize("@pms.hasPermission('{{pagePermission}}')")
     @PostMapping("queryPage")
     public ApiResult<JhPage<{{Entity}}PageVO>> query{{Entity}}Page(
-            @Parameter(hidden = true) JhPage<{{Entity}}PageVO> page,
             @RequestBody @Validated {{Entity}}PageDTO params) {
+        JhPage<{{Entity}}PageVO> page = new JhPage<>();
+        page.setCurrent(params.getCurrent());
+        page.setSize(params.getSize());
         return ApiResult.success("查询成功", {{entity}}Service.query{{Entity}}Page(page, params));
     }
 

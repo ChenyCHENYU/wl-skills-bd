@@ -2,7 +2,7 @@
 
 > DDL、数据回填和生产写操作必须先生成差异与风险报告，等待人工确认后由流水线执行。AI/MCP 默认只允许 plan/dry-run。
 >
-> v0.9 起契约可选声明 `alter`，codegen 自动生成 ALTER 迁移 SQL（add/modify/drop）+ Expand-Contract 阶段标注；`indexes` 自动渲染到 migration。
+> v0.14 起契约 `alter` 必须显式声明 `phase=expand|contract`：expand 仅允许新增可空列、兼容索引和经声明的 widening 类型扩大；contract 仅允许带审批号的 drop。禁止把破坏性操作混入 expand。
 
 ## 1. 方言与物理库前置确认
 
@@ -110,7 +110,7 @@ db/migration/
 - planHash；
 - 审批人和执行窗口。
 
-生产环境默认拒绝 MCP 写入。DDL 生成完成不等于授权执行。
+`pre/prod/production` 默认拒绝工程文件写入。DDL 生成完成不等于授权执行，更不代表工具会连接数据库。
 
 ## 8.5 生产 DDL/DML 敏感操作审批流程（v0.10，与 standards/21 联动）
 
@@ -125,7 +125,7 @@ db/migration/
 | ⑦ 监控 | 监控锁、慢查询、错误率 30 分钟 | SRE | 监控面板 |
 | ⑧ 回滚演练 | 上线前在测试环境演练回滚 | 开发 + 运维 | Rollback.md |
 
-**生产只读护栏**：codegen/MCP/safe-fix 的写操作在 `environment=production` 时默认阻断，需显式 `allowProductionWrites: true` 才能本地启用（详见 standards/21 §8）。
+**受保护环境护栏**：codegen/MCP/safe-fix/config/permissions 的写操作在 `environment=pre|prod|production` 时默认阻断；必须先审查预览和 planHash，再本地显式设置 `allowProductionWrites: true` 才能授权工程文件写入（详见 standards/21 §8）。该授权不包含执行数据库 DDL/DML。
 
 ## 9. 机器门禁
 
@@ -136,5 +136,6 @@ db/migration/
 
 ## 变更记录
 
+- 2026-07-18 v0.14：ALTER 强制 expand/contract 分阶段；expand 仅兼容扩展，contract drop 需 approvalRef；增加只读 verification SQL、Flyway 版本不可变和 DDL_PREVIEW 门禁。
 - 2026-07-18 v0.9：契约 `alter` 字段自动生成 ALTER SQL（add/modify/drop）+ Expand-Contract 阶段标注；`indexes` 字段渲染自定义索引；Rollback.md 含变更类型与 Expand-Contract 段。
 - 2026-07-18 v0.8：删除重复旧章节，修正 Flyway rollback、软删唯一键与批处理规则，引入 expand-contract。
