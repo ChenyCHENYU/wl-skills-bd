@@ -29,6 +29,9 @@ public class {{Entity}}VO {
     private Integer revision;
 
     {{#detailFields}}
+    {{#excludeFromToString}}
+    @ToString.Exclude
+    {{/excludeFromToString}}
     @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 

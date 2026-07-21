@@ -36,6 +36,9 @@ public class {{Entity}}PageDTO {
     private Long size;
 
     {{#queryFields}}
+    {{#excludeFromToString}}
+    @ToString.Exclude
+    {{/excludeFromToString}}
     @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 

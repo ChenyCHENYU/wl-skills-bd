@@ -20,7 +20,7 @@
 ③ contract diff ──► wl-api-contract + OpenAPI 3 + 权限清单 + completion 差异
   │
   ▼
-④ validate ──► B1~B23 text/json/markdown/SARIF
+④ validate ──► B1~B25 text/json/markdown/SARIF
   │
   ▼
 ⑤ Maven quality ──► ArchUnit + Checkstyle + PMD7 + SpotBugs + Spotless + JaCoCo
@@ -98,7 +98,7 @@ wl-skills-bd validate . --strict
 wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```
 
-B1~B23 独立执行；忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。error 未清零不得进入下一阶段。
+B1~B25 独立执行；忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。error 未清零不得进入下一阶段。
 
 ## ⑤ Java/Maven 质量门
 
@@ -123,7 +123,7 @@ DDL 还必须单独完成数据库人工 diff、只读验证 SQL、DBA/发布审
 | entity/service/mapper-xml-gen | 解释分层与业务扩展 | `codegen plan/apply` 标准骨架 |
 | db-migration | DDL 评审和恢复策略 | Flyway 正向脚本 + rollback manual |
 | unit-test-gen | 补充业务测试 | Maven test + 生成测试骨架 |
-| convention-audit-be | 汇总规则与质量门 | B1~B23 + Maven quality |
+| convention-audit-be | 汇总规则与质量门 | B1~B25 + Maven quality + production assurance |
 | code-fix-be | 受控修复和复扫 | planHash/confirm + closure report |
 
 Skill 文档不能声称完成了执行器未实现的能力；命令输出和受管状态是闭环证据。

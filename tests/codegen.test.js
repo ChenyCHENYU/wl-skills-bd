@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, "..");
 const contractFile = path.join(ROOT, "files", ".github", "templates", "examples", "feature-category.contract.json");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-codegen-"));
 const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-codegen-rollback-"));
+const assuranceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-codegen-assurance-"));
 
 try {
   const plan = buildPlan(contractFile, { projectRoot: tempRoot });
@@ -22,6 +23,50 @@ try {
   assert.strictEqual(applyPlan(plan, { planHash: plan.planHash }).reason, "confirm-required");
   assert.strictEqual(applyPlan(plan, { confirm: true, planHash: "bad" }).reason, "plan-hash-mismatch");
   assert.strictEqual(fs.existsSync(path.join(tempRoot, STATE_REL)), false, "未确认时必须零写入");
+
+  const assuranceContract = JSON.parse(fs.readFileSync(contractFile, "utf8"));
+  assuranceContract.assurance = {
+    level: "production",
+    criticality: "core",
+    slo: { availabilityPercent: 99.9, p95LatencyMs: 500, p99LatencyMs: 1000, maxErrorRatePercent: 0.1 },
+    recovery: { rtoMinutes: 60, rpoMinutes: 15 },
+    security: { authorizationModel: "tenant-data-scope", methodSecurityRequired: true, auditRequired: true },
+    dataGovernance: { owner: "主数据团队", sourceOfTruth: "feature-category", classificationDefault: "internal", retentionPolicy: "按企业主数据保留策略执行" },
+    consistency: { idempotencyStrategy: "business-key", eventDelivery: "none", crossServiceTransaction: "none" },
+    resilience: { dependencyTimeoutMs: 3000, retryMaxAttempts: 1, circuitBreakerRequired: true, rateLimitRequired: true },
+    evidence: {
+      threatModelRef: "docs/evidence/threat-model.md",
+      authorizationReviewRef: "docs/evidence/authorization-review.md",
+      loadTestRef: "docs/evidence/load-test.md",
+      runbookRef: "docs/evidence/runbook.md",
+      restoreDrillRef: "docs/evidence/restore-drill.md",
+      dataReviewRef: "docs/evidence/data-review.md",
+    },
+  };
+  const assuranceContractFile = path.join(assuranceRoot, "feature-category.contract.json");
+  fs.writeFileSync(assuranceContractFile, `${JSON.stringify(assuranceContract, null, 2)}\n`, "utf8");
+  const missingEvidencePlan = buildPlan(assuranceContractFile, { projectRoot: assuranceRoot });
+  assert.strictEqual(missingEvidencePlan.ok, true, JSON.stringify(missingEvidencePlan.errors));
+  assert.strictEqual(missingEvidencePlan.completion.contractStatus, "draft");
+  assert.strictEqual(missingEvidencePlan.assuranceEvidence.missing.length, 6);
+  assert.strictEqual(
+    applyPlan(missingEvidencePlan, { confirm: true, planHash: missingEvidencePlan.planHash, requireComplete: true }).reason,
+    "contract-incomplete",
+    "生产证据缺失时 requireComplete 必须零写入",
+  );
+  for (const rel of Object.values(assuranceContract.assurance.evidence)) {
+    const file = path.join(assuranceRoot, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `# ${path.basename(file)}\n\n已评审证据。\n`, "utf8");
+  }
+  const readyEvidencePlan = buildPlan(assuranceContractFile, { projectRoot: assuranceRoot });
+  assert.strictEqual(readyEvidencePlan.completion.contractStatus, "confirmed");
+  assert.strictEqual(readyEvidencePlan.assuranceEvidence.ok, true);
+  assert.strictEqual(applyPlan(readyEvidencePlan, {
+    confirm: true,
+    planHash: readyEvidencePlan.planHash,
+    requireComplete: true,
+  }).ok, true, "生产证据齐备后才允许通过完成门");
 
   const applied = applyPlan(plan, { confirm: true, planHash: plan.planHash, requireComplete: true });
   assert.strictEqual(applied.ok, true);
@@ -77,6 +122,7 @@ try {
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
   fs.rmSync(rollbackRoot, { recursive: true, force: true });
+  fs.rmSync(assuranceRoot, { recursive: true, force: true });
 }
 
 console.log("✅ codegen：17 产物、确定性、确认门、冲突保护、强制备份与失败整批回滚通过");

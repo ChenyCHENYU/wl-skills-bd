@@ -29,7 +29,7 @@ stage: ⑦ 测试
 3. Controller 用 `@WebMvcTest`/MockMvc 覆盖权限、Bean Validation、路径和响应包装；
 4. 方言相关 Mapper 使用对应数据库的集成测试；
 5. 执行 `mvn verify -Pwl-quality`，以 JaCoCo 实测补齐分支；
-6. 再执行 B1~B23 与完整质量门，确认测试代码本身也合规。
+6. 再执行 B1~B25 与完整质量门，确认测试代码本身也合规。
 
 ## 约束
 

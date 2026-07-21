@@ -424,3 +424,72 @@ class DangerRepository {
 });
 
 console.log("✅ be-rules v0.14：XML/JDBC 物理删除、WHERE 1=1 与跨租户写漏报回归通过");
+
+withFixture({
+  "src/main/java/demo/DemoController.java": `package demo;
+@PreAuthorize("@pms.hasPermission('demo_query')")
+public class DemoController {
+    @Operation(summary = "query")
+    @GetMapping("query")
+    public Object query() { return null; }
+}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B24"), 1, "有 @PreAuthorize 但未启用方法安全必须阻断"));
+
+withFixture({
+  "src/main/java/demo/DemoController.java": `package demo;
+@PreAuthorize("@pms.hasPermission('demo_query')")
+public class DemoController {
+    @Operation(summary = "query")
+    @GetMapping("query")
+    public Object query() { return null; }
+}`,
+  "src/main/java/demo/SecurityConfiguration.java": `package demo;
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SecurityConfiguration {}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B24"), 0, "Spring Boot 2 方法安全启用证据应通过"));
+
+withFixture({
+  "src/main/java/demo/LoginDTO.java": `package demo;
+@ToString
+public class LoginDTO {
+    private String accessToken;
+}`,
+  "src/main/java/demo/SafeLoginDTO.java": `package demo;
+@ToString
+public class SafeLoginDTO {
+    @ToString.Exclude
+    private String refreshToken;
+}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B25"), 1, "敏感字段缺 ToString.Exclude 必须阻断"));
+
+withFixture({
+  "src/main/java/demo/DangerService.java": `package demo;
+public class DangerService {
+    public Object find(String id) { return baseMapper.selectById(id); }
+    public Object list() { return lambdaQuery().eq(Demo::getStatus, 1).list(); }
+    public void remove(String id) { removeById(id); }
+    public void update() { lambdaUpdate().eq(Demo::getId, "1").set(Demo::getStatus, 1).update(); }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B7") >= 2, "selectById 和缺 companyId 的 lambdaQuery 必须识别");
+  assert.ok(count(result, "B17") >= 1, "removeById 必须按团队显式软删口径阻断");
+  assert.ok(count(result, "B18") >= 1, "缺租户/软删/版本约束的 Wrapper 更新必须阻断");
+});
+
+withFixture({
+  ".be-rules-ignore": "B24:src/main/java/demo/DemoController.java # SEC-PLATFORM-123 平台统一启用方法安全\n",
+  "src/main/java/demo/DemoController.java": `package demo;
+@PreAuthorize("@pms.hasPermission('demo_query')")
+public class DemoController {
+    @Operation(summary = "query")
+    @GetMapping("query")
+    public Object query() { return null; }
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B24"), 0, "B24 应支持带审批依据的精确豁免");
+  assert.ok(result.suppressed.some((item) => item.rule === "B24"));
+});
+
+console.log("✅ be-rules v0.17：方法安全、敏感日志、Java 租户查询、显式软删和 Wrapper 原子写门禁通过");

@@ -23,6 +23,7 @@ const { validateSchema } = require("../mcp/schema-validator");
     "wls_be_catalog",
     "wls_be_context",
     "wls_be_commit",
+    "wls_be_test",
   ];
   assert.deepStrictEqual(TOOLS.map((tool) => tool.name), expected);
   assert.deepStrictEqual(Object.keys(HANDLERS), expected);
@@ -33,8 +34,8 @@ const { validateSchema } = require("../mcp/schema-validator");
 
   const standard = await HANDLERS.wls_be_standards.handle({ id: "04" });
   assert.match(standard.text, /^# 04/m);
-  const latestStandard = await HANDLERS.wls_be_standards.handle({ id: "27" });
-  assert.match(latestStandard.text, /^# 27/m);
+  const latestStandard = await HANDLERS.wls_be_standards.handle({ id: "28" });
+  assert.match(latestStandard.text, /^# 28/m);
   const template = await HANDLERS.wls_be_templates.handle({ name: "Controller" });
   assert.match(template.text, /class \{\{Entity\}\}Controller/);
 
@@ -78,7 +79,10 @@ const { validateSchema } = require("../mcp/schema-validator");
   assert.strictEqual(escaped.structuredContent.ok, false);
   assert.strictEqual(escaped.structuredContent.state, "invalid-input");
 
-  console.log("✅ MCP registry：15 工具、严格 schema、路径边界及核心 handler 通过");
+  const generatedTest = await HANDLERS.wls_be_test.handle({ mode: "scenarios", contract });
+  assert.strictEqual(generatedTest.structuredContent.ok, true);
+
+  console.log("✅ MCP registry：16 工具、严格 schema、路径边界及核心 handler 通过");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

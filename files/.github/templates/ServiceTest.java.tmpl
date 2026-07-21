@@ -1,6 +1,9 @@
 package {{rootPackage}}.{{module}}.service;
 
 import {{rootPackage}}.api.dto.{{module}}.{{Entity}}CreateDTO;
+{{#customRequestDtos}}
+import {{rootPackage}}.api.dto.{{module}}.{{requestDtoName}};
+{{/customRequestDtos}}
 import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
 import {{rootPackage}}.{{module}}.mapper.{{Entity}}Mapper;
 import com.jhict.common.core.exception.ServiceException;
@@ -21,9 +24,9 @@ import static org.mockito.Mockito.when;
  *
  * <p>测试原则（standards/14 + unit-test-gen）：
  * <ul>
- *   <li>测"行为契约"（业务规则/状态机/权限/幂等），不测"代码镜像"（getter/setter/纯转发）</li>
- *   <li>标准 CRUD 的 smoke 测试验证可运行；业务命令测试验证前置校验和状态转移</li>
- *   <li>断言关注"结果是否正确"，不关注"调用了哪个 mock 方法"</li>
+ *   <li>测"行为契约"（业务规则/状态机/权限/幂等），不测"代码镜像"（getter/setter/纯转发）
+ *   <li>标准 CRUD 的 smoke 测试验证可运行；业务命令测试验证前置校验和状态转移
+ *   <li>断言关注"结果是否正确"，不关注"调用了哪个 mock 方法"
  * </ul>
  *
  * @author wl-skills-bd codegen
@@ -31,8 +34,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class {{Entity}}ServiceTest {
 
-    @Mock
-    private {{Entity}}Mapper mapper;
+    @Mock private {{Entity}}Mapper mapper;
 
     private {{Entity}}Service service;
 
@@ -43,18 +45,24 @@ class {{Entity}}ServiceTest {
     }
 
     @Test
-    void save_shouldReturnGeneratedId() {
+    void saveShouldReturnGeneratedId() {
         {{Entity}}CreateDTO dto = new {{Entity}}CreateDTO();
         {{#testCreateAssignments}}
         dto.set{{Field}}({{testValue}});
         {{/testCreateAssignments}}
-        when(mapper.insert(any({{Entity}}.class))).thenAnswer(invocation -> {
-            {{Entity}} entity = invocation.getArgument(0);
-            entity.setId("1000000000000000001");
-            return 1;
-        });
+        when(mapper.insert(any({{Entity}}.class)))
+                .thenAnswer(
+                        invocation -> {
+                            {{Entity}} entity = invocation.getArgument(0);
+                            entity.setId("1000000000000000001");
+                            return 1;
+                        });
 
         assertEquals("1000000000000000001", service.save(dto));
     }
 {{customTestsSection}}
+
+    // <wl-custom name="tests">
+    // 补充契约无法确定生成的业务行为测试；禁止空测试、占位实现和只验证调用次数的镜像测试。
+    // </wl-custom>
 }

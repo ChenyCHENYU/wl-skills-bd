@@ -2,6 +2,7 @@ package {{rootPackage}}.arch;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -55,7 +56,7 @@ public class LayerRulesTest {
                     .resideInAPackage("..entity..")
                     .should()
                     .dependOnClassesThat()
-                    .resideInAnyPackage("..controller..", "..service..")
+                    .resideInAnyPackage("..controller..", "..service..", "..mapper..")
                     .because("standards/02: Entity 是纯数据模型，禁止反向依赖业务层")
                     .allowEmptyShould(true);
 
@@ -78,5 +79,26 @@ public class LayerRulesTest {
                     .areAnnotatedWith("org.apache.ibatis.annotations.Mapper")
                     .should()
                     .resideInAPackage("..mapper..")
+                    .allowEmptyShould(true);
+
+    /** R6: Mapper 只能由 Service/Mapper 基础设施访问，避免工具类或 API 层绕过业务边界直接写库。 */
+    @ArchTest
+    static final ArchRule 映射器不得被非服务层访问 =
+            noClasses()
+                    .that()
+                    .resideOutsideOfPackages("..service..", "..mapper..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage("..mapper..")
+                    .because("standards/02: 数据访问必须收敛在 Service → Mapper 边界")
+                    .allowEmptyShould(true);
+
+    /** R7: 根包下一层业务子域之间不得形成循环依赖。 */
+    @ArchTest
+    static final ArchRule 业务子域之间不得循环依赖 =
+            slices().matching("{{rootPackage}}.(*)..")
+                    .should()
+                    .beFreeOfCycles()
+                    .because("模块循环会放大联动发布和数据边界污染风险")
                     .allowEmptyShould(true);
 }

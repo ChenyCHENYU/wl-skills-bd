@@ -108,7 +108,7 @@ const fixTool = {
 
 const standardsTool = {
   name: "wls_be_standards",
-  description: "查询 27 条后端规范。无参返回索引；id=01~27 返回指定全文。只读。",
+  description: "查询 28 条后端规范。无参返回索引；id=01~28 返回指定全文。只读。",
   inputSchema: {
     type: "object",
     properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-7])$" } },
@@ -282,7 +282,7 @@ const commitTool = {
 
 const testTool = {
   name: "wls_be_test",
-  description: "行为契约测试生成（v0.16）：从契约 customOperations 生成关键场景测试（正常路径/前置拒绝/状态转移/batch 计数）。gen 生成完整 ServiceTest；scenarios 列出场景清单。测行为契约不测代码镜像，避免冗余。",
+  description: "行为契约测试生成：从 customOperations 生成正常路径、前置拒绝、状态转移及 batch 全成全败测试。gen 生成可执行 ServiceTest；scenarios 列出场景。禁止 TODO、空断言和部分成功语义。",
   inputSchema: {
     type: "object",
     required: ["mode", "contract"],

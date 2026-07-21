@@ -25,6 +25,9 @@ public class {{Entity}}CreateDTO {
     {{#validationAnnotations}}
     {{.}}
     {{/validationAnnotations}}
+    {{#excludeFromToString}}
+    @ToString.Exclude
+    {{/excludeFromToString}}
     @Schema(description = "{{fieldComment}}")
     private {{fieldType}} {{field}};
 

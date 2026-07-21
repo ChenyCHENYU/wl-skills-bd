@@ -294,7 +294,7 @@ if (ruleCatalog) {
       }
     }
   }
-  for (let i = 1; i <= 23; i += 1) {
+  for (let i = 1; i <= 25; i += 1) {
     if (!ids.has(`B${i}`)) errors.push(`rules/catalog.json: 缺少 B${i}`);
   }
   for (let i = 1; i <= 8; i += 1) {

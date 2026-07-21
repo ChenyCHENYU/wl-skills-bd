@@ -232,7 +232,49 @@ class CoverageTest {
     windowsHide: true,
   });
   assert.strictEqual(result.status, 0, `Java 质量 Maven 夹具失败：${result.error ? `\n${result.error.message}` : ""}\n${result.stdout || ""}\n${result.stderr || ""}`);
+  const generatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-generated-quality-"));
+  try {
+    const { applyPlan, buildPlan } = require("../lib/codegen");
+    const contractFile = path.join(ROOT, "files", ".github", "templates", "examples", "sale-order-master.contract.json");
+    const plan = buildPlan(contractFile, { projectRoot: generatedRoot });
+    assert.strictEqual(plan.ok, true, JSON.stringify(plan.errors));
+    assert.strictEqual(applyPlan(plan, { confirm: true, planHash: plan.planHash }).ok, true);
+    const generatedProfile = profileMatch[0]
+      .replace("<includeTestSourceDirectory>false</includeTestSourceDirectory>", "<includeTestSourceDirectory>true</includeTestSourceDirectory>")
+      .replace("<linkXRef>false</linkXRef>", "<linkXRef>false</linkXRef><includeTests>true</includeTests>");
+    fs.writeFileSync(path.join(generatedRoot, "pom.xml"), `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jhict.fixture</groupId><artifactId>generated-quality-fixture</artifactId><version>1.0.0</version>
+  <properties><maven.compiler.source>1.8</maven.compiler.source><maven.compiler.target>1.8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
+  <profiles>${generatedProfile}</profiles>
+</project>
+`, "utf8");
+    fs.cpSync(QUALITY, path.join(generatedRoot, ".github", "java-quality"), { recursive: true });
+    const generatedArgs = commandArgs.map((arg) => arg.startsWith("-Dmaven.multiModuleProjectDirectory=")
+      ? `-Dmaven.multiModuleProjectDirectory=${generatedRoot}`
+      : arg);
+    const lifecycleIndex = generatedArgs.indexOf("verify");
+    assert.ok(lifecycleIndex >= 0, "Maven 参数缺 verify 生命周期");
+    generatedArgs.splice(
+      lifecycleIndex,
+      1,
+      "validate",
+      "com.diffplug.spotless:spotless-maven-plugin:2.30.0:check",
+      "org.apache.maven.plugins:maven-pmd-plugin:3.28.0:check",
+    );
+    const generatedResult = spawnSync(command, generatedArgs, {
+      cwd: generatedRoot,
+      encoding: "utf8",
+      maxBuffer: 30 * 1024 * 1024,
+      windowsHide: true,
+    });
+    assert.strictEqual(generatedResult.status, 0, `生成产物源码质量门失败：${generatedResult.error ? `\n${generatedResult.error.message}` : ""}\n${generatedResult.stdout || ""}\n${generatedResult.stderr || ""}`);
+  } finally {
+    fs.rmSync(generatedRoot, { recursive: true, force: true });
+  }
   console.log("✅ java-quality Maven：ArchUnit、Checkstyle、PMD7、SpotBugs、Spotless、JaCoCo 在 Java 8 工程真实通过");
+  console.log("✅ generated Java quality：扩展契约主代码与测试通过 Checkstyle、Spotless、PMD7 源码门");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

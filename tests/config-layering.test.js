@@ -177,6 +177,17 @@ withRoot((root) => {
   assert.strictEqual(applied.ok, true);
   assert.ok(fs.existsSync(path.join(root, ".env.huaxin.dev")), "应生成 .env.huaxin.dev");
   assert.ok(fs.existsSync(path.join(root, "deploy/huaxin/k8s-configmap-dev.yaml")), "应生成 K8s ConfigMap");
+  const deploymentDev = fs.readFileSync(path.join(root, "deploy/huaxin/k8s-deployment-dev.yaml"), "utf8");
+  const deploymentProd = fs.readFileSync(path.join(root, "deploy/huaxin/k8s-deployment-prod.yaml"), "utf8");
+  assert.match(deploymentDev, /:\$\{IMAGE_TAG\}/, "镜像版本必须由发布流水线注入，不得硬编码 latest/数字标签");
+  assert.doesNotMatch(deploymentDev, /:latest\b/, "禁止 latest 镜像");
+  assert.match(deploymentDev, /\/actuator\/health\/readiness/, "readiness 必须使用独立探针组");
+  assert.match(deploymentDev, /\/actuator\/health\/liveness/, "liveness 必须使用独立探针组");
+  assert.match(deploymentDev, /startupProbe:/, "慢启动必须由 startupProbe 保护");
+  assert.match(deploymentDev, /runAsNonRoot: true/, "容器必须非 root");
+  assert.match(deploymentDev, /readOnlyRootFilesystem: true/, "容器根文件系统必须只读");
+  assert.match(deploymentProd, /kind: PodDisruptionBudget/, "生产部署必须包含 PDB");
+  assert.match(deploymentProd, /kind: HorizontalPodAutoscaler/, "生产部署必须包含 HPA");
   const envDev = fs.readFileSync(path.join(root, ".env.huaxin.dev"), "utf8");
   assert.match(envDev, /NACOS_HOST=nacos-huaxin:8848/, "env 含 huaxin nacos");
   assert.match(envDev, /DB_HOST=mysql.basic-services/, "env 含 huaxin db");

@@ -48,11 +48,14 @@ spring:
 - 三方一致（bootstrap profile = env-matrix current = K8s PROFILES_ACTIVE）
 - 连通性（可选 --probe）：DB/Redis/Nacos TCP 可达
 - init/migrate/fix 的 apply 均使用刚生成的 planHash + confirm；pre/prod/production 另需显式授权
+- K8s Deployment 使用独立 startup/readiness/liveness 探针、优雅停机、非 root、只读根文件系统、禁提权、drop ALL、禁用默认 ServiceAccount token；生产额外生成 PDB/HPA/拓扑分散
+- `${IMAGE_TAG}` 只是发布流水线占位，CI 必须在部署前替换为不可变 tag 或 digest，禁止 `latest`
 
 详见 [standards/25 配置分层](../../../standards/25-config-layering.md) 和 [standards/24 多环境](../../../standards/24-multi-env.md)。
 
 ## 变更记录
 
+- 2026-07-19 v0.17：K8s 产物补探针、优雅停机、非 root、只读根文件系统、能力收敛、PDB/HPA 与非 latest 镜像门。
 - 2026-07-18 v0.14：所有配置写命令统一 planHash/原子写/回滚/受保护环境护栏。
 - 2026-07-18 v0.12：本 Skill 目标已由 `config` 命令族落地；USAGE 改为指向 config 等价命令。
 - 2026-07-17：骨架 USAGE（占位符示例 + 验收清单）。

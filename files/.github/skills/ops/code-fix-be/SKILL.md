@@ -1,7 +1,7 @@
 ---
 name: code-fix-be
 description: |
-  根据 B1~B23 审计结果建立安全修复计划。只有满足确定性前置条件的 B3/B5 可自动修改；
+  根据 B1~B25 审计结果建立安全修复计划。只有满足确定性前置条件的 B3/B5 可自动修改；
   其余规则输出人工方案。所有自动写入必须 planHash + 显式确认 + 备份 + 强制复扫。
   典型触发：「修复规范问题」「按审计报告改」「修违规」「批量整改」
 status: ✅ 已落地
@@ -63,7 +63,7 @@ MCP 对应工具为 `wls_be_safe_fix`：默认预览；正式写入传 `confirmA
 3. 写前重新扫描，任何漂移使 plan 失效；
 4. 所有目标先备份到 `.wl-skills-bd/.state/fix-backups/`；
 5. 多文件写入失败时从备份回滚；
-6. 写后强制执行同范围 B1~B23 复扫；
+6. 写后强制执行同范围 B1~B25 复扫；
 7. 生成确定性的 `reports/FIX_BE_<planHash前12位>.md`；
 8. 报告给出 before/after/fixed/remaining/regressions。`remaining` 或 `regressions` 非零时不得宣称闭环完成。
 

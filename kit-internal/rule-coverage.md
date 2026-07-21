@@ -6,7 +6,7 @@
 
 | 编号 | 实现 | 默认门禁 | 说明 |
 |---|---|:---:|---|
-| B1~B23 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 SARIF/Markdown/JSON |
+| B1~B25 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 SARIF/Markdown/JSON |
 | J1 | ArchUnit | 是 | 分层依赖 |
 | J2 | Checkstyle | 是 | 命名、Javadoc、import、规模 |
 | J3 | PMD 7 | 是 | 缺陷、复杂度、性能 |
@@ -32,6 +32,8 @@
 | standards/20 | Redis 无 TTL、自实现锁、危险命令 | regex B13~B15 | error | 是 |
 | standards/21 | 物理删除或无 WHERE 写 | regex B17~B18 | error | 是 |
 | standards/10/22 | 事务内 MQ/HTTP | regex B20 | error | 是 |
+| standards/11/28 | 使用 `@PreAuthorize` 但未启用方法安全 | regex B24 | error | 是 |
+| standards/09/11/28 | 敏感字段进入 Lombok `toString` | regex B25 | error | 是 |
 | standards/15/16/17 | 缺陷、资源、复杂度、性能 | J3 | error | 是 |
 | standards/17 | 字节码缺陷 | J4 | error | 是 |
 | standards/15 | 格式漂移 | J5 | error | 是 |
@@ -52,6 +54,7 @@
 | standards/07 | DTO/VO 业务字段边界 | Schema + 模板 + review | 业务语义仍需人工确认 |
 | standards/09/10 | 敏感日志、事务内远程调用 | review | 静态工具不能完整证明语义安全 |
 | standards/12 | DDL 可执行性与恢复策略 | contract + review | 生成但不执行，DBA/CD 卡口 |
+| standards/28 | SLO、恢复、威胁模型、授权、压测、运行手册和数据评审 | assurance contract + evidence refs + external review | 缺声明/文件阻断完成；证据真实性由安全/DBA/SRE/业务评审 |
 
 ## 自动修复边界
 
@@ -69,4 +72,5 @@
 - 2026-07-18 v0.8.0：同步 B1~B12 严重度、安全修复白名单和 J8 JaCoCo。
 - 2026-07-18 v0.12.0：同步 B1~B23、完成度门和跨包契约校验。
 - 2026-07-18 v0.13.0：任务路由复用 B1~B23 子集；路由只读，写入统一进入既有安全链。
+- 2026-07-19 v0.17.0：同步 B24/B25、production assurance 证据门和实际生成源码质量门。
 - 2026-07-17 v0.6.0：补 B12 与设计级规则。

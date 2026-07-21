@@ -70,12 +70,13 @@ try {
 
   const service = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/order/service/SaleOrderMasterService.java"), "utf8");
   assert.match(service, /public void submit\(String id\)/, "Service submit 四段式");
-  assert.match(service, /ServiceAssert\.isTrue\(java\.util\.Objects\.equals\(entity\.getStatus\(\), "DRAFT"\)/, "Service submit 含类型安全的前置状态校验");
+  assert.match(service, /ServiceAssert\.isTrue\([\s\S]*?java\.util\.Objects\.equals\(entity\.getStatus\(\), "DRAFT"\)/, "Service submit 含类型安全的前置状态校验");
   assert.match(service, /entity\.setStatus\("SUBMITTED"\);/, "Service submit 构造 patch");
   assert.match(service, /public void approve\(String id, SaleOrderMasterApproveRequestDTO request\)/, "Service approve 使用 DTO");
   assert.match(service, /entity\.setApprovalOpinion\(request\.getOpinion\(\)\)/, "审批意见被显式消费");
+  assert.match(service, /entity\.setStatus\("DRAFT"\);/, "新增时必须设置状态机初始值");
   assert.match(service, /public java\.util\.Map<String, Object> batchCancel\(SaleOrderMasterBatchCancelRequestDTO request\)/, "Service batchCancel 签名");
-  assert.match(service, /ids\.size\(\) <= 1000, "批量作废：去重后单批不能超过1000条"/);
+  assert.match(service, /ids\.size\(\) <= MAX_BATCH_SIZE, "批量作废：去重后单批不能超过1000条"/);
   assert.match(service, /result\.put\("failures"/, "批量响应与契约 failures 一致");
   assert.match(service, /successCount/, "Service batchCancel 返回 successCount");
 
@@ -83,6 +84,7 @@ try {
   assert.match(migration, /CREATE TABLE SALE_ORDER_MASTER/, "扩展契约默认生成 CREATE TABLE");
   assert.match(migration, /CREATE UNIQUE INDEX UK_ORDER_NO/, "migration 含唯一索引");
   assert.match(migration, /CREATE INDEX IDX_ORDER_STATUS/, "migration 含普通索引");
+  assert.match(migration, /STATUS VARCHAR2\(32 CHAR\) DEFAULT 'DRAFT' NOT NULL/, "状态机初值必须同时固化到数据库默认值");
 
   const apiMd = fs.readFileSync(path.join(tempRoot, "docs/contracts/sale-order-master.api.md"), "utf8");
   assert.match(apiMd, /\| submit \| POST \|/, "api.md 含 submit 操作行");
@@ -106,7 +108,7 @@ class WeakEvidence {
 }
 `, "utf8");
   const weakEvidence = inspectImplementation(extended.contract, tempRoot);
-  // test-codegen 生成的 submit_success 含 ArgumentCaptor 断言，属于强证据；inspectImplementation 应认可
+  // test-codegen 生成的 submit_success 含真实 Service 调用和状态断言，属于强证据；inspectImplementation 应认可
   // 本用例验证：当 ServiceTest 被替换为只有方法调用无断言时，submit 应判为 missing
   // 但因 test-codegen 已注入强证据测试，此处改为验证 export（test-codegen 不为其生成测试）仍 missing
   assert.ok(weakEvidence.missingOperations.some((item) => item.operation === "export" && item.test === "missing"), "export 无测试证据应判 missing");
@@ -115,34 +117,34 @@ class WeakEvidence {
   const serviceFile = path.join(tempRoot, "src/main/java/com/jhict/sale/order/service/SaleOrderMasterService.java");
   const completedService = fs.readFileSync(serviceFile, "utf8")
     .replace(/throw new UnsupportedOperationException\("销售订单主表 导出实现需业务补齐：设置响应头并写入输出流"\);/, "response.setStatus(200);")
-    .replace(/throw new UnsupportedOperationException\("SaleOrderItem 关联查询需注入对应 Service 并转发；契约 sale-order-item"\);/, "return java.util.Collections.emptyList();");
+    .replace(/throw new UnsupportedOperationException\(\s*"SaleOrderItem 关联查询需注入对应 Service 并转发；契约 sale-order-item"\);/, "return java.util.Collections.emptyList();");
   fs.writeFileSync(serviceFile, completedService, "utf8");
   const serviceTestFile = weakTestFile;
   const completedTests = fs.readFileSync(serviceTestFile, "utf8").replace(
     /    \/\/ <wl-custom name="tests">[\s\S]*?    \/\/ <\/wl-custom>/,
     `    // <wl-custom name="tests">
     @Test
-    void export_shouldWriteResponse() {
+    void exportShouldWriteResponse() {
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.export(null, null));
     }
 
     @Test
-    void queryItems_shouldDelegate() {
+    void queryItemsShouldDelegate() {
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.querySaleOrderItemByParentId("1"));
     }
 
     @Test
-    void submit_shouldEnforceTransition() {
+    void submitShouldEnforceTransition() {
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.submit("1"));
     }
 
     @Test
-    void approve_shouldConsumeRequest() {
+    void approveShouldConsumeRequest() {
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.approve("1", null));
     }
 
     @Test
-    void batchCancel_shouldValidateBatch() {
+    void batchCancelShouldValidateBatch() {
         org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> service.batchCancel(null));
     }
     // </wl-custom>`,
@@ -155,7 +157,20 @@ class WeakEvidence {
   });
   assert.strictEqual(verifiedManifest.completion.contractStatus, "confirmed");
   const preservedPlan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
-  assert.deepStrictEqual(preservedPlan.summary, { unchanged: 19 }, "受保护实现与测试区不得形成 codegen 污染或升级冲突");
+  assert.strictEqual(preservedPlan.completion.contractStatus, "confirmed", "codegen 计划必须读取实现与测试证据");
+  assert.deepStrictEqual(
+    preservedPlan.summary,
+    { unchanged: 17, update: 2 },
+    "业务实现区保持不变，仅同步后端协作契约和 api.md 的 confirmed 状态",
+  );
+  const completionApplied = applyPlan(preservedPlan, {
+    confirm: true,
+    planHash: preservedPlan.planHash,
+    requireComplete: true,
+  });
+  assert.strictEqual(completionApplied.ok, true, "证据完整后 requireComplete 必须允许同步 completion");
+  const stableCompletedPlan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
+  assert.deepStrictEqual(stableCompletedPlan.summary, { unchanged: 19 }, "completion 同步后重规划必须稳定");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

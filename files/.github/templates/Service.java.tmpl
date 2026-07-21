@@ -40,11 +40,15 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Service("{{entity}}Service")
 public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}}> {
+{{#batchOperationsPresent}}
+
+    private static final int MAX_BATCH_SIZE = 1000;
+{{/batchOperationsPresent}}
 
     /**
      * 分页查询{{apiDesc}}。
      *
-     * @param page   分页参数（current/size）
+     * @param page 分页参数（current/size）
      * @param params 查询条件（全可选）
      * @return 分页结果列表
      */
@@ -61,11 +65,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @throws ServiceException 当 id 对应记录不存在
      */
     public {{Entity}}VO getById(String id) {
-        {{Entity}} entity = lambdaQuery()
-                .eq({{Entity}}::getId, id)
-                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
-                .eq({{Entity}}::getIsDelete, 1)
-                .one();
+        {{Entity}} entity = baseMapper.selectActiveById(id, AuthUtil.getLoginCompanyId());
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
         {{Entity}}VO vo = new {{Entity}}VO();
         BeanUtil.copyProperties(entity, vo);
@@ -83,6 +83,9 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     public String save({{Entity}}CreateDTO dto) {
         {{Entity}} entity = new {{Entity}}();
         BeanUtil.copyProperties(dto, entity, "id", "revision");
+{{#initialValueAssignments}}
+        entity.set{{Field}}({{value}});
+{{/initialValueAssignments}}
         EntityUtil.setCreateProp(entity);
         entity.setIsDelete(1);
         entity.setRevision(0);
@@ -102,17 +105,24 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     public void updateById({{Entity}}UpdateDTO dto) {
         ServiceAssert.isTrue(Objects.nonNull(dto.getId()), "主键不能为空");
         ServiceAssert.isTrue(Objects.nonNull(dto.getRevision()), "版本号不能为空");
-        {{Entity}} entity = lambdaQuery()
-                .eq({{Entity}}::getId, dto.getId())
-                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
-                .eq({{Entity}}::getIsDelete, 1)
-                .one();
+        {{Entity}} entity =
+                baseMapper.selectActiveById(dto.getId(), AuthUtil.getLoginCompanyId());
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
-        BeanUtil.copyProperties(dto, entity, CopyOptions.create()
-                .setIgnoreNullValue(true)
-                .setIgnoreProperties("id", "companyId", "isDelete", "revision", "createUserNo", "createDateTime"));
+        BeanUtil.copyProperties(
+                dto,
+                entity,
+                CopyOptions.create()
+                        .setIgnoreNullValue(true)
+                        .setIgnoreProperties(
+                                "id",
+                                "companyId",
+                                "isDelete",
+                                "revision",
+                                "createUserNo",
+                                "createDateTime"));
         EntityUtil.setUpdateProp(entity);
-        int updated = baseMapper.updateAtomic(entity, AuthUtil.getLoginCompanyId(), dto.getRevision());
+        int updated =
+                baseMapper.updateAtomic(entity, AuthUtil.getLoginCompanyId(), dto.getRevision());
         ServiceAssert.isTrue(updated == 1, "修改失败，数据可能已被其他用户更新");
     }
 
@@ -125,11 +135,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(String id) {
-        {{Entity}} entity = lambdaQuery()
-                .eq({{Entity}}::getId, id)
-                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
-                .eq({{Entity}}::getIsDelete, 1)
-                .one();
+        {{Entity}} entity = baseMapper.selectActiveById(id, AuthUtil.getLoginCompanyId());
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
         EntityUtil.setUpdateProp(entity);
         int deleted = baseMapper.softDeleteAtomic(entity, AuthUtil.getLoginCompanyId());
@@ -141,8 +147,9 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * 导出{{apiDesc}}。
      * <p>按当前租户和查询条件导出；具体序列化格式由业务实现补齐。
      *
-     * @param params   查询条件
+     * @param params 查询条件
      * @param response HTTP 响应（业务实现设置 Content-Type 与输出流）
+     * @throws UnsupportedOperationException 当导出业务实现尚未补齐
      */
     public void export({{Entity}}PageDTO params, HttpServletResponse response) {
         // <wl-custom name="export">
@@ -159,10 +166,12 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      *
      * @param parentId 父级主键
      * @return 关联列表（业务实现需注入 {{detailEntityLower}}Service 并转发）
+     * @throws UnsupportedOperationException 当关联查询业务实现尚未补齐
      */
     public java.util.List<{{detailEntity}}VO> query{{detailEntity}}ByParentId(String parentId) {
         // <wl-custom name="relation:{{name}}">
-        throw new UnsupportedOperationException("{{detailEntity}} 关联查询需注入对应 Service 并转发；契约 {{detailContractId}}");
+        throw new UnsupportedOperationException(
+                "{{detailEntity}} 关联查询需注入对应 Service 并转发；契约 {{detailContractId}}");
         // </wl-custom>
     }
 {{/exposeQuery}}
@@ -172,26 +181,24 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
 
     /**
      * {{summary}}（批量）。
-     * <p>四段式：遍历 → 校验前置 → 构造 patch → 更新。返回成功/失败计数。
+     * <p>四段式：批量加载 → 全量校验前置 → 构造 patch → 原子更新。
+     * <p>团队事务口径为全成全败；任意记录失败时抛出异常并整体回滚，不返回部分成功。
      *
-     * @param ids 主键集合
-{{#requestFields}}
-     * @param {{field}} {{fieldComment}}
-{{/requestFields}}
-     * @return 含 successCount/failureCount 的结果
+     * @param request 批量命令请求，含主键集合及契约声明的命令字段
+     * @return 含 successCount/failureCount 的结果；成功时 failureCount 固定为 0
+{{^implementationReady}}
+     * @throws UnsupportedOperationException 当契约信息不足且业务实现尚未补齐
+{{/implementationReady}}
      */
     @Transactional(rollbackFor = Exception.class)
     public java.util.Map<String, Object> {{methodName}}({{serviceParamsJoined}}) {
 {{#implementationReady}}
-        java.util.List<String> ids = new java.util.ArrayList<>(new java.util.LinkedHashSet<>({{idsExpression}}));
+        java.util.List<String> ids =
+                new java.util.ArrayList<>(new java.util.LinkedHashSet<>({{idsExpression}}));
         ServiceAssert.isTrue(!ids.isEmpty(), "{{summary}}：ids 不能为空");
-        ServiceAssert.isTrue(ids.size() <= 1000, "{{summary}}：去重后单批不能超过1000条");
+        ServiceAssert.isTrue(ids.size() <= MAX_BATCH_SIZE, "{{summary}}：去重后单批不能超过1000条");
         String companyId = AuthUtil.getLoginCompanyId();
-        java.util.List<{{Entity}}> loaded = lambdaQuery()
-                .in({{Entity}}::getId, ids)
-                .eq({{Entity}}::getCompanyId, companyId)
-                .eq({{Entity}}::getIsDelete, 1)
-                .list();
+        java.util.List<{{Entity}}> loaded = baseMapper.selectActiveByIds(ids, companyId);
         ServiceAssert.isTrue(loaded.size() == ids.size(), "{{summary}}失败：记录不存在、已删除或无权限");
         java.util.Map<String, {{Entity}}> byId = new java.util.HashMap<>();
         for ({{Entity}} item : loaded) {
@@ -202,7 +209,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
             {{Entity}} entity = byId.get(id);
             ServiceAssert.isNotNull(entity, "{{summary}}失败：记录不存在、已删除或无权限");
 {{#preconditions}}
-            {{java}};
+            {{batchJava}};
 {{/preconditions}}
 {{#patchLines}}
             entity.set{{Field}}({{value}});
@@ -237,21 +244,22 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
      * @param id 主键
 {{/hasId}}
 {{#hasBodyId}}
-     * @param id 主键
+     * @param request 业务命令请求，含主键及契约声明的命令字段
 {{/hasBodyId}}
-{{#requestFields}}
-     * @param {{field}} {{fieldComment}}
-{{/requestFields}}
+{{#requestDtoPresent}}
+{{^hasBodyId}}
+     * @param request 业务命令请求，含契约声明的命令字段
+{{/hasBodyId}}
+{{/requestDtoPresent}}
      * @throws ServiceException 当记录不存在或前置条件不满足
+{{^implementationReady}}
+     * @throws UnsupportedOperationException 当契约信息不足且业务实现尚未补齐
+{{/implementationReady}}
      */
     @Transactional(rollbackFor = Exception.class)
     public void {{methodName}}({{serviceParamsJoined}}) {
 {{#implementationReady}}
-        {{Entity}} entity = lambdaQuery()
-                .eq({{Entity}}::getId, {{idExpression}})
-                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
-                .eq({{Entity}}::getIsDelete, 1)
-                .one();
+        {{Entity}} entity = baseMapper.selectActiveById({{idExpression}}, AuthUtil.getLoginCompanyId());
         ServiceAssert.isNotNull(entity, "{{apiDesc}}不存在");
 {{#preconditions}}
         {{java}};
@@ -260,7 +268,8 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         entity.set{{Field}}({{value}});
 {{/patchLines}}
         EntityUtil.setUpdateProp(entity);
-        int updated = baseMapper.updateAtomic(entity, AuthUtil.getLoginCompanyId(), entity.getRevision());
+        int updated =
+                baseMapper.updateAtomic(entity, AuthUtil.getLoginCompanyId(), entity.getRevision());
         ServiceAssert.isTrue(updated == 1, "{{summary}}失败，数据可能已被其他用户更新");
 {{/implementationReady}}
 {{^implementationReady}}

@@ -6,6 +6,7 @@ const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const taskRouter = require("../lib/task-router");
+const ruleCatalog = require("../files/.wl-skills-bd/rules/catalog.json");
 const { runBeRules } = require("../lib/be-rules");
 const publicApi = require("../lib");
 
@@ -37,11 +38,24 @@ assert.match(plan, /codegen plan/);
 assert.match(plan, /planHash/);
 assert.doesNotMatch(plan, /patch-codegen/);
 assert.strictEqual(taskRouter.getTask("add-api").mode, "incremental-contract");
-assert.deepStrictEqual(taskRouter.buildRuleSubset("add-api"), ["B1", "B2", "B5", "B8", "B12", "B20"]);
-assert.deepStrictEqual(taskRouter.buildRuleSubset("add-field"), ["B3", "B4", "B7", "B18"]);
-assert.strictEqual(taskRouter.buildRuleSubset("audit").length, 23);
+assert.deepStrictEqual(taskRouter.buildRuleSubset("add-api"), ["B1", "B2", "B5", "B8", "B12", "B20", "B24", "B25"]);
+assert.deepStrictEqual(taskRouter.buildRuleSubset("add-field"), ["B3", "B4", "B7", "B18", "B25"]);
+assert.strictEqual(taskRouter.buildRuleSubset("audit").length, 25);
 assert.strictEqual(taskRouter.buildRuleSubset("config-op").length, 0);
+assert.deepStrictEqual(taskRouter.buildJavaGateSubset("new-service"), ["J1", "J2", "J3", "J8"]);
 assert.strictEqual(taskRouter.listTasks().length, 8);
+for (const taskId of taskRouter.TASK_IDS) {
+  assert.deepStrictEqual(
+    taskRouter.buildRuleSubset(taskId),
+    ruleCatalog.taskRuleMapping[taskId].rules,
+    `${taskId} 规则子集必须与 catalog 单一事实源一致`,
+  );
+  assert.deepStrictEqual(
+    taskRouter.buildJavaGateSubset(taskId),
+    ruleCatalog.taskRuleMapping[taskId].javaGates,
+    `${taskId} Java 质量门必须与 catalog 单一事实源一致`,
+  );
+}
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-task-rules-"));
 try {

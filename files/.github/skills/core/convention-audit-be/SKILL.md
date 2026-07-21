@@ -1,7 +1,7 @@
 ---
 name: convention-audit-be
 description: |
-  后端工程只读审计：B1~B23、多格式报告、ArchUnit/Checkstyle/PMD7/SpotBugs/Spotless 与人工语义检查。
+  后端工程只读审计：B1~B25、多格式报告、ArchUnit/Checkstyle/PMD7/SpotBugs/Spotless、生产 assurance 与人工语义检查。
   支持全量和 quick 模式，输出可追踪指纹、豁免理由和后续处理分流。
   典型触发：「规范审计」「代码体检」「全量扫描」「检查代码」「代码质量」「复扫验证」
 status: ✅ 已落地
@@ -25,7 +25,7 @@ stage: ⑧ 审计
 ## 执行
 
 ```bash
-# 全量 B1~B23
+# 全量 B1~B25
 wl-skills-bd validate <范围> --strict
 
 # 跳过 B9~B12 设计级慢规则，适合快速反馈
@@ -44,7 +44,7 @@ mvn verify
 
 | 层 | 执行器 | 重点 |
 |---|---|---|
-| 快速规则 | B1~B23 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性 |
+| 快速规则 | B1~B25 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性/方法安全/敏感日志 |
 | 架构 | ArchUnit J1 | Controller→Mapper、层依赖、循环依赖 |
 | 规范 | Checkstyle J2 | 命名、import、Javadoc、文件结构 |
 | 代码问题 | PMD7 J3 | Java 规则主门禁 |

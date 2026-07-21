@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.16.0）
+# Backend Skills 注册表（v0.17.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 frontmatter 严格一致，改一处必须同步另一处。
@@ -24,12 +24,13 @@
 
 **落地度**：12 个 Skill 中 **10 已落地**（project-context / api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config / unit-test）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **1 骨架**（business-doc：从旧代码抽取业务文档属 NLP 能力，不在代码生成包边界）。
 
-## v0.16 行为契约测试生成
+## v0.17 生产安全与行为契约测试
 
 | 任务 | 工具 | 生成内容 |
 |---|---|---|
-| 生成单测 | `test gen <contract>` / `wls_be_test` | 从 customOperations 生成场景测试（正常路径/前置拒绝/状态转移/batch），用 ArgumentCaptor 验证持久化状态（行为断言）|
+| 生成单测 | `test gen <contract>` / `wls_be_test` | 从 customOperations 生成可执行场景测试；直接断言状态/结果，batch 验证整批成功与整批拒绝，不生成 TODO/空测试 |
 | 列出场景 | `test scenarios <contract>` | 列出所有操作 + 测试场景清单 |
+| 生产证据 | `codegen validate/plan/apply --require-complete` | `assurance.level=production` 时校验 SLO/RTO/RPO、安全、数据治理、一致性、韧性与六类证据文件 |
 
 原则：测"行为契约"不测"代码镜像"——不 verify setter/方法调用次数，只断言结果（状态值/计数/异常）。避免冗余。
 
@@ -37,13 +38,13 @@
 
 | 任务类型 | 模式 | 触发词 | 规则子集 | 工具 |
 |---|---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B23 + J | codegen |
-| add-api | 路由 | 加接口/加方法 | B1/B2/B5/B8/B12/B20 | codegen 增量 |
-| add-field | 路由 | 加字段/落库 | B3/B4/B7/B18 | codegen + db |
-| add-business-cmd | 路由 | 状态机/审批 | B5/B8/B17/B20 | codegen 增量 |
-| fix-bug | 路由 | 改bug/修复 | B3/B5/B7/B8/B17/B18 | safe-fix + troubleshoot |
-| refactor | 路由 | 重构/优化 | B5-B12/B23 | validate |
-| audit | readonly | 审计/体检 | B1-B23 | doctor + validate |
+| new-service | full | 新开发/全套CRUD | B1-B25 子集 + J | codegen |
+| add-api | 路由 | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25 | codegen 增量 |
+| add-field | 路由 | 加字段/落库 | B3/B4/B7/B18/B25 | codegen + db |
+| add-business-cmd | 路由 | 状态机/审批 | B5/B8/B17/B20/B24/B25 | codegen 增量 |
+| fix-bug | 路由 | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25 | safe-fix + troubleshoot |
+| refactor | 路由 | 重构/优化 | B5-B12/B23/B24/B25 | validate |
+| audit | readonly | 审计/体检 | B1-B25 | doctor + validate |
 | config-op | config | 配置/连不上 | config-doctor L0~L8 | config + troubleshoot |
 
 `task` 是只读指挥层：识别意图→给 Skill/规则/步骤，不直接写代码；写操作统一走 codegen plan/apply（planHash+确认）或 safe-fix/config。
@@ -68,6 +69,8 @@
 | B21 | 22 | HttpUtil/RestTemplate 裸调用无超时 | warn | ✅ |
 | B22 | 13 | Swagger 2/OpenAPI 3 混用（混用 error/纯 Swagger 2 warn）| warn | ✅ |
 | B23 | 02 + 19 | Service 注入依赖 > 10（巨型类信号）| warn | ✅ |
+| B24 | 11 + 28 | 使用 `@PreAuthorize` 但未启用方法安全 | error | ✅ |
+| B25 | 09 + 11 + 28 | 敏感字段进入 Lombok `toString` | error | ✅ |
 
 ## v0.10 数据安全矩阵
 

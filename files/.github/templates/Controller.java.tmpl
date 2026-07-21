@@ -29,6 +29,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+{{#exportPresent}}
+import javax.servlet.http.HttpServletResponse;
+{{/exportPresent}}
 {{#relationVoImports}}
 import {{.}};
 {{/relationVoImports}}
@@ -46,8 +49,7 @@ import {{.}};
 @RequestMapping("{{requestPath}}")
 public class {{Entity}}Controller {
 
-    @Resource
-    private {{Entity}}Service {{entity}}Service;
+    @Resource private {{Entity}}Service {{entity}}Service;
 
     @Operation(summary = "查询{{apiDesc}}分页")
     @PreAuthorize("@pms.hasPermission('{{pagePermission}}')")
@@ -57,13 +59,14 @@ public class {{Entity}}Controller {
         JhPage<{{Entity}}PageVO> page = new JhPage<>();
         page.setCurrent(params.getCurrent());
         page.setSize(params.getSize());
-        return ApiResult.success("查询成功", {{entity}}Service.query{{Entity}}Page(page, params));
+        return ApiResult.success(
+                "查询成功", {{entity}}Service.query{{Entity}}Page(page, params));
     }
 
     @Operation(summary = "主键查询{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{detailPermission}}')")
     @GetMapping("getById/{id}")
-    public ApiResult<{{Entity}}VO> getById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
+    {{getByIdControllerDeclaration}} {
         return ApiResult.success("查询成功", {{entity}}Service.getById(id));
     }
 
@@ -85,7 +88,7 @@ public class {{Entity}}Controller {
     @Operation(summary = "删除{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{removePermission}}')")
     @DeleteMapping("deleteById/{id}")
-    public ApiResult<Void> deleteById(@Parameter(description = "主键ID") @PathVariable("id") String id) {
+    {{deleteByIdControllerDeclaration}} {
         {{entity}}Service.deleteById(id);
         return ApiResult.success("删除成功", null);
     }
@@ -94,7 +97,7 @@ public class {{Entity}}Controller {
     @Operation(summary = "导出{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{exportPermission}}')")
     @GetMapping("export")
-    public void export(@Parameter(hidden = true) {{Entity}}PageDTO params, javax.servlet.http.HttpServletResponse response) {
+    {{exportControllerDeclaration}} {
         {{entity}}Service.export(params, response);
     }
 {{/exportPresent}}
@@ -106,7 +109,8 @@ public class {{Entity}}Controller {
     @GetMapping("query{{detailEntity}}ByParentId/{parentId}")
     public ApiResult<java.util.List<{{detailEntity}}VO>> query{{detailEntity}}ByParentId(
             @Parameter(description = "父级主键ID") @PathVariable("parentId") String parentId) {
-        return ApiResult.success("查询成功", {{entity}}Service.query{{detailEntity}}ByParentId(parentId));
+        return ApiResult.success(
+                "查询成功", {{entity}}Service.query{{detailEntity}}ByParentId(parentId));
     }
 {{/exposeQuery}}
 {{/relations}}
@@ -115,7 +119,7 @@ public class {{Entity}}Controller {
     @Operation(summary = "{{summary}}")
     @PreAuthorize("@pms.hasPermission('{{permission}}')")
     @{{httpAnnotation}}("{{path}}")
-    public ApiResult<{{returnType}}> {{methodName}}({{controllerParamsJoined}}) {
+    {{controllerDeclaration}} {
 {{#isBatch}}
         java.util.Map<String, Object> result = {{entity}}Service.{{methodName}}({{serviceArgsJoined}});
         return ApiResult.success("{{summary}}成功", result);

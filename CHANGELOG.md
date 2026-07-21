@@ -4,6 +4,44 @@
 
 ---
 
+## [0.17.1] - 2026-07-21（治理列策略化：默认兜底 + 项目级覆盖）
+
+### Changed
+
+- **治理列从硬编码改为默认值兜底 + profile/rules 覆盖**：`IS_DELETE`、治理时间（`CREATE_DATE_TIME`/`UPDATE_DATE_TIME`）不再写死，codegen 优先读 `profile.softDelete` / `profile.auditTime`，未提供时回退到 jh4j 基线（`1有效/0删除`、`VARCHAR(19)`），完全等价历史行为。
+  - `lib/codegen.js`：新增 `DEFAULT_GOVERNANCE` 常量与 `resolveGovernance(profile)` 解析器；`renderMysqlMigration` / `renderOracleMigration` / `renderMigration` 增加 `profile` 形参，治理列、注释、索引列名全部从解析结果生成。
+  - 兼容性：未传 `profile` 或 `profile` 无 `softDelete`/`auditTime` 时，生成的 DDL 与 0.17.0 逐字节一致（向后兼容）。
+- **B17 物理删除提示语随软删值动态变化**：`lib/be-rules.js` 的 `checkPhysicalDelete` / `checkMapperXml` / `checkUpdateDeleteWithoutWhere` 接收 `softDelete`，提示文本中的 `IS_DELETE=` 取实际删除值，不再写死 `0`。
+- **`rules.local.json` 新增可选 `softDelete` 配置块**：支持 `activeValue` / `deletedValue`（均为整数，且不能相等），缺失或非法时回退默认并给出 `WLS_CONFIG` 诊断。
+
+### Added
+
+- `tests/governance-policy.test.js`：覆盖默认兜底、华新 `0有效/4删除`、`DATETIME(3)` 覆盖、B17 动态提示、配置校验五类场景。
+
+## [0.17.0] - 2026-07-19（生产安全、数据治理与真实生成质量闭环）
+
+### Added
+
+- 新增 standards/28 与 `assurance.level=production` 契约：强制声明业务关键级别、SLO、RTO/RPO、安全、数据治理、一致性、韧性，以及威胁模型、授权评审、压测、运行手册、恢复演练、数据评审六类证据；证据不齐时 `--require-complete` 零写入。
+- 字段契约新增稳定语义 ID、定义、枚举、初始值、数据分级、脱敏、日志策略、加密要求、保留期限、数据所有者和唯一事实源；状态值、初始值和敏感字段执行 fail-closed 校验。
+- 新增 B24 方法安全启用检查与 B25 敏感字段 Lombok `toString` 泄漏检查；任务路由和规则目录复用同一规则事实源。
+- K8s 生成补 readiness/liveness/startup 探针、优雅停机、非 root、只读根文件系统、Seccomp、能力收敛、PDB/HPA 与不可变镜像标签。
+- 新增 JS 语法/冲突标记/BOM 门，并将真实 codegen 产出的 Java 主代码和测试纳入 Checkstyle、Spotless、PMD 7 验证。
+
+### Changed
+
+- 保持团队 Java 8、Spring Boot 2、jh4j-cloud 3 和业务子域分层为第一基线；所有新增实践均采用兼容实现，不强推高版本 JDK/Spring API。
+- 生成查询统一走显式租户与有效标记 Mapper 边界；写操作继续同时约束 `ID + COMPANY_ID + IS_DELETE + REVISION`，批量命令改为去重、限量、全有或全无事务语义。
+- 生成 ServiceTest 从占位/TODO 升级为可执行行为断言，覆盖成功、前置拒绝、状态迁移和整批失败，不伪造权限、并发、数据库方言或压测证据。
+- 模板渲染增加稳定空白、导入排序和 AOSP 兼容格式，重复生成保持确定性并保护 `<wl-custom>` 区域。
+- ArchUnit 增加 Entity 禁依赖 Mapper、Mapper 仅限 Service/Mapper 使用和业务子域无环依赖。
+
+### Verification
+
+- 全量 Node 契约、规则、CLI、MCP、配置、生成、回滚、完成度与 Java 8 编译回归通过。
+- Java 8 真实 Maven 工程通过 ArchUnit、Checkstyle、PMD 7、SpotBugs、Spotless、JaCoCo；实际生成源码额外通过 Checkstyle、Spotless、PMD 7。
+- `release:check` 继续包含完整 verify、真实 Maven 门和 `npm pack --dry-run` 发布内容审计。
+
 ## [0.16.0] - 2026-07-19（行为契约测试生成）
 
 ### Added

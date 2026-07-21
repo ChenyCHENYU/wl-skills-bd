@@ -9,6 +9,9 @@ import com.jhict.common.data.mybatis.entity.JhPage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * {{apiDesc}}({{Entity}})表数据库访问层。
  * <p>继承 JhBaseMapper 获得基础读写能力；默认业务模板只暴露租户安全的查询与软删除流程。
@@ -30,7 +33,7 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
      * 分页查询{{apiDesc}}。
      * <p>实现见同名 Mapper.xml（禁止 SELECT 星号，软删除条件常驻）。
      *
-     * @param page    分页参数（current/size，由 MP 拦截器自动包裹）
+     * @param page 分页参数（current/size，由 MP 拦截器自动包裹）
      * @param pageDTO 查询条件（@Param("param")，XML 用 param.xxx 引用）
      * @param companyId 当前登录公司，由 Service 从 AuthUtil 获取，禁止接受前端传值
      * @return 分页结果，元素为 {{Entity}}PageVO
@@ -44,13 +47,30 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
      * 按 ID + 租户查询详情（复杂详情/联表场景的 SQL 起点）。
      * <p>默认 getById 由 Service.lambdaQuery 兜底；需要联表或裁剪大字段时改用本方法。
      *
-     * @param id        主键
+     * @param id 主键
      * @param companyId 当前登录公司
      * @return 详情 VO，无匹配返回 null
      */
-    {{Entity}}VO queryById(
-            @Param("id") String id,
-            @Param(COMPANY_ID_KEY) String companyId);
+    {{queryByIdMapperDeclaration}};
+
+    /**
+     * 按 ID + 租户 + 有效标记读取实体。
+     * <p>写操作和状态机统一从本方法加载，保证租户谓词在 Mapper SQL 中可审计、可测试。
+     *
+     * @param id 主键
+     * @param companyId 当前登录公司
+     * @return 有效实体，无匹配返回 null
+     */
+    {{selectActiveByIdMapperDeclaration}};
+
+    /**
+     * 按主键集合 + 租户 + 有效标记批量读取实体。
+     *
+     * @param ids 去重后的主键集合，调用方必须先校验非空且不超过 1000 条
+     * @param companyId 当前登录公司
+     * @return 有效实体列表
+     */
+    {{selectActiveByIdsMapperDeclaration}};
 
     /**
      * 租户 + 有效标记 + 乐观锁原子更新。
@@ -60,10 +80,7 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
      * @param expectedRevision 客户端读取到的版本号
      * @return 受影响行数；只能为 0 或 1
      */
-    int updateAtomic(
-            @Param("entity") {{Entity}} entity,
-            @Param(COMPANY_ID_KEY) String companyId,
-            @Param("expectedRevision") Integer expectedRevision);
+    {{updateAtomicMapperDeclaration}};
 
     /**
      * 租户 + 有效标记 + 乐观锁原子软删除。
@@ -72,7 +89,5 @@ public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
      * @param companyId 当前登录公司
      * @return 受影响行数；只能为 0 或 1
      */
-    int softDeleteAtomic(
-            @Param("entity") {{Entity}} entity,
-            @Param(COMPANY_ID_KEY) String companyId);
+    {{softDeleteAtomicMapperDeclaration}};
 }

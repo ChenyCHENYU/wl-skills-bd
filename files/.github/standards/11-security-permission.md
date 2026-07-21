@@ -2,7 +2,20 @@
 
 > 权限注解防越权调用，租户隔离防跨租户数据泄露。两者都是安全红线。
 >
-> 强制度：🔴 必遵。be-rules B1 查 @PreAuthorize / B7 查 COMPANY_ID。
+> 强制度：🔴 必遵。be-rules B1 查 @PreAuthorize / B7 查 COMPANY_ID / B24 查方法安全是否真实启用。
+
+## 0. 方法安全必须真实启用
+
+团队 Java 8 / Spring Boot 2 基线必须在安全配置中启用：
+
+```java
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+@Configuration
+public class MethodSecurityConfig {
+}
+```
+
+兼容 Spring Boot 3 的项目可使用 `@EnableMethodSecurity`，但不得仅为追新而改动团队基线。代码存在 `@PreAuthorize`、项目却没有启用方法级授权时，注解不会形成可信权限证据，B24 必须阻断。
 >
 > **依据**：MyBatis-Plus 官方多租户（TenantLineHandler 插件）、Spring Security 官方、OWASP 数据隔离最佳实践。
 
@@ -163,6 +176,7 @@ obj.put(COMPANY_ID.name(), "1");                                 // 所有租户
 | 检查项 | 风险 | 检测方式 |
 |--------|:---:|---------|
 | Controller 接口缺 @PreAuthorize | 🔴 | B1 regex |
+| 使用 @PreAuthorize 但未启用方法安全 | 🔴 | B24 project gate |
 | SELECT/UPDATE/DELETE 缺 COMPANY_ID 或未验证租户插件 | 🔴 | B7 XML/SQL 结构检查 |
 | **COMPANY_ID 硬编码**（如 "1"）| 🔴 | regex：搜索 `"1"` 字面量赋给 companyId |
 | 从请求参数取 userId/companyId | 🔴 | 人工/AI |

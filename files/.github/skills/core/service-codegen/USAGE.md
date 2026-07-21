@@ -46,7 +46,8 @@ codegen 自动生成 OperationRequestDTO + Controller 方法 + Service 四段式
 @Transactional(rollbackFor = Exception.class)
 public void submitForReview(String id) {
     // ① 校验存在
-    MdmFeatureCategory entity = lambdaQuery().eq(...).one();
+    String companyId = AuthUtil.getLoginCompanyId();
+    MdmFeatureCategory entity = baseMapper.selectActiveById(id, companyId);
     ServiceAssert.isNotNull(entity, "分类不存在");
     // ② 校验状态
     ServiceAssert.isTrue("DRAFT".equals(entity.getStatus()), "仅待提交可操作");
@@ -60,6 +61,10 @@ public void submitForReview(String id) {
 ```
 
 > ⚠️ **B20**：业务方法内禁止发 MQ/HTTP（事务回滚后消息已发）；用事务消息 + afterCommit。
+
+### 生产交付补充：生产级契约
+
+核心链路增加 `assurance.level=production`，声明 SLO/RTO/RPO、方法安全、审计、数据治理、幂等/事件/跨服务事务、超时/重试/熔断/限流，并引用威胁模型、授权评审、压测、运行手册、恢复演练和数据评审文件。缺证据时 completion 保持 draft，不能用 `--require-complete` 交付；详见 standards/28。
 
 ### 场景 C：批量导入
 
@@ -81,13 +86,12 @@ public void batchImport(List<MdmFeatureCategoryDTO> list) {
 getById 中关联查子表，组装到 VO：
 ```java
 public MdmFeatureCategoryVO getById(String id) {
-    MdmFeatureCategory entity = baseMapper.selectById(id);
+    MdmFeatureCategory entity = baseMapper.selectActiveById(id, AuthUtil.getLoginCompanyId());
     ServiceAssert.isNotNull(entity, "分类不存在");
     MdmFeatureCategoryVO vo = new MdmFeatureCategoryVO();
     BeanUtil.copyProperties(entity, vo);
     // 关联查字段列表
-    List<MdmFeatureField> fields = fieldService.lambdaQuery()
-        .eq(MdmFeatureField::getCategoryId, id).list();
+    List<MdmFeatureFieldVO> fields = fieldService.queryByCategoryId(id);
     vo.setFields(fields.stream().map(...).collect(toList()));
     return vo;
 }
@@ -118,6 +122,8 @@ mdm_feature_category_submit         业务动作（如提交审核）
 | B2 | Controller 方法缺 @Operation | 补 OpenAPI 3 注解 |
 | B5 | 写操作方法缺 @Transactional | 加 @Transactional(rollbackFor=Exception.class) |
 | B8 | throw new RuntimeException | 改 ServiceAssert / ServiceException |
+| B24 | 使用 @PreAuthorize 但未启用方法安全 | Spring Boot 2 配置 `@EnableGlobalMethodSecurity(prePostEnabled = true)` |
+| B25 | 敏感字段进入 Lombok toString | 字段分级并加 `@ToString.Exclude`，禁止日志原值 |
 
 ## FAQ
 
@@ -135,6 +141,7 @@ A：团队基线用软删除（`IS_DELETE = 0`）。deleteById 只调用 `softDe
 
 ## 变更记录
 
+- 2026-07-19 v0.17：补生产保障契约、真实行为测试、租户安全查询与原子批量语义。
 - 2026-07-18 v0.14：示例改为显式原子写；自定义命令生成 RequestDTO 并要求真实测试证据。
 
 **Q：@Transactional 加在 Controller 还是 Service？**

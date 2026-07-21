@@ -34,6 +34,9 @@ private Integer revision;
 - 长度、范围、枚举值在 DTO 上声明 Bean Validation。
 - 契约中的每个顶层业务字段必须显式声明 `writable: true|false`；只有 `true` 的字段可进入 Create/UpdateDTO，禁止依靠默认可写推断越权边界。
 - 密码、token、证件号等敏感字段使用 `@ToString.Exclude`，禁止进入日志。
+- 契约字段应声明稳定 `semanticId`、业务 `definition`、枚举范围、数据所有者和 `sourceOfTruth`；状态机字段还必须声明确定性初始值。
+- `confidential/restricted` 字段必须声明脱敏策略，`logPolicy` 只能排除，禁止通过 Lombok `@ToString`、异常消息或审计扩展字段泄露原值（B25）。
+- 数据分级、脱敏、留存和唯一事实源属于业务口径，生产契约必须在 standards/28 的 data review 证据中由数据所有者确认。
 
 ## 3. VO
 

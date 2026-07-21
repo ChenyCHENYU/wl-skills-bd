@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agile-team.example/schemas/wl-backend-contract-v1.json",
   "title": "wl-skills-bd backend resource contract",
-  "description": "v0.14 安全契约：显式字段写策略、强类型业务命令 DTO、原子版本写、Expand/Contract DDL 和 Flyway 不可变门。",
+    "description": "生产安全契约：团队 Java 8/Spring Boot 2 基线、显式字段写策略、数据分级、状态初值、强类型业务命令、原子版本写、Expand/Contract DDL 和 Flyway 不可变门。",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "contractId", "profile", "rootPackage", "module", "entity", "api", "database", "migration", "fields"],
@@ -15,6 +15,97 @@
     "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 wl-skills-design 的 design-model.json entity.id，用于跨包稳定 ID 追溯" },
     "environment": { "enum": ["dev", "sit", "uat", "pre", "prod"], "description": "可选，声明契约适用的环境；不声明则环境无关。声明 prod 时 codegen apply 默认阻断（详见 standards/24 §6）" },
     "dbCluster": { "enum": ["cx", "non_cx", "pt"], "description": "可选，数据库集群归属：cx=产销库 / non_cx=非产销库 / pt=平台库；doctor 校验与 datasource profile 一致（standards/24 §3.3）" },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level"],
+      "description": "可选生产保障契约。level=production 时，completion 还必须取得安全/SLA/容灾/数据治理证据文件。",
+      "properties": {
+        "level": { "enum": ["standard", "production"] },
+        "criticality": { "enum": ["core", "important", "standard"] },
+        "slo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availabilityPercent", "p95LatencyMs", "p99LatencyMs", "maxErrorRatePercent"],
+          "properties": {
+            "availabilityPercent": { "type": "number", "minimum": 90, "maximum": 100 },
+            "p95LatencyMs": { "type": "integer", "minimum": 1, "maximum": 600000 },
+            "p99LatencyMs": { "type": "integer", "minimum": 1, "maximum": 600000 },
+            "maxErrorRatePercent": { "type": "number", "minimum": 0, "maximum": 10 }
+          }
+        },
+        "recovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rtoMinutes", "rpoMinutes"],
+          "properties": {
+            "rtoMinutes": { "type": "integer", "minimum": 0, "maximum": 525600 },
+            "rpoMinutes": { "type": "integer", "minimum": 0, "maximum": 525600 }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authorizationModel", "methodSecurityRequired", "auditRequired"],
+          "properties": {
+            "authorizationModel": { "enum": ["tenant", "tenant-data-scope", "custom"] },
+            "methodSecurityRequired": { "const": true },
+            "auditRequired": { "const": true }
+          }
+        },
+        "dataGovernance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner", "sourceOfTruth", "classificationDefault", "retentionPolicy"],
+          "properties": {
+            "owner": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "sourceOfTruth": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "classificationDefault": { "enum": ["public", "internal", "confidential", "restricted"] },
+            "retentionPolicy": { "type": "string", "minLength": 1, "maxLength": 500 }
+          }
+        },
+        "consistency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["idempotencyStrategy", "eventDelivery", "crossServiceTransaction"],
+          "properties": {
+            "idempotencyStrategy": { "enum": ["request-key", "business-key", "state-machine"] },
+            "eventDelivery": { "enum": ["none", "outbox", "transactional-message"] },
+            "crossServiceTransaction": { "enum": ["none", "saga", "seata"] }
+          }
+        },
+        "resilience": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dependencyTimeoutMs", "retryMaxAttempts", "circuitBreakerRequired", "rateLimitRequired"],
+          "properties": {
+            "dependencyTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 300000 },
+            "retryMaxAttempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+            "circuitBreakerRequired": { "type": "boolean" },
+            "rateLimitRequired": { "type": "boolean" }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["threatModelRef", "authorizationReviewRef", "loadTestRef", "runbookRef", "restoreDrillRef", "dataReviewRef"],
+          "properties": {
+            "threatModelRef": { "$ref": "#/$defs/relativePath" },
+            "authorizationReviewRef": { "$ref": "#/$defs/relativePath" },
+            "loadTestRef": { "$ref": "#/$defs/relativePath" },
+            "runbookRef": { "$ref": "#/$defs/relativePath" },
+            "restoreDrillRef": { "$ref": "#/$defs/relativePath" },
+            "dataReviewRef": { "$ref": "#/$defs/relativePath" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "level": { "const": "production" } } },
+          "then": { "required": ["criticality", "slo", "recovery", "security", "dataGovernance", "consistency", "resilience", "evidence"] }
+        }
+      ]
+    },
     "entity": {
       "type": "object",
       "additionalProperties": false,
@@ -91,7 +182,18 @@
           "detail": { "type": "boolean", "default": true },
           "list": { "type": "boolean", "default": true },
           "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
-          "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 design-model field.id" }
+          "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 design-model field.id" },
+          "semanticId": { "$ref": "#/$defs/stableId", "description": "企业级数据语义/指标口径稳定 ID" },
+          "definition": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "enumValues": { "type": "array", "minItems": 1, "uniqueItems": true, "items": {} },
+          "initialValue": { "description": "不可由通用 DTO 写入的状态/治理字段初始值；生成 Java 赋值与数据库 DEFAULT NOT NULL" },
+          "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+          "masking": { "enum": ["none", "partial", "full"], "description": "机密/受限字段必须显式声明的响应脱敏策略" },
+          "logPolicy": { "enum": ["allow", "exclude"], "description": "confidential/restricted 强制 exclude" },
+          "encryptionRequired": { "type": "boolean" },
+          "retentionDays": { "type": "integer", "minimum": 1, "maximum": 36500 },
+          "dataOwner": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "sourceOfTruth": { "type": "string", "minLength": 1, "maxLength": 100 }
         }
       }
     },
@@ -147,7 +249,10 @@
         "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime"] },
         "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
         "required": { "type": "boolean", "default": false },
-        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 }
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+        "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+        "masking": { "enum": ["none", "partial", "full"] },
+        "logPolicy": { "enum": ["allow", "exclude"] }
       }
     },
     "precondition": {

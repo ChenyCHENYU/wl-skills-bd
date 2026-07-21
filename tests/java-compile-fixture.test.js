@@ -64,7 +64,7 @@ const commonStubs = {
   "io/swagger/v3/oas/annotations/tags/Tag.java": `package io.swagger.v3.oas.annotations.tags; public @interface Tag { String name(); }`,
   "lombok/Getter.java": `package lombok; public @interface Getter {}`,
   "lombok/Setter.java": `package lombok; public @interface Setter {}`,
-  "lombok/ToString.java": `package lombok; public @interface ToString {}`,
+  "lombok/ToString.java": `package lombok; public @interface ToString { public @interface Exclude {} }`,
   "lombok/RequiredArgsConstructor.java": `package lombok; public @interface RequiredArgsConstructor {}`,
   "lombok/experimental/Accessors.java": `package lombok.experimental; public @interface Accessors { boolean chain() default false; }`,
   "javax/annotation/Resource.java": `package javax.annotation; public @interface Resource {}`,
@@ -102,7 +102,6 @@ const commonStubs = {
   "org/mockito/stubbing/Answer.java": `package org.mockito.stubbing; import org.mockito.invocation.InvocationOnMock; public interface Answer<T> { T answer(InvocationOnMock invocation) throws Throwable; }`,
   "org/mockito/stubbing/OngoingStubbing.java": `package org.mockito.stubbing; public interface OngoingStubbing<T> { OngoingStubbing<T> thenReturn(T value); OngoingStubbing<T> thenAnswer(Answer<T> answer); }`,
   "org/mockito/Mockito.java": `package org.mockito; import org.mockito.stubbing.OngoingStubbing; public final class Mockito { public static <T> OngoingStubbing<T> when(T value){return null;} public static <T> T verify(T mock){return mock;} public static <T> T verify(T mock, Object mode){return mock;} }`,
-  "org/mockito/ArgumentCaptor.java": `package org.mockito; public final class ArgumentCaptor<T> { public static <T> ArgumentCaptor<T> forClass(Class<T> clazz){return new ArgumentCaptor<T>();} public T capture(){return null;} public T getValue(){return null;} }`,
   "org/mockito/ArgumentMatchers.java": `package org.mockito; public final class ArgumentMatchers { public static <T> T any(Class<T> type){return null;} public static <T> T any(){return null;} }`,
   "org/springframework/test/util/ReflectionTestUtils.java": `package org.springframework.test.util; public final class ReflectionTestUtils { public static void setField(Object target,String name,Object value){} }`,
   "org/springframework/test/web/servlet/RequestBuilder.java": `package org.springframework.test.web.servlet; public interface RequestBuilder {}`,
@@ -124,12 +123,12 @@ const modelStubs = {
 };
 
 const extensionModelStubs = {
-  "com/jhict/sale/api/entity/order/SaleOrderMaster.java": `package com.jhict.sale.api.entity.order; import com.jhict.common.core.entity.CoreEntity; public class SaleOrderMaster extends CoreEntity { private Integer isDelete; private Integer revision; private String status; private String approvalOpinion; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public Integer getIsDelete(){return isDelete;} public void setIsDelete(Integer value){isDelete=value;} public String getStatus(){return status;} public void setStatus(String value){status=value;} public void setApprovalOpinion(String value){approvalOpinion=value;} }`,
+  "com/jhict/sale/api/entity/order/SaleOrderMaster.java": `package com.jhict.sale.api.entity.order; import com.jhict.common.core.entity.CoreEntity; public class SaleOrderMaster extends CoreEntity { private Integer isDelete; private Integer revision; private String status; private String approvalOpinion; public Integer getRevision(){return revision;} public void setRevision(Integer value){revision=value;} public Integer getIsDelete(){return isDelete;} public void setIsDelete(Integer value){isDelete=value;} public String getStatus(){return status;} public void setStatus(String value){status=value;} public String getApprovalOpinion(){return approvalOpinion;} public void setApprovalOpinion(String value){approvalOpinion=value;} }`,
   "com/jhict/sale/api/dto/order/SaleOrderMasterCreateDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterCreateDTO { public void setOrderNo(String value){} public void setCustomerName(String value){} }`,
   "com/jhict/sale/api/dto/order/SaleOrderMasterUpdateDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterUpdateDTO { public String getId(){return "id";} public Integer getRevision(){return 0;} }`,
   "com/jhict/sale/api/dto/order/SaleOrderMasterPageDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterPageDTO { public long getCurrent(){return 1L;} public long getSize(){return 20L;} }`,
-  "com/jhict/sale/api/dto/order/SaleOrderMasterApproveRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterApproveRequestDTO { public String getId(){return "id";} public String getOpinion(){return "ok";} }`,
-  "com/jhict/sale/api/dto/order/SaleOrderMasterBatchCancelRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterBatchCancelRequestDTO { public java.util.List<String> getIds(){return java.util.Collections.singletonList("id");} }`,
+  "com/jhict/sale/api/dto/order/SaleOrderMasterApproveRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterApproveRequestDTO { private String opinion; public String getOpinion(){return opinion;} public void setOpinion(String value){opinion=value;} }`,
+  "com/jhict/sale/api/dto/order/SaleOrderMasterBatchCancelRequestDTO.java": `package com.jhict.sale.api.dto.order; public class SaleOrderMasterBatchCancelRequestDTO { private java.util.List<String> ids; public java.util.List<String> getIds(){return ids;} public void setIds(java.util.List<String> value){ids=value;} }`,
   "com/jhict/sale/api/vo/order/SaleOrderMasterVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderMasterVO {}`,
   "com/jhict/sale/api/vo/order/SaleOrderMasterPageVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderMasterPageVO {}`,
   "com/jhict/sale/api/vo/order/SaleOrderItemVO.java": `package com.jhict.sale.api.vo.order; public class SaleOrderItemVO {}`,
@@ -165,8 +164,6 @@ try {
     "sale-order-master.contract.json",
   ), "utf8"));
   extensionContract.customOperations[0].method = "PATCH";
-  extensionContract.customOperations[1].idFrom = "body";
-  extensionContract.customOperations[1].path = "approve";
   const extensionContractFile = path.join(extensionRoot, "sale-order.contract.json");
   fs.writeFileSync(extensionContractFile, `${JSON.stringify(extensionContract, null, 2)}\n`, "utf8");
   const extensionPlan = buildPlan(extensionContractFile, { projectRoot: extensionRoot });

@@ -67,7 +67,7 @@ if (json.length() > 1000) json = json.substring(0, 1000) + "...(truncated)";
 log.debug("响应: {}", json);
 ```
 
-> 打印整个 DTO 前确认其 toString 不含密码字段（`@ToString(exclude = "password")`）。
+> 打印整个 DTO 前确认其 toString 不含任何敏感字段；使用字段级 `@ToString.Exclude`，并由 B25 阻断疑似敏感字段泄露。即使已脱敏，也优先只记录稳定业务 ID，不记录整个请求对象。
 
 ## 5. 链路追踪（traceId，Spring 官方 MDC）
 

@@ -22,8 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class {{Entity}}ControllerTest {
 
-    @Mock
-    private {{Entity}}Service service;
+    private static final int SUCCESS_CODE = 2000;
+
+    @Mock private {{Entity}}Service service;
 
     private MockMvc mockMvc;
 
@@ -35,9 +36,9 @@ class {{Entity}}ControllerTest {
     }
 
     @Test
-    void getById_shouldUsePlatformEnvelope() throws Exception {
+    void getByIdShouldUsePlatformEnvelope() throws Exception {
         when(service.getById("1000000000000000001")).thenReturn(null);
         mockMvc.perform(get("/{{requestPath}}/getById/{id}", "1000000000000000001"))
-                .andExpect(jsonPath("$.code").value(2000));
+                .andExpect(jsonPath("$.code").value(SUCCESS_CODE));
     }
 }

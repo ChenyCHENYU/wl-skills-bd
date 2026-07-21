@@ -41,4 +41,4 @@ npm run verify:quality-config   # 离线检查 XML、版本和隔离关系
 npm run verify:quality-maven    # 创建临时 Java 8 工程，真实运行 J1~J5/J8
 ```
 
-真实夹具会编译源码、执行测试与 5 条 ArchUnit 断言，并依次通过 Checkstyle、PMD 7、SpotBugs、Spotless 和 JaCoCo。CI 在 Ubuntu/Node 22/Java 8 组合上执行此轮验证。
+真实夹具会编译源码、执行测试与 5 条 ArchUnit 断言，并依次通过 Checkstyle、PMD 7、SpotBugs、Spotless 和 JaCoCo；同时从正式契约生成 Controller、Service、Mapper、DTO/VO 和测试源码，对实际生成结果再执行 Checkstyle、Spotless、PMD 7 源码门。CI 在 Ubuntu/Node 22/Java 8 组合上执行此轮验证。

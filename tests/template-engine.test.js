@@ -11,6 +11,11 @@ assert.strictEqual(render("{{#items}}[{{name}}={{.}}]{{/items}}", {
 assert.strictEqual(render("{{^items}}empty{{/items}}", { items: [] }), "empty");
 assert.throws(() => render("{{missing}}", {}), /模板变量未提供/);
 assert.throws(() => render("{{value}}", { value: {} }), /必须是标量/);
+assert.strictEqual(
+  render("a\n{{#enabled}}\nvalue\n{{/enabled}}\nz\n", { enabled: false }),
+  "a\nz\n",
+  "standalone 控制标签不得产生空行污染",
+);
 assert.throws(() => parse("{{#a}}"), /未闭合/);
 assert.throws(() => parse("{{#a}}{{/b}}"), /未配对/);
 

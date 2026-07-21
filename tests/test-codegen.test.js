@@ -25,7 +25,7 @@ function loadExample(file) {
 
 console.log("✅ test-codegen：无 customOperations 时只给 smoke + 引导");
 
-// ─── 2. 有 customOperations：正常路径 + 前置拒绝 + batch ───
+// ─── 2. 有 customOperations：正常路径 + 前置拒绝 + 原子 batch ───
 {
   const loaded = loadExample("sale-order-master.contract.json");
   const ops = loaded.contract.customOperations;
@@ -41,39 +41,43 @@ console.log("✅ test-codegen：无 customOperations 时只给 smoke + 引导");
   const approveScenarios = testCodegen.buildTestScenarios(ops[1], loaded.contract);
   assert.strictEqual(approveScenarios.length, 2, "approve 2 场景");
 
-  // batchCancel（batch）：批量成功 + 部分失败 = 2
+  // batchCancel（batch）：批量成功 + 任一失败整体拒绝 = 2
   const batchScenarios = testCodegen.buildTestScenarios(ops[2], loaded.contract);
   assert.strictEqual(batchScenarios.length, 2, "batch 2 场景");
-  assert.ok(batchScenarios.every((s) => s.kind.startsWith("batch")), "全是 batch 场景");
+  assert.ok(batchScenarios.some((s) => s.kind === "batch-success"), "含批量成功场景");
+  assert.ok(batchScenarios.some((s) => s.kind === "batch-atomic-reject"), "含批量整体拒绝场景");
 }
 
-console.log("✅ test-codegen：customOperations 正常路径/前置拒绝/batch 场景矩阵正确");
+console.log("✅ test-codegen：customOperations 正常路径/前置拒绝/原子 batch 场景矩阵正确");
 
 // ─── 3. 生成完整 ServiceTest：方法论名 + 断言 + 前置拒绝 ───
 {
   const result = testCodegen.generateServiceTest(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: ROOT });
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.scenarioCount, 7, "7 场景（1 smoke + 6 行为契约）");
-  assert.match(result.content, /void submit_success\(\)/, "含 submit 正常路径");
-  assert.match(result.content, /void submit_reject_status_equals\(\)/, "含 submit 前置拒绝");
-  assert.match(result.content, /void approve_success\(\)/, "含 approve 正常路径");
-  assert.match(result.content, /void batchCancel_batch_success\(\)/, "含 batchCancel 批量成功");
+  assert.match(result.content, /void submitSuccess\(\)/, "含 submit 正常路径");
+  assert.match(result.content, /void submitRejectStatusEquals\(\)/, "含 submit 前置拒绝");
+  assert.match(result.content, /void approveSuccess\(\)/, "含 approve 正常路径");
+  assert.match(result.content, /void batchCancelBatchSuccess\(\)/, "含 batchCancel 批量成功");
   assert.match(result.content, /service\.submit\(/, "方法名正确（非 undefined）");
   assert.match(result.content, /service\.batchCancel\(/, "batch 方法名正确");
   assert.match(result.content, /assertThrows\(ServiceException\.class/, "前置拒绝用 assertThrows");
-  assert.match(result.content, /assertEquals\("SUBMITTED".*captor/, "正常路径含状态转移断言引导（ArgumentCaptor）");
+  assert.match(result.content, /assertEquals\("SUBMITTED", entity\.getStatus\(\)\)/, "正常路径真实断言状态转移结果");
+  assert.match(result.content, /service\.approve\("1000000000000000001", request\)/, "path + body 参数必须同时生成");
+  assert.match(result.content, /java\.util\.Map<String, Object> result = service\.batchCancel\(request\)/, "批量调用必须使用强类型请求并接收结果");
+  assert.doesNotMatch(result.content, /batch_partial|部分失败|TODO/, "生成测试不得含部分成功语义或 TODO");
   assert.doesNotMatch(result.content, /service\.undefined/, "无 undefined 方法名");
 }
 
 console.log("✅ test-codegen：生成完整 ServiceTest 方法名/断言/前置拒绝正确");
 
-// ─── 4. 测行为不测镜像：不测 setter 调用，正常路径用 ArgumentCaptor 引导验证状态 ───
+// ─── 4. 测行为不测镜像：真实 mock Service 边界并断言业务结果 ───
 {
   const result = testCodegen.generateServiceTest(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: ROOT });
   assert.doesNotMatch(result.content, /verify\(.*\.setStatus\)/, "不直接测 setter 调用（冗余）");
-  assert.match(result.content, /ArgumentCaptor/, "正常路径含 ArgumentCaptor 引导（行为断言）");
-  assert.match(result.content, /verify\(baseMapper\)\.updateById\(captor\.capture/, "引导用 ArgumentCaptor 捕获持久化状态（行为验证）");
-  assert.match(result.content, /assertEquals\("SUBMITTED".*captor/, "引导验证持久化状态值（行为断言）");
+  assert.match(result.content, /when\(mapper\.selectActiveById\(any\(\), any\(\)\)\)\.thenReturn\(entity\)/, "正常路径 mock 显式租户查询边界");
+  assert.match(result.content, /when\(mapper\.updateAtomic/, "正常路径 mock 乐观锁原子更新");
+  assert.match(result.content, /assertEquals\("SUBMITTED", entity\.getStatus\(\)\)/, "验证状态转移业务结果");
 }
 
 console.log("✅ test-codegen：测行为契约不测代码镜像（无 verify 冗余）");

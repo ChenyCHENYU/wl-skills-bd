@@ -65,7 +65,14 @@
       "comment": "订单状态",
       "writable": false,
       "queryMode": "eq",
-      "maxLength": 32
+      "maxLength": 32,
+      "semanticId": "SALE_ORDER_STATUS",
+      "definition": "销售订单在审批流程中的唯一生命周期状态口径",
+      "enumValues": ["DRAFT", "SUBMITTED", "APPROVED", "CANCELLED"],
+      "initialValue": "DRAFT",
+      "classification": "internal",
+      "dataOwner": "销售业务域",
+      "sourceOfTruth": "sale-order-master"
     },
     {
       "name": "totalAmount",

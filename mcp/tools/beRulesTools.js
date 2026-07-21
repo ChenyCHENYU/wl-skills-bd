@@ -3,29 +3,21 @@
 /**
  * beRulesTools — MCP 工具：包装 lib/be-rules.js
  *
- * 暴露 wls_be_validate（扫描工程输出 B1~B12 偏差）。
+ * 暴露 wls_be_validate（扫描工程输出 B1~B25 偏差）。
  * 对标 kit 的 mcp/tools/projectTools.js，但后端无需网关，只读扫描。
  */
 
 const fs = require("fs");
+const ruleCatalog = require("../../files/.wl-skills-bd/rules/catalog.json");
 const { runBeRules } = require("../../lib/be-rules");
 const { normalizeRel, resolveWithin } = require("../../lib/manifest");
 const { projectRoot } = require("../project-root");
 
-const RULE_DESC = {
-  B1: "Controller 接口缺 @PreAuthorize（越权风险）",
-  B2: "Controller 缺 @Operation/@ApiOperation（文档缺失）",
-  B3: "Mapper XML SELECT 星号",
-  B4: "Mapper XML 美元花括号注入",
-  B5: "写操作缺 @Transactional",
-  B6: "单目录文件 >20",
-  B7: "SELECT 缺 COMPANY_ID",
-  B8: "裸 RuntimeException",
-  B9: "类长度 >500 行（上帝类）",
-  B10: "方法长度 >80 行（长方法）",
-  B11: "圈复杂度 >10",
-  B12: "业务/接口方法缺 Javadoc",
-};
+const RULE_DESC = Object.fromEntries(
+  ruleCatalog.rules
+    .filter((rule) => /^B\d+$/.test(rule.id))
+    .map((rule) => [rule.id, rule.title]),
+);
 
 function handleValidate(args) {
   const target = projectRoot();

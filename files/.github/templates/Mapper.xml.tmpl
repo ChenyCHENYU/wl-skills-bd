@@ -59,6 +59,28 @@
           AND t.ID = #{id}
     </select>
 
+    <!-- 写操作统一使用显式租户 SQL 加载实体，避免 Wrapper 条件遗漏且便于静态审计。 -->
+    <select id="selectActiveById" resultType="{{rootPackage}}.api.entity.{{module}}.{{Entity}}">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.ID = #{id}
+          AND t.COMPANY_ID = #{companyId}
+          AND t.IS_DELETE = 1
+    </select>
+
+    <select id="selectActiveByIds" resultType="{{rootPackage}}.api.entity.{{module}}.{{Entity}}">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.COMPANY_ID = #{companyId}
+          AND t.IS_DELETE = 1
+          AND t.ID IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
     <!-- 所有业务更新必须在同一条 SQL 中同时约束 ID、租户、有效标记和版本号。 -->
     <update id="updateAtomic">
         UPDATE {{table}}

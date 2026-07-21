@@ -25,6 +25,28 @@ assert.strictEqual(context.queryFields.length, 2);
 assert.strictEqual(context.pagePermission, example.api.permissions.page);
 assert.ok(context.createImports.includes("javax.validation.constraints.NotBlank"));
 
+const stateExample = JSON.parse(fs.readFileSync(
+  path.join(ROOT, "files", ".github", "templates", "examples", "sale-order-master.contract.json"),
+  "utf8",
+));
+const stateValid = validateContract(stateExample, { projectRoot: ROOT });
+assert.strictEqual(stateValid.ok, true, JSON.stringify(stateValid.errors));
+const stateContext = buildContext(stateValid.contract, stateValid.profile);
+assert.deepStrictEqual(stateContext.initialValueAssignments, [{ Field: "Status", value: '"DRAFT"' }]);
+
+const stateWithoutInitial = structuredClone(stateExample);
+delete stateWithoutInitial.fields.find((field) => field.name === "status").initialValue;
+const missingInitial = validateContract(stateWithoutInitial, { projectRoot: ROOT });
+assert.strictEqual(missingInitial.ok, false);
+assert.ok(missingInitial.errors.some((error) => /状态机字段必须声明初始值/.test(error.message)));
+
+const sensitiveWithoutClassification = structuredClone(example);
+sensitiveWithoutClassification.fields[0].name = "accessToken";
+sensitiveWithoutClassification.fields[0].column = "ACCESS_TOKEN";
+const sensitiveResult = validateContract(sensitiveWithoutClassification, { projectRoot: ROOT });
+assert.strictEqual(sensitiveResult.ok, false);
+assert.ok(sensitiveResult.errors.some((error) => /敏感数据/.test(error.message)));
+
 const badReserved = structuredClone(example);
 badReserved.fields[0].name = "companyId";
 badReserved.fields[0].column = "COMPANY_ID";

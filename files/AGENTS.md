@@ -10,7 +10,8 @@
 4. 软删 1=有效/0=删除；受管更新/软删使用 `ID + COMPANY_ID + IS_DELETE + REVISION` 显式原子 SQL，详情返回 revision。
 5. DDL、数据写入、权限发布和破坏性 API 变更必须展示差异并等待人工确认；MCP 不执行数据库写入。
 6. codegen 使用机器契约，先 plan 后 apply；apply 必须携带相同 planHash 与显式确认。
-7. 最终验证执行 B1~B23 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。
+7. 最终验证执行 B1~B25 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。
+8. 生产契约必须满足 standards/28：SLO/RTO/RPO、安全、数据治理、一致性、韧性与六类证据缺一不可；外部评审不得由工具伪造。
 8. 修复器只自动处理安全白名单 B3/B5，写后强制复扫；不得猜权限、SQL、租户、异常或业务文档。
 9. 每个生成/修复步骤后运行对应验证；error 未清零不得宣称完成。
 10. **Redis 操作（v0.10）**：必须带 TTL；分布式锁用 Redisson RLock（长任务 watchdog 自动续期）；禁用 KEYS \*/FLUSHDB/FLUSHALL；禁用 JdkSerializationRedisSerializer。
@@ -36,7 +37,7 @@ wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可
 wl-skills-bd contract diff wl-contract.json --frontend <api.md> --openapi <openapi.json> --permissions <permissions.json> --strict
 wl-skills-bd db preview wl-contract.json
 wl-skills-bd permissions export wl-contract.json
-wl-skills-bd validate . --strict           # B1~B23
+wl-skills-bd validate . --strict           # B1~B25
 wl-skills-bd test gen wl-contract.json    # 行为契约测试（测行为不测镜像）
 wl-skills-bd test scenarios wl-contract.json
 ```
