@@ -75,9 +75,13 @@ withFixture({
 withFixture({
   "resources/mapper/TenantMapper.xml": `<mapper>
 <select id="bad">SELECT a.ID FROM A a JOIN B b ON a.ID=b.ID</select>
-<select id="good">SELECT a.ID FROM A a WHERE a.COMPANY_ID = #{companyId}</select>
+<select id="good">SELECT a.ID FROM A a WHERE a.COMPANY_ID = #{companyId,jdbcType=VARCHAR}</select>
 </mapper>`,
-}, (root) => assert.strictEqual(count(runBeRules(root), "B7"), 1, "JOIN 不能绕过租户检查"));
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B7"),
+  1,
+  "JOIN 不能绕过租户检查，带 jdbcType 的 companyId 谓词必须识别",
+));
 
 withFixture({
   "config/TenantConfig.java": "class TenantConfig { TenantLineInnerInterceptor interceptor; }",
@@ -447,6 +451,23 @@ public class DemoController {
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {}`,
 }, (root) => assert.strictEqual(count(runBeRules(root), "B24"), 0, "Spring Boot 2 方法安全启用证据应通过"));
+
+withFixture({
+  "src/main/java/demo/DemoController.java": `package demo;
+@PreAuthorize("@pms.hasPermission('demo_query')")
+public class DemoController {
+    @Operation(summary = "query")
+    @GetMapping("query")
+    public Object query() { return null; }
+}`,
+  "src/main/java/demo/DemoApplication.java": `package demo;
+@EnableJhResourceServer
+public class DemoApplication {}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B24"),
+  0,
+  "jh4j-cloud 资源服务启用注解应作为平台方法安全证据",
+));
 
 withFixture({
   "src/main/java/demo/LoginDTO.java": `package demo;

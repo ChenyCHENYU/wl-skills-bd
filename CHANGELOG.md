@@ -4,6 +4,17 @@
 
 ---
 
+## [0.17.5] - 2026-07-22（华新资源服务安全门识别）
+
+### Fixed
+
+- B24 方法级授权门识别 jh4j-cloud `@EnableJhResourceServer` 平台启用证据，避免华新服务已启用资源服务器却被误报为缺少方法安全。
+- B7/B18 租户谓词识别兼容 MyBatis `#{companyId,jdbcType=VARCHAR}` 写法，不再把显式租户条件误判为缺失。
+
+### Verification
+
+- 增加 `@PreAuthorize` Controller 配合 `@EnableJhResourceServer` 启动类，以及 companyId 携带 jdbcType 的回归测试；同时保留无启用证据和缺租户条件时的阻断行为。
+
 ## [0.17.4] - 2026-07-22（多模块工程环境发现修正）
 
 ### Fixed
