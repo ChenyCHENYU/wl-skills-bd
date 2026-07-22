@@ -14,7 +14,7 @@
         t.{{COLUMN}}            AS {{field}},
         {{/columns}}
         t.COMPANY_ID       AS companyId,
-        t.IS_DELETE        AS isDelete,
+        t.{{softDeleteColumn}}        AS isDelete,
         t.REVISION         AS revision,
         t.CREATE_USER_NO   AS createUserNo,
         t.CREATE_DATE_TIME AS createDateTime,
@@ -28,8 +28,8 @@
         <include refid="BaseColumns"/>
         FROM {{table}} t
         <where>
-            <!-- 软删除条件常驻（standards/06：IS_DELETE = 1 有效）-->
-            AND t.IS_DELETE = 1
+            <!-- 软删除条件常驻：{{softDeleteComment}} -->
+            AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
             <!-- 租户值只能由 Service 从 AuthUtil 注入，禁止从请求 DTO 获取 -->
             AND t.COMPANY_ID = #{companyId}
             <if test="param != null">
@@ -54,7 +54,7 @@
         SELECT
         <include refid="BaseColumns"/>
         FROM {{table}} t
-        WHERE t.IS_DELETE = 1
+        WHERE t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
           AND t.COMPANY_ID = #{companyId}
           AND t.ID = #{id}
     </select>
@@ -66,7 +66,7 @@
         FROM {{table}} t
         WHERE t.ID = #{id}
           AND t.COMPANY_ID = #{companyId}
-          AND t.IS_DELETE = 1
+          AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
     </select>
 
     <select id="selectActiveByIds" resultType="{{rootPackage}}.api.entity.{{module}}.{{Entity}}">
@@ -74,7 +74,7 @@
         <include refid="BaseColumns"/>
         FROM {{table}} t
         WHERE t.COMPANY_ID = #{companyId}
-          AND t.IS_DELETE = 1
+          AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
           AND t.ID IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
@@ -96,20 +96,20 @@
         </set>
         WHERE ID = #{entity.id}
           AND COMPANY_ID = #{companyId}
-          AND IS_DELETE = 1
+          AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
           AND REVISION = #{expectedRevision}
     </update>
 
-    <!-- 团队软删除口径：1=有效、0=删除；禁止物理 DELETE。 -->
+    <!-- 当前 profile 软删除口径：{{softDeleteComment}}；禁止物理 DELETE。 -->
     <update id="softDeleteAtomic">
         UPDATE {{table}}
-        SET IS_DELETE = 0,
+        SET {{softDeleteColumn}} = {{softDeleteDeletedValue}},
             UPDATE_USER_NO = #{entity.updateUserNo},
             UPDATE_DATE_TIME = #{entity.updateDateTime},
             REVISION = REVISION + 1
         WHERE ID = #{entity.id}
           AND COMPANY_ID = #{companyId}
-          AND IS_DELETE = 1
+          AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
           AND REVISION = #{entity.revision}
     </update>
 

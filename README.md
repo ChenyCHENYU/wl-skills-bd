@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.17.1-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.17.2-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -266,7 +266,7 @@ scripts/ + tests/     包自身治理、真实 Java 8 夹具和回归测试
 | 分布式锁 | setnx 自实现 | Redisson RLock | B14 error |
 | Redis 命令 | KEYS \*/FLUSHDB/FLUSHALL | SCAN | B15 error |
 | Redis 序列化 | JDK 序列化 | Jackson + JavaTimeModule | B16 warn |
-| 删除数据 | deleteBatchIds/TRUNCATE/DROP | 软删 IS_DELETE=0 | B17 error |
+| 删除数据 | deleteBatchIds/TRUNCATE/DROP | 使用当前 profile 的软删列/删除值（默认 IS_DELETE=0） | B17 error |
 | 全表写 | update/delete 无 WHERE | WHERE + COMPANY_ID 谓词 | B18 error |
 | 批量写 | saveBatch > 1000 | ≤1000 或分批游标 | B19 warn |
 
@@ -315,7 +315,9 @@ wl-skills-bd troubleshoot "NacosException"
 wl-skills-bd troubleshoot "CrashLoopBackOff"
 ```
 
-**L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。
+**L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。`env-port` 优先校验 env-matrix 中项目冻结端口，不会用通用业务域范围覆盖已确认的客户端口。
+
+**治理列闭环**：`profile.softDelete/auditTime` 同时驱动 DDL、Entity、Service 与 Mapper XML；doctor 校验 profile、`rules.local.json`、本地 MyBatis-Plus 运行值三点一致。运行值仅由 Nacos 下发时，doctor 会明确标记“本地未验证”，联调前需保留配置证据。
 
 **内置 10 类故障诊断树**：DB 连接 / Redis 连接 / Nacos 连接 / K8s Pod / 端口占用 / Bean 创建 / Profile 未激活 / Flyway 迁移 / Feign 超时 / MQ 失败。
 

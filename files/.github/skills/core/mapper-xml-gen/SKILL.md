@@ -85,6 +85,8 @@ default {Entity} getByCode(String code) {
 
 **软删除条件常驻**（where 内首行）：
 
+列名和有效值必须读取当前 profile。下例仅表示默认 profile；不得把 `1/0` 复制到已有项目。
+
 ```xml
 <where>
     AND t.IS_DELETE = 1          <!-- 1=有效，0=删除，常驻 -->
@@ -131,7 +133,7 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 - **禁止** `${}` 拼接（B4 error，SQL 注入）；统一用 `#{x}`
 - `<sql id="BaseColumns">` 显式列字段
 - `<where>` + `<if>` 动态条件
-- 软删除条件常驻 `AND IS_DELETE = 1`
+- 软删除条件常驻 `AND <profile.softDelete.column> = <profile.softDelete.activeValue>`
 - 转义：`<` → `&lt;`，`>` → `&gt;`，`&` → `&amp;`
 - 模糊查询按数据库方言（见步骤 4）
 
@@ -155,7 +157,7 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 ```
 ✅ <include refid="BaseColumns"/>           显式字段片段
    <where>
-     AND t.IS_DELETE = 1                    软删常驻
+     AND t.IS_DELETE = 1                    默认 profile 的软删常驻示例
      AND t.NAME LIKE CONCAT(CONCAT('%', #{param.name}), '%')   #{} 安全
 
 ❌ SELECT * FROM table                      B3 error（禁星号）

@@ -33,7 +33,13 @@
     "column": "IS_DELETE",
     "javaField": "isDelete",
     "activeValue": 1,
-    "deletedValue": 0
+    "deletedValue": 0,
+    "mysqlType": "TINYINT(1)",
+    "oracleType": "NUMBER(1)"
+  },
+  "auditTime": {
+    "mysqlType": "VARCHAR(19)",
+    "oracleType": "VARCHAR2(19 CHAR)"
   },
   "optimisticLock": {
     "column": "REVISION",

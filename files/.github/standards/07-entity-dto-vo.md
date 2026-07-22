@@ -51,7 +51,7 @@ private Integer revision;
 |---|---|---|
 | 雪花 ID | String | JSON 返回字符串 |
 | 金额 | BigDecimal | 禁止 double |
-| 开关/软删 | Integer 或枚举 | 与现网 1/0 基线一致 |
+| 开关/软删 | Integer 或枚举 | 软删值由 profile 声明，默认 1/0，项目覆盖必须贯穿完整生成链 |
 | jh4j 审计时间 | String | `yyyy-MM-dd HH:mm:ss` |
 | modern Profile 时间 | LocalDateTime | 必须统一 Jackson 格式与时区 |
 

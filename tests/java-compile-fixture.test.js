@@ -43,6 +43,7 @@ function compile(label, sources) {
 }
 
 const commonStubs = {
+  "com/baomidou/mybatisplus/annotation/TableField.java": `package com.baomidou.mybatisplus.annotation; public @interface TableField { String value() default ""; }`,
   "com/baomidou/mybatisplus/annotation/TableLogic.java": `package com.baomidou.mybatisplus.annotation; public @interface TableLogic { String value(); String delval(); }`,
   "com/baomidou/mybatisplus/annotation/TableName.java": `package com.baomidou.mybatisplus.annotation; public @interface TableName { String value() default ""; boolean autoResultMap() default false; }`,
   "com/baomidou/mybatisplus/annotation/Version.java": `package com.baomidou.mybatisplus.annotation; public @interface Version {}`,

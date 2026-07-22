@@ -24,6 +24,9 @@ assert.strictEqual(context.createFields.length, 3);
 assert.strictEqual(context.queryFields.length, 2);
 assert.strictEqual(context.pagePermission, example.api.permissions.page);
 assert.ok(context.createImports.includes("javax.validation.constraints.NotBlank"));
+assert.strictEqual(context.softDeleteColumn, "IS_DELETE");
+assert.strictEqual(context.softDeleteActiveValue, 1);
+assert.strictEqual(context.softDeleteDeletedValue, 0);
 
 const stateExample = JSON.parse(fs.readFileSync(
   path.join(ROOT, "files", ".github", "templates", "examples", "sale-order-master.contract.json"),

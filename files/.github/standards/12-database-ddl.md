@@ -40,7 +40,7 @@
 |---|---|---|
 | ID | String 对应的 VARCHAR/VARCHAR2 | 主键，EntityUtil 生成 |
 | COMPANY_ID | VARCHAR/VARCHAR2 | NOT NULL，租户隔离 |
-| IS_DELETE | SMALLINT/NUMBER(1) | NOT NULL，1=有效、0=删除 |
+| profile.softDelete.column（默认 IS_DELETE） | profile 方言类型 | NOT NULL；有效值/删除值由 profile 声明，默认 1/0 |
 | REVISION | INTEGER/NUMBER | NOT NULL，默认 0 |
 | CREATE_USER_NO | VARCHAR/VARCHAR2 | NOT NULL |
 | CREATE_DATE_TIME | VARCHAR/VARCHAR2 或 Profile 时间类型 | NOT NULL |

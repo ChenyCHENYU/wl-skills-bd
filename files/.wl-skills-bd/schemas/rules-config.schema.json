@@ -36,6 +36,15 @@
           }
         }
       ]
+    },
+    "softDelete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activeValue", "deletedValue"],
+      "properties": {
+        "activeValue": { "type": "integer" },
+        "deletedValue": { "type": "integer" }
+      }
     }
   }
 }

@@ -127,6 +127,8 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
 
 若团队未启用并经过 doctor 验证的多租户插件，所有 SELECT/UPDATE/DELETE **必须显式**带 COMPANY_ID 条件：
 
+下例采用默认 profile 的 `IS_DELETE = 1`；项目覆盖软删值后必须使用该 profile 的有效值。
+
 ```xml
 <select id="queryPage" resultType="...PageVO">
     SELECT <include refid="BaseColumns"/>
@@ -233,6 +235,7 @@ if (!tokenService.verify(dto.getConfirmToken(), "batchDelete:" + dto.getOperateA
 ```
 
 ```xml
+<!-- 以下有效标记采用默认 profile；项目覆盖时由生成器替换 -->
 ✅ <where> AND t.IS_DELETE = 1 AND t.COMPANY_ID = #{companyId} </where>
 
 ❌ <where> AND t.IS_DELETE = 1 </where>                  <!-- 缺 COMPANY_ID（B7）-->
@@ -240,6 +243,7 @@ if (!tokenService.verify(dto.getConfirmToken(), "batchDelete:" + dto.getOperateA
 
 ## 变更记录
 
+- 2026-07-22 v0.17.2：明确软删除示例值来自 profile，避免项目覆盖后误用默认 1/0。
 - 2026-07-18 v0.10：新增 §9 敏感操作二次确认（详见 standards/21）。
 - 2026-07-17 v0.4.2 修正：依据 MyBatis-Plus 官方多租户重写；明确禁止硬编码并标注 mdm-service 反面教材
 - 2026-07-17 v0.4 补厚（误用 mdm-service 为基线，已纠正）

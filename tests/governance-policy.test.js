@@ -6,6 +6,10 @@ const os = require("os");
 const path = require("path");
 const { renderMigration, renderMysqlMigration, renderOracleMigration } = require("../lib/codegen");
 const { runBeRules } = require("../lib/be-rules");
+const { buildContext, validateContract } = require("../lib/contract");
+const { checkGovernance } = require("../lib/doctor");
+const { validateGovernance } = require("../lib/governance");
+const { render } = require("../lib/template-engine");
 
 const baseContract = {
   contractId: "pl/test/v1",
@@ -129,4 +133,86 @@ function runWithBadConfig(cfg) {
   ok("非整数值拒绝");
 }
 
-console.log("\n✅ governance-policy 全部通过（默认兜底 + 自定义覆盖 + 向后兼容 + B17 动态提示 + 配置校验）");
+// ===== 6. Entity / Service / Mapper 全链路随 profile 渲染 =====
+console.log("\n=== 6. Java/XML 模板治理值全链路 ===");
+{
+  const root = path.resolve(__dirname, "..");
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(root, "files", ".github", "templates", "examples", "feature-category.contract.json"),
+    "utf8",
+  ));
+  const validated = validateContract(contract, { projectRoot: root });
+  assert.strictEqual(validated.ok, true, JSON.stringify(validated.errors));
+  const profile = {
+    ...validated.profile,
+    softDelete: {
+      ...validated.profile.softDelete,
+      activeValue: 0,
+      deletedValue: 4,
+      mysqlType: "TINYINT(1)",
+      oracleType: "NUMBER(1)",
+    },
+    auditTime: { mysqlType: "DATETIME(3)", oracleType: "TIMESTAMP(3)" },
+  };
+  const context = buildContext(validated.contract, profile);
+  const templateDir = path.join(root, "files", ".github", "templates");
+  const renderedEntity = render(fs.readFileSync(path.join(templateDir, "Entity.java.tmpl"), "utf8"), context);
+  const renderedService = render(fs.readFileSync(path.join(templateDir, "Service.java.tmpl"), "utf8"), context);
+  const renderedMapper = render(fs.readFileSync(path.join(templateDir, "Mapper.xml.tmpl"), "utf8"), context);
+  assert.match(renderedEntity, /@TableLogic\(value = "0", delval = "4"\)/);
+  assert.match(renderedService, /setIsDelete\(0\)/);
+  assert.match(renderedMapper, /AND t\.IS_DELETE = 0/);
+  assert.match(renderedMapper, /SET IS_DELETE = 4/);
+  assert.doesNotMatch(renderedMapper.replace(/<!--[\s\S]*?-->/g, ""), /IS_DELETE\s*=\s*1/);
+  ok("华新 0/4 从 profile 贯穿 Entity、Service、Mapper XML");
+}
+
+// ===== 7. profile 治理值 fail-closed 校验 =====
+console.log("\n=== 7. profile 治理值 fail-closed 校验 ===");
+{
+  assert.strictEqual(validateGovernance({ softDelete: { activeValue: 1, deletedValue: 1 } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { column: "IS_DELETE;DROP" } }).ok, false);
+  assert.strictEqual(validateGovernance({ auditTime: { mysqlType: "DATETIME(3) DEFAULT NOW()" } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { javaField: "deleted" } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: "0/4" }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { activeValue: 0 } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { activeValue: 0, deletedValue: 4, extra: true } }).ok, false);
+  ok("相同治理值、危险列名/类型和不兼容 Java 字段均被拒绝");
+}
+
+// ===== 8. doctor 对 profile / rules / 运行时三点校验 =====
+console.log("\n=== 8. doctor 治理口径三点校验 ===");
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-governance-doctor-"));
+  fs.mkdirSync(path.join(root, ".wl-skills-bd"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "main", "resources"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".wl-skills-bd", "rules.local.json"), JSON.stringify({
+    schemaVersion: 1,
+    softDelete: { activeValue: 0, deletedValue: 4 },
+  }));
+  fs.writeFileSync(path.join(root, "src", "main", "resources", "application.yml"), [
+    "mybatis-plus:",
+    "  global-config:",
+    "    db-config:",
+    "      logic-not-delete-value: 0",
+    "      logic-delete-value: 4",
+  ].join("\n"));
+  const checks = [];
+  checkGovernance(root, {
+    softDelete: { activeValue: 0, deletedValue: 4 },
+    auditTime: { mysqlType: "DATETIME(3)", oracleType: "TIMESTAMP(3)" },
+  }, (id, passed, detail) => checks.push({ id, passed, detail }));
+  assert.ok(checks.every((check) => check.passed), JSON.stringify(checks));
+  fs.writeFileSync(path.join(root, ".wl-skills-bd", "rules.local.json"), JSON.stringify({
+    schemaVersion: 1,
+    softDelete: { activeValue: 1, deletedValue: 0 },
+  }));
+  const mismatch = [];
+  checkGovernance(root, { softDelete: { activeValue: 0, deletedValue: 4 } },
+    (id, passed, detail) => mismatch.push({ id, passed, detail }));
+  assert.ok(mismatch.some((check) => check.id === "governance-rules" && !check.passed));
+  fs.rmSync(root, { recursive: true, force: true });
+  ok("doctor 可验证 profile、rules.local 与 MyBatis-Plus 运行值一致性");
+}
+
+console.log("\n✅ governance-policy 全部通过（DDL + 模板 + profile/rules/runtime 三点闭环）");

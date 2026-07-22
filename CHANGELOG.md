@@ -4,6 +4,20 @@
 
 ---
 
+## [0.17.2] - 2026-07-22（治理列生成闭环与项目配置防误改）
+
+### Fixed
+
+- 将 `profile.softDelete` 从 DDL/B17 局部覆盖补齐为 Entity、Service、Mapper XML 全链路渲染，消除业务代码仍硬编码默认 `1/0` 的工程冲突。
+- 新增治理 profile 的 fail-closed 校验，拒绝相同有效/删除值、危险列名/方言类型和当前模板不支持的 Java 字段映射。
+- `rules-config.schema.json` 正式声明 `softDelete`，doctor 校验 profile、`rules.local.json` 与本地 MyBatis-Plus 运行值三点一致；仅由 Nacos 下发时明确报告待补运行证据。
+- `env-port` 优先比对 env-matrix 的项目冻结端口，避免通用业务域范围误导修改已确认可用的客户配置。
+
+### Verification
+
+- 增加华新 `0有效/4删除 + DATETIME(3)` 的 Entity/Service/Mapper XML 渲染回归、非法 profile、doctor 三点一致性及项目冻结端口测试。
+- 保留默认 `1有效/0删除 + VARCHAR(19)` 的向后兼容行为，并纳入 Java 8 真实编译夹具。
+
 ## [0.17.1] - 2026-07-21（治理列策略化：默认兜底 + 项目级覆盖）
 
 ### Changed

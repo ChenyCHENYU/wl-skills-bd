@@ -69,6 +69,11 @@ withRoot((root) => {
 
 console.log("✅ config-layering：bootstrap 识别通过");
 
+assert.strictEqual(configLayering.checkPortRange("produce", 10301, 10301).ok, true, "env-matrix 冻结端口优先于通用范围");
+assert.strictEqual(configLayering.checkPortRange("produce", 10201, 10301).ok, false, "端口必须与项目冻结值一致");
+assert.strictEqual(configLayering.checkPortRange("produce", 10201).ok, true, "未声明冻结值时保留通用范围兼容行为");
+console.log("✅ config-layering：项目冻结端口优先且保留通用范围兼容行为");
+
 // ─── 3. env-matrix：加载/校验/迁移 ───
 withRoot((root) => {
   const matrix = [

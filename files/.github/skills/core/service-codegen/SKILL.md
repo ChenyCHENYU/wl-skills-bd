@@ -127,7 +127,7 @@ xxx-service/.../{module}/service/{Entity}Service.java     ← extends JhServiceI
 - 写操作 `@Transactional(rollbackFor = Exception.class)`（B5 查）
 - 业务校验用 `ServiceAssert`，**禁止** `throw new RuntimeException`（B8 查）
 - 审计字段用 `EntityUtil.setCreateProp` / `setUpdateProp`
-- 更新/软删只走 `updateAtomic/softDeleteAtomic`；SQL 必须限定 ID、COMPANY_ID、IS_DELETE=1、REVISION 并检查影响行数
+- 更新/软删只走 `updateAtomic/softDeleteAtomic`；SQL 必须限定 ID、COMPANY_ID、profile 有效标记、REVISION 并检查影响行数
 - 跨 Service 调用：注入其他 Service（@RequiredArgsConstructor），**禁止**直接注入其他 Mapper
 
 ---
@@ -139,7 +139,7 @@ xxx-service/.../{module}/service/{Entity}Service.java     ← extends JhServiceI
 | 批量新增 | `saveBatch(list)`（JhServiceImpl 内置），循环内先 `EntityUtil.setCreateProp` |
 | 树形查询 | lambdaQuery 查全量 + 内存 `TreeBaseUtil.treeSetList(list, "0")` 构树 |
 | 联表查询详情 | getById 中关联查子表（如分类→字段列表），组装到 VO |
-| 软删除 | `softDeleteAtomic(entity, companyId)`（团队基线 0=删除，1=有效）|
+| 软删除 | `softDeleteAtomic(entity, companyId)`；有效/删除值由当前 profile 生成，默认 1/0 |
 | 乐观锁 | REVISION 由显式 SQL `REVISION = REVISION + 1` 原子维护，不依赖拦截器是否注册 |
 | 状态机 | 四段式，每个状态迁移单独方法（submitForReview/approve/offline）|
 

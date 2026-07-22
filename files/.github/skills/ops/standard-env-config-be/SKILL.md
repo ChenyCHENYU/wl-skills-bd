@@ -35,6 +35,7 @@ risk: 🟡 中风险
 - L1 代码仓库只存 `${VAR}` 占位符；真实 secret 仅在 K8s Secret/Nacos/CI/受控 `.env`。
 - 不读取或修改 Nacos 服务端内容，不持有数据库/K8s/Nacos 写凭据，不自动部署。
 - `env-matrix.yml` 是客户×环境差异的单一事实源；bootstrap、K8s 与矩阵必须一致。
+- 端口先与 `customers.<current>.k8s.port` 的项目冻结值比对；不得用通用业务域范围覆盖已确认可用的客户配置。
 - init/migrate/fix 必须先 plan，plan 纳入当前文件哈希；apply 前重算并核对 planHash，原子写失败必须回滚，不能留下半套文件。
 - `pre/prod/production` 默认阻断上述写入；显式授权仅覆盖工程文件，不覆盖 Nacos/K8s/数据库外部写入。
 - 所有报告脱敏；不得在日志、Markdown、命令示例或测试夹具中写入真实 token/密码。

@@ -1,6 +1,6 @@
 # Copilot Instructions — wl-skills-bd 后端主入口
 
-本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 27 条。
+本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 28 条。
 
 ## 技术基线
 
@@ -9,7 +9,7 @@
 - 返回：`ApiResult.success(message, data)`，业务成功码 2000；
 - 分页：`JhPage<T>`，响应 `data.records/data.total`；
 - Controller → 直接 Service → Mapper，禁止 Controller 直调 Mapper；
-- 租户从 `AuthUtil` 获取，SQL 显式 `COMPANY_ID`；软删 1=有效、0=删除；
+- 租户从 `AuthUtil` 获取，SQL 显式 `COMPANY_ID`；软删列和值读取当前 profile（默认 1=有效、0=删除，项目覆盖时禁止沿用默认值）；
 - UpdateDTO 必须 id/revision，详情 VO 必须返回 revision；受管更新/软删使用包含租户、有效标记和 revision 的显式原子 SQL。
 
 数据库类型不能猜。Oracle/MySQL、物理库归属与目标 Profile 必须从工程配置和用户上下文确认。
