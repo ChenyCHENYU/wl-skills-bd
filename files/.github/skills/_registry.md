@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.17.3）
+# Backend Skills 注册表（v0.17.4）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 frontmatter 严格一致，改一处必须同步另一处。

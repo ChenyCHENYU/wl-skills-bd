@@ -4,6 +4,18 @@
 
 ---
 
+## [0.17.4] - 2026-07-22（多模块工程环境发现修正）
+
+### Fixed
+
+- doctor/config doctor 可递归发现多模块工程中的 `bootstrap.yml` 与 `application.yml`，不再把服务模块配置误报为根工程缺失。
+- Windows doctor 使用 `mvn.cmd` 探测 Maven，兼容 IntelliJ/独立 Maven 的标准 Windows 安装布局。
+- datasource profile 识别复用多模块配置文件扫描，保留 cx/non_cx/pt 的既有判定语义。
+
+### Verification
+
+- 增加 `wl-produce-pl/*-service/src/main/resources` 形态的 bootstrap、端口与 doctor profile 回归。
+
 ## [0.17.3] - 2026-07-22（项目治理覆盖与安装升级链解耦）
 
 ### Fixed

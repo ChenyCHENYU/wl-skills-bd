@@ -9,6 +9,7 @@ const envMatrix = require("../lib/env-matrix");
 const configInit = require("../lib/config-init");
 const configFix = require("../lib/config-fix");
 const { runConfigDoctor } = require("../lib/config-doctor");
+const { readBootstrapProfile } = require("../lib/doctor");
 const troubleshoot = require("../lib/troubleshoot");
 
 function withRoot(fn) {
@@ -68,6 +69,32 @@ withRoot((root) => {
 });
 
 console.log("✅ config-layering：bootstrap 识别通过");
+
+withRoot((root) => {
+  const resources = path.join(root, "wl-produce-pl", "wl-produce-pl-service", "src", "main", "resources");
+  fs.mkdirSync(resources, { recursive: true });
+  fs.writeFileSync(path.join(resources, "bootstrap.yml"), [
+    "spring:",
+    "  profiles:",
+    "    active: ${PROFILES_ACTIVE:dev}",
+    "  cloud:",
+    "    nacos:",
+    "      config:",
+    "        server-addr: ${NACOS_HOST}",
+    "        namespace: ${NACOS_CONFIG_NAMESPACE:dev}",
+    "        group: JH4J",
+  ].join("\n"));
+  fs.writeFileSync(path.join(resources, "application.yml"), [
+    "server:",
+    "  port: ${SERVER_PORT:10301}",
+  ].join("\n"));
+  const layer = configLayering.detectBootstrapLayer(root);
+  assert.ok(layer && /wl-produce-pl-service/.test(layer.file), "应识别多模块 bootstrap");
+  assert.strictEqual(configLayering.detectPort(root).port, 10301, "应识别多模块 application 端口");
+  assert.strictEqual(readBootstrapProfile(root).profile, "dev", "doctor 应复用多模块配置发现");
+});
+
+console.log("✅ config-layering：多模块 bootstrap/application 发现通过");
 
 assert.strictEqual(configLayering.checkPortRange("produce", 10301, 10301).ok, true, "env-matrix 冻结端口优先于通用范围");
 assert.strictEqual(configLayering.checkPortRange("produce", 10201, 10301).ok, false, "端口必须与项目冻结值一致");
