@@ -646,7 +646,7 @@ fix 示例：
     --probe 开启 DB/Redis/Nacos TCP 连通性探测
 
   wl-skills-bd config fix [--plan-hash <hash>] [--confirm] [--target <dir>]
-    安全修复：明文密码自动改 ${VAR} 占位符 + 复扫验证
+    安全修复：明文密码自动改 \${VAR} 占位符 + 复扫验证
 
   wl-skills-bd troubleshoot "<错误关键字>"   # 故障排查导引
   wl-skills-bd troubleshoot --list            # 列出所有诊断项

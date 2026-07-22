@@ -14,6 +14,10 @@ function run(args) {
 }
 
 try {
+  const help = run(["help"]);
+  assert.strictEqual(help.status, 0, help.stderr);
+  assert.match(help.stdout, /\$\{VAR\} 占位符/);
+
   const preview = run(["init", "--target", root, "--dry-run", "--json"]);
   assert.strictEqual(preview.status, 0, preview.stderr);
   assert.match(preview.stdout, /"action": "add"/);
