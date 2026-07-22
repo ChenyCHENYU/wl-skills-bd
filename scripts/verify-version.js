@@ -317,6 +317,7 @@ const REQUIRED_EXIST = [
   "files/.wl-skills-bd/schemas/catalog-config.schema.json",
   "files/.wl-skills-bd/schemas/module-catalog.schema.json",
   "files/.wl-skills-bd/schemas/project-catalog.schema.json",
+  "files/.wl-skills-bd/schemas/profile-local.schema.json",
   "files/.wl-skills-bd/schemas/context-plan.schema.json",
   "files/.githooks/commit-msg",
   "files/.github/guides/frontend-backend-contract.md",

@@ -6,7 +6,7 @@ const os = require("os");
 const path = require("path");
 const { renderMigration, renderMysqlMigration, renderOracleMigration } = require("../lib/codegen");
 const { runBeRules } = require("../lib/be-rules");
-const { buildContext, validateContract } = require("../lib/contract");
+const { buildContext, resolveProfile, validateContract } = require("../lib/contract");
 const { checkGovernance } = require("../lib/doctor");
 const { validateGovernance } = require("../lib/governance");
 const { render } = require("../lib/template-engine");
@@ -215,4 +215,30 @@ console.log("\n=== 8. doctor 治理口径三点校验 ===");
   ok("doctor 可验证 profile、rules.local 与 MyBatis-Plus 运行值一致性");
 }
 
-console.log("\n✅ governance-policy 全部通过（DDL + 模板 + profile/rules/runtime 三点闭环）");
+// ===== 9. 未受管 profile.local 覆盖层 =====
+console.log("\n=== 9. profile.local 项目覆盖层 ===");
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-skills-bd-profile-local-"));
+  fs.mkdirSync(path.join(root, ".wl-skills-bd"), { recursive: true });
+  const localFile = path.join(root, ".wl-skills-bd", "profile.local.json");
+  fs.writeFileSync(localFile, JSON.stringify({
+    schemaVersion: 1,
+    profileId: "jh4j3-openapi3",
+    softDelete: { activeValue: 0, deletedValue: 4 },
+    auditTime: { mysqlType: "DATETIME(3)", oracleType: "TIMESTAMP(3)" },
+  }));
+  const profile = resolveProfile("jh4j3-openapi3", root).profile;
+  assert.strictEqual(profile.softDelete.activeValue, 0);
+  assert.strictEqual(profile.softDelete.deletedValue, 4);
+  assert.strictEqual(profile.auditTime.mysqlType, "DATETIME(3)");
+  fs.writeFileSync(localFile, JSON.stringify({
+    schemaVersion: 1,
+    profileId: "wrong-profile",
+    softDelete: { activeValue: 0, deletedValue: 4 },
+  }));
+  assert.throws(() => resolveProfile("jh4j3-openapi3", root), /profile\.local\.json/);
+  fs.rmSync(root, { recursive: true, force: true });
+  ok("本地覆盖可合并治理值，profileId 漂移被拒绝");
+}
+
+console.log("\n✅ governance-policy 全部通过（DDL + 模板 + profile/rules/runtime + 本地覆盖）");

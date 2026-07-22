@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.17.2-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.17.3-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -317,7 +317,7 @@ wl-skills-bd troubleshoot "CrashLoopBackOff"
 
 **L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。`env-port` 优先校验 env-matrix 中项目冻结端口，不会用通用业务域范围覆盖已确认的客户端口。
 
-**治理列闭环**：`profile.softDelete/auditTime` 同时驱动 DDL、Entity、Service 与 Mapper XML；doctor 校验 profile、`rules.local.json`、本地 MyBatis-Plus 运行值三点一致。运行值仅由 Nacos 下发时，doctor 会明确标记“本地未验证”，联调前需保留配置证据。
+**治理列闭环**：受管 profile 提供默认值；项目差异写入未受管的 `.wl-skills-bd/profile.local.json`，禁止直接编辑 `profiles/*.json` 制造安装漂移。合并后的 `softDelete/auditTime` 同时驱动 DDL、Entity、Service 与 Mapper XML；doctor 校验 profile、`rules.local.json`、本地 MyBatis-Plus 运行值三点一致。运行值仅由 Nacos 下发时，doctor 会明确标记“本地未验证”，联调前需保留配置证据。
 
 **内置 10 类故障诊断树**：DB 连接 / Redis 连接 / Nacos 连接 / K8s Pod / 端口占用 / Bean 创建 / Profile 未激活 / Flyway 迁移 / Feign 超时 / MQ 失败。
 

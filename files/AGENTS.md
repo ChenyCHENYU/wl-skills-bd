@@ -7,7 +7,7 @@
 1. Java 8 / Spring Boot 2 / jh4j-cloud 3.1 / MyBatis-Plus；新代码使用 OpenAPI 3。
 2. Controller → Service → Mapper，禁止 Controller 直调 Mapper。
 3. 租户来自 AuthUtil；SQL 必须显式 COMPANY_ID，除非存在 doctor 可验证的统一拦截器证据。
-4. 软删列和值以当前 profile 为唯一事实源（默认 1=有效/0=删除，项目可覆盖）；Entity、Service、Mapper、DDL、rules.local 与 MyBatis-Plus 运行值必须一致。受管更新/软删使用 `ID + COMPANY_ID + 有效标记 + REVISION` 显式原子 SQL，详情返回 revision。
+4. 软删列和值以“受管 profile + 未受管 profile.local”合并结果为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`。Entity、Service、Mapper、DDL、rules.local 与 MyBatis-Plus 运行值必须一致。受管更新/软删使用 `ID + COMPANY_ID + 有效标记 + REVISION` 显式原子 SQL，详情返回 revision。
 5. DDL、数据写入、权限发布和破坏性 API 变更必须展示差异并等待人工确认；MCP 不执行数据库写入。
 6. codegen 使用机器契约，先 plan 后 apply；apply 必须携带相同 planHash 与显式确认。
 7. 最终验证执行 B1~B25 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。

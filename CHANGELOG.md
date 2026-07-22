@@ -4,6 +4,18 @@
 
 ---
 
+## [0.17.3] - 2026-07-22（项目治理覆盖与安装升级链解耦）
+
+### Fixed
+
+- 新增未受管 `.wl-skills-bd/profile.local.json` 覆盖层：codegen 与 doctor 在受管 profile 基线上安全合并项目治理差异，避免直接修改 `profiles/*.json` 导致 manifest 漂移和后续 update 冲突。
+- 本地覆盖严格校验 schemaVersion、profileId、属性白名单及软删/时间方言值；非法或跨 profile 覆盖 fail-closed。
+- 新增 `profile-local.schema.json`，并验证本地覆盖文件不会破坏 installer 完整性检查。
+
+### Verification
+
+- 增加华新 0/4 与 DATETIME(3) 本地覆盖、错误 profileId 拒绝、installer 零漂移回归。
+
 ## [0.17.2] - 2026-07-22（治理列生成闭环与项目配置防误改）
 
 ### Fixed

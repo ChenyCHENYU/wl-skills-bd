@@ -59,6 +59,7 @@ VO/PageVO 不继承 Entity，避免租户、软删和内部审计字段意外出
 - `List<String>/List<Long>` 只用于 API 模型，不得直接映射单一普通列；
 - Java 8 使用 `javax.validation` 和当前 Profile 声明的 OpenAPI 3 注解。
 - `@TableField/@TableLogic` 的列名、有效值和删除值必须由当前 profile 渲染；项目覆盖不得只改 DDL。
+- 项目差异只写 `.wl-skills-bd/profile.local.json`；禁止编辑受管 `profiles/*.json`，否则 installer 会正确报告漂移。
 
 ## 验证
 

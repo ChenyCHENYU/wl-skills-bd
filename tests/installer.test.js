@@ -17,6 +17,12 @@ try {
   const installed = installer.applyPlan(initialPlan);
   assert.strictEqual(installed.ok, true);
   assert.strictEqual(installer.check(root).ok, true);
+  fs.writeFileSync(path.join(root, ".wl-skills-bd", "profile.local.json"), JSON.stringify({
+    schemaVersion: 1,
+    profileId: "jh4j3-openapi3",
+    softDelete: { activeValue: 0, deletedValue: 4 },
+  }));
+  assert.strictEqual(installer.check(root).ok, true, "未受管 profile.local 不应制造安装漂移");
 
   const conflictRel = ".cursor/mcp.json";
   const missingRel = ".vscode/mcp.json";
