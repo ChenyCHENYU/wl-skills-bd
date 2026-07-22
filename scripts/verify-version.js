@@ -29,6 +29,25 @@ function exists(rel) {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
+function verifyNoTrailingWhitespace(current) {
+  const stat = fs.statSync(current);
+  if (stat.isDirectory()) {
+    for (const entry of fs.readdirSync(current)) verifyNoTrailingWhitespace(path.join(current, entry));
+    return;
+  }
+  if (!/\.(?:md|json|ya?ml|tmpl|xml|java|js)$/i.test(current)) return;
+  const lines = fs.readFileSync(current, "utf8").split(/\r?\n/);
+  lines.forEach((line, index) => {
+    if (/[ \t]+$/.test(line)) {
+      errors.push(`${path.relative(ROOT, current)}:${index + 1}: 禁止行尾空白，安装后会破坏 git diff --check`);
+    }
+  });
+}
+
+verifyNoTrailingWhitespace(path.join(ROOT, "files"));
+verifyNoTrailingWhitespace(path.join(ROOT, "README.md"));
+verifyNoTrailingWhitespace(path.join(ROOT, "CHANGELOG.md"));
+
 // ─── 版本一致性 ─────────────────────────────────────────────────────────
 
 function checkVersionMatch(file, regex, label) {

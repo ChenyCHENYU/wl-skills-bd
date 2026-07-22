@@ -1,6 +1,6 @@
 # 后端规范审计报告模板
 
-> **使用说明**：`convention-audit-be` Skill 触发后，AI 以此模板输出报告，保存至 `reports/AUDIT_BE_{yyyymmdd_HHmm}.md`。  
+> **使用说明**：`convention-audit-be` Skill 触发后，AI 以此模板输出报告，保存至 `reports/AUDIT_BE_{yyyymmdd_HHmm}.md`。
 > 报告本身**不修改代码**，修复阶段由 `code-fix-be` Skill 接手。
 
 ---

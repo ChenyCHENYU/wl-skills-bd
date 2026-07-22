@@ -4,6 +4,16 @@
 
 ---
 
+## [0.17.7] - 2026-07-22（安装资产行尾质量门）
+
+### Fixed
+
+- 清理 4 处受管 Markdown 资产的行尾空格，避免业务仓首次接入后 `git diff --check` 失败。
+
+### Verification
+
+- 版本自检递归扫描发布包 `files/` 及根文档，阻断 Markdown、JSON、YAML、模板、XML、Java、JavaScript 行尾空白回归。
+
 ## [0.17.6] - 2026-07-22（CLI 帮助模板修正）
 
 ### Fixed
