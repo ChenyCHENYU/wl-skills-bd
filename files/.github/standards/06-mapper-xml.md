@@ -37,7 +37,9 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
 **要点**：
 
-- `@Mapper` 注解必加
+- 具体业务 Mapper 必须可被发现：推荐显式加 `@Mapper`；如果使用不带 `annotationClass` 限制的精确 `@MapperScan("com.example.mapper")`，可不重复标注
+- 泛型基础 Mapper 契约（例如 `BaseDataMapper<E extends CoreEntity>`）**禁止**加 `@Mapper`，否则 MyBatis 会尝试实例化未绑定的泛型接口
+- `@MapperScan.basePackages` 只写 Java 包前缀（如 `com.produce`），禁止 `com.produce.**`；若设置 `annotationClass = Mapper.class`，每个具体 Mapper 都必须加 `@Mapper`
 - 继承 `JhBaseMapper<T>` 复用基础读写能力；受管业务更新和删除不得直接调用通用 `updateById/deleteById`，必须走下述原子 Mapper 方法
 - 多参数方法用 `@Param`；租户参数必须由 Service 从 `AuthUtil` 获取，禁止从 DTO 透传
 - 简单条件查询用 `Wrappers.lambdaQuery()`，复杂查询走 XML
@@ -151,6 +153,8 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 9. **批量 UPDATE / INSERT** 必须限定租户、检查影响行数，并维护 `REVISION/UPDATE_*`；物理删除不进入默认模板
 10. **受管 UPDATE/软删必须原子化**：WHERE 同时包含 `ID`、`COMPANY_ID`、profile 有效标记、`REVISION = expectedRevision`，SET 中执行 `REVISION = REVISION + 1`；影响行数不是 1 即视为越权/已删除/并发冲突
 11. **动态 WHERE 不算安全边界**：禁止仅依赖 `<where><if .../></where>`，也禁止 `WHERE 1=1/TRUE`；租户和有效标记谓词必须无条件常驻
+12. **Mapper 绑定必须闭环（B26）**：具体 Mapper 可发现；泛型基础 Mapper 不注册；XML `namespace` 与 Java 接口全限定名逐字符一致且全工程唯一
+13. **真实构建和启动验证不可省略**：静态扫描通过后仍需 `mvn clean package`；至少启动一次并执行一个 Mapper 查询，防止资源未打包、`mapper-locations` 错误或运行 classpath 漂移
 
 ---
 
@@ -168,6 +172,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 
 ## 变更记录
 
+- 2026-07-28 v0.17.8：补 B26 Mapper 扫描/泛型契约/XML namespace 闭环，并要求 package + 启动查询冒烟。
 - 2026-07-22 v0.17.2：软删除列和值改为 profile 驱动，默认示例与项目覆盖口径分离。
 - 2026-07-18 v0.14：受管更新/软删统一显式原子 SQL；补充动态 WHERE、恒真 WHERE 与租户谓词硬门禁。
 - 2026-07-18 v0.8 租户谓词、稳定排序、乐观锁和显式列闭环

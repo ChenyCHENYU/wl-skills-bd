@@ -124,7 +124,9 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 ## 约束（强制）
 
 **Mapper 接口**：
-- `@Mapper` 必加
+- 具体 Mapper 推荐 `@Mapper`；若扫描器使用 `annotationClass = Mapper.class` 则必加
+- 泛型基础 Mapper 契约禁止 `@Mapper`
+- `@MapperScan` 使用精确包前缀，禁止 `com.example.**`
 - 继承 `JhBaseMapper<T>`
 - 多参用 `@Param`，DTO 用 `@Param("param")`
 
@@ -136,6 +138,7 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 - 软删除条件常驻 `AND <profile.softDelete.column> = <profile.softDelete.activeValue>`
 - 转义：`<` → `&lt;`，`>` → `&gt;`，`&` → `&amp;`
 - 模糊查询按数据库方言（见步骤 4）
+- XML `namespace` 与 Java Mapper 全限定名完全一致且唯一（B26）
 
 ---
 
@@ -175,11 +178,13 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
    - 自定义 SQL 数: {N}
    - BaseColumns 字段数: {M}
    - 方言: {Oracle|MySQL}
-   - ★ 生成后自检: wl-skills-bd validate（B3 SELECT星号 / B4 美元符注入 / B7 缺COMPANY_ID）
+   - ★ 生成后自检: wl-skills-bd validate（B3/B4/B7/B26）
+   - ★ 运行闭环: mvn clean package + 启动后执行至少一个 Mapper 查询
    - 下一步建议: ⑥ db-migration（如果新表）或 ⑦ unit-test-gen
 ```
 
 ## 变更记录
+- 2026-07-28 v0.17.8：补 Mapper 扫描、泛型契约、namespace 与真实启动查询闭环。
 - 2026-07-17 v0.4 补厚落地（执行步骤 + BaseColumns + 动态条件 + 方言差异 + 边界用例 + 正反例）+ USAGE.md
 - 2026-07-17 v0.2 加 templates 引用
 - 2026-05-14 v0.0.1 骨架

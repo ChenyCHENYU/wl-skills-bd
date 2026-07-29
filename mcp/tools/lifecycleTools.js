@@ -294,9 +294,13 @@ function handleConfig(args) {
       module: args.module,
       port: typeof args.port === "number" ? args.port : undefined,
       datasourceType: args.datasourceType,
+      dbCluster: args.dbCluster,
       customer: args.customer,
       overwrite: args.overwrite === true,
     });
+    if (!plan.ok) {
+      return blockedResult(`config init 失败：${plan.hint || plan.reason}`, plan.reason, plan);
+    }
     if (args.confirmApply !== true) {
       return previewResult(`config init 预览：将生成 ${plan.actions.length} 个配置文件。确认后携带 planHash=${plan.planHash} 并传 confirmApply: true。`, { planHash: plan.planHash, actions: plan.actions.map((a) => ({ rel: a.rel, kind: a.kind, env: a.env, currentHash: a.currentHash })) });
     }

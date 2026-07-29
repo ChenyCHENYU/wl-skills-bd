@@ -110,6 +110,11 @@ try {
   const sarif = JSON.parse(fs.readFileSync(path.join(root, "reports", "backend.sarif"), "utf8"));
   assert.strictEqual(sarif.version, "2.1.0");
 
+  fs.writeFileSync(path.join(root, "SensitiveDTO.java"), "@ToString public class SensitiveDTO { private String accessToken; }\n");
+  const scopedValidate = run(["validate", ".", "--target", root, "--rules", "B26", "--json"]);
+  assert.strictEqual(scopedValidate.status, 0, scopedValidate.stderr);
+  assert.ok(!JSON.parse(scopedValidate.stdout).issues.some((item) => item.rule === "B25"), "--rules 必须真实过滤规则");
+
   const doctor = run(["doctor", "--target", root, "--json"]);
   assert.strictEqual(doctor.status, 1, "无 pom 的目录 doctor 必须失败");
 

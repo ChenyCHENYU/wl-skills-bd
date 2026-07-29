@@ -514,3 +514,43 @@ public class DemoController {
 });
 
 console.log("✅ be-rules v0.17：方法安全、敏感日志、Java 租户查询、显式软删和 Wrapper 原子写门禁通过");
+
+withFixture({
+  "src/main/java/com/produce/pl/PlApplication.java": `package com.produce.pl;
+@MapperScan({"com.produce.**", "com.jhict.**"})
+public class PlApplication {}`,
+  "src/main/java/com/produce/pl/mapper/BaseDataMapper.java": `package com.produce.pl.mapper;
+@Mapper
+public interface BaseDataMapper<E extends CoreEntity> extends JhBaseMapper<E> {}`,
+  "src/main/java/com/produce/pl/mapper/SteelGradeMapper.java": `package com.produce.pl.mapper;
+public interface SteelGradeMapper extends BaseDataMapper<SteelGrade> {}`,
+  "src/main/resources/mybatis/SteelGradeMapper.xml": `<mapper namespace="com.produce.pl.mapper.MissingMapper"></mapper>`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.ok(count(result, "B26") >= 3, "Mapper 通配扫描、泛型 @Mapper、具体 Mapper 不可发现、XML namespace 漂移必须阻断");
+});
+
+withFixture({
+  "src/main/java/com/produce/pl/PlApplication.java": `package com.produce.pl;
+@MapperScans({
+  @MapperScan(basePackages = "com.produce", annotationClass = Mapper.class),
+  @MapperScan(basePackages = "com.jhict")
+})
+public class PlApplication {}`,
+  "src/main/java/com/produce/pl/mapper/BaseDataMapper.java": `package com.produce.pl.mapper;
+public interface BaseDataMapper<E extends CoreEntity> extends JhBaseMapper<E> {}`,
+  "src/main/java/com/produce/pl/mapper/SteelGradeMapper.java": `package com.produce.pl.mapper;
+@Mapper
+public interface SteelGradeMapper extends BaseDataMapper<SteelGrade> {}`,
+  "src/main/resources/mybatis/SteelGradeMapper.xml": `<mapper namespace="com.produce.pl.mapper.SteelGradeMapper"></mapper>`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B26"), 0, "具体 Mapper 注解 + 精确扫描 + namespace 一致应通过"));
+
+withFixture({
+  "src/main/java/com/example/mapper/DemoMapper.java": `package com.example.mapper;
+public interface DemoMapper extends BaseMapper<Demo> {}`,
+  "src/main/java/com/example/MapperConfiguration.java": `package com.example;
+@MapperScan("com.example.mapper")
+public class MapperConfiguration {}`,
+}, (root) => assert.strictEqual(count(runBeRules(root), "B26"), 0, "非注解限制的精确 @MapperScan 可发现具体 Mapper"));
+
+console.log("✅ be-rules v0.17.8：Mapper 精确扫描、泛型契约与 XML namespace 绑定门禁通过");

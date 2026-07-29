@@ -4,6 +4,25 @@
 
 ---
 
+## [0.17.8] - 2026-07-28（炼钢实战故障闭环固化）
+
+### Added
+
+- 新增 B26：阻断 MyBatis `@MapperScan` 通配符、泛型基础 Mapper 误注册、具体 Mapper 不可发现、XML namespace 缺失或重复。
+- doctor 新增 Maven/IDEA Java target 探测；troubleshoot 增加 Nacos 403、运行时缺类、Mapper Binding、IDEA/Maven 与 RocketMQ CODE 13 专项诊断。
+- `config init` 新增 `dbCluster` 参数和团队业务域推断；未知业务域 fail-closed，不再静默生成 pt 配置。
+
+### Fixed
+
+- datasource dataId 统一为 `datasource-${DATASOURCE}-${DB_CLUSTER}-${profile}.yml`，env-matrix、环境变量与 K8s 增加集群一致性检查。
+- 生成的 bootstrap 不再默认回退 dev，环境必须由 IDEA、脚本、ConfigMap 或 CI 显式注入。
+- `validate --rules` 从文档占位补为真实 CLI 规则过滤能力。
+
+### Verification
+
+- 新增 Mapper 正反例、集群推断/显式阻断、动态 profile、Java target 和五类启动故障诊断回归。
+- 用 B26 反扫真实 `wl-produce`：炼钢模块扫描/泛型 Mapper/XML 绑定通过，存量模块的 MapperScan 通配符被准确识别。
+
 ## [0.17.7] - 2026-07-22（安装资产行尾质量门）
 
 ### Fixed

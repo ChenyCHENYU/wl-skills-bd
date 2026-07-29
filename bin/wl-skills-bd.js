@@ -111,14 +111,19 @@ function commandCheck(args) {
 
 function commandValidate(args) {
   const root = targetRoot(args);
-  const valueOptions = new Set(["--target", "--format", "--output"]);
+  const valueOptions = new Set(["--target", "--format", "--output", "--rules"]);
   const positionals = [];
   for (let index = 0; index < args.length; index += 1) {
     if (valueOptions.has(args[index])) { index += 1; continue; }
     if (!args[index].startsWith("-")) positionals.push(args[index]);
   }
   const positional = positionals[0];
-  const result = runBeRules(root, { scanRel: positional, quick: has(args, "--quick") });
+  const selectedRules = option(args, "--rules");
+  const result = runBeRules(root, {
+    scanRel: positional,
+    quick: has(args, "--quick"),
+    rules: selectedRules ? selectedRules.split(",").map((value) => value.trim()).filter(Boolean) : undefined,
+  });
   const format = has(args, "--json") ? "json" : option(args, "--format", "text");
   let rendered;
   try {
@@ -577,7 +582,7 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B25 快速规则
+  validate     执行 B1~B26 快速规则
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
@@ -596,6 +601,7 @@ function help() {
 
 通用参数：
   --target <dir>  指定项目根目录
+  --rules <B1,B2> 仅执行指定 B 规则（逗号分隔）
   --dry-run       只预览，不写盘
   --json          输出结构化 JSON
   --force         发生安装冲突时备份后覆盖
@@ -634,7 +640,7 @@ fix 示例：
 
 配置分层与多环境（v0.12，详见 standards/25）：
 
-  wl-skills-bd config init [--project <name>] [--module <name>] [--port <n>]
+  wl-skills-bd config init [--project <name>] [--module <name>] [--port <n>] [--db-cluster <cx|non_cx|pt>]
                            [--datasource-type oracle|mysql] [--customer <name>] [--plan-hash <hash>] [--confirm]
     生成标准配置骨架：bootstrap.yml + application.yml + logback + .env.example ×5 + env-matrix.yml + .gitignore
 
@@ -800,9 +806,15 @@ function commandConfigInit(args, root) {
     module: option(args, "--module"),
     port: option(args, "--port") ? Number(option(args, "--port")) : undefined,
     datasourceType: option(args, "--datasource-type") || option(args, "--datasource"),
+    dbCluster: option(args, "--db-cluster"),
     customer: option(args, "--customer"),
     overwrite: has(args, "--overwrite"),
   });
+  if (!plan.ok) {
+    if (has(args, "--json")) printJson(plan);
+    else console.error(`❌ config init 失败：${plan.hint || plan.reason}`);
+    return 1;
+  }
   if (has(args, "--dry-run") || !has(args, "--confirm")) {
     printJson(plan);
     return 0;

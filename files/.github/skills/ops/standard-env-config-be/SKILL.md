@@ -35,10 +35,13 @@ risk: 🟡 中风险
 - L1 代码仓库只存 `${VAR}` 占位符；真实 secret 仅在 K8s Secret/Nacos/CI/受控 `.env`。
 - 不读取或修改 Nacos 服务端内容，不持有数据库/K8s/Nacos 写凭据，不自动部署。
 - `env-matrix.yml` 是客户×环境差异的单一事实源；bootstrap、K8s 与矩阵必须一致。
+- datasource dataId 必须包含数据源类型、`${DB_CLUSTER}` 和 profile；集群必须与业务域映射、env-matrix、K8s 一致。无法推断时用 `--db-cluster` 显式指定，禁止默认 pt。
+- `PROFILES_ACTIVE` 必须由 IDEA/脚本/ConfigMap/CI 显式注入；禁止修改 bootstrap 切环境，也禁止缺省回退 dev。
 - 端口先与 `customers.<current>.k8s.port` 的项目冻结值比对；不得用通用业务域范围覆盖已确认可用的客户配置。
 - init/migrate/fix 必须先 plan，plan 纳入当前文件哈希；apply 前重算并核对 planHash，原子写失败必须回滚，不能留下半套文件。
 - `pre/prod/production` 默认阻断上述写入；显式授权仅覆盖工程文件，不覆盖 Nacos/K8s/数据库外部写入。
 - 所有报告脱敏；不得在日志、Markdown、命令示例或测试夹具中写入真实 token/密码。
 - 结束前运行 `config doctor`；未全绿项必须给出证据、影响和人工下一步，不得宣称完成。
+- 启动故障先按最底层异常分类：Nacos 403 看进程凭据/权限，ClassNotFound 看 BOM 与运行包，Mapper Binding 看 B26，IDEA target 看 doctor 工具链项，MQ CODE 13 与启动状态分开验收。
 
 完整参数与验收清单见同目录 `USAGE.md`。

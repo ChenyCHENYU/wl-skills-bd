@@ -3,7 +3,7 @@
 /**
  * beRulesTools — MCP 工具：包装 lib/be-rules.js
  *
- * 暴露 wls_be_validate（扫描工程输出 B1~B25 偏差）。
+ * 暴露 wls_be_validate（扫描工程输出 B1~B26 偏差）。
  * 对标 kit 的 mcp/tools/projectTools.js，但后端无需网关，只读扫描。
  */
 

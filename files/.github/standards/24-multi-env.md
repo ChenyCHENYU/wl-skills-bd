@@ -36,13 +36,13 @@ spring:
         group: JH4J
         shared-configs:
           - dataId: application-${spring.profiles.active}.yml
-          - dataId: datasource-${DATASOURCE:oracle}-${spring.profiles.active}.yml
+          - dataId: datasource-${DATASOURCE:mysql}-${DB_CLUSTER:cx}-${spring.profiles.active}.yml
         namespace: ${NACOS_CONFIG_NAMESPACE}    # 按 profile 区分
       discovery:
         server-addr: ${spring.cloud.nacos.config.server-addr}
         namespace: ${NACOS_DISCOVERY_NAMESPACE}
   profiles:
-    active: ${PROFILES_ACTIVE:dev}              # 默认 dev
+    active: ${PROFILES_ACTIVE}                  # 必须由启动环境显式注入
 ```
 
 ### 3.2 环境特定配置（nacos dataId）
@@ -52,8 +52,8 @@ spring:
 | `application-dev.yml` | 开发环境通用配置 | 日志 DEBUG、关闭熔断 |
 | `application-uat.yml` | UAT 通用配置 | 日志 INFO、开启熔断 |
 | `application-prod.yml` | 生产通用配置 | 日志 WARN、开启熔断 + 限流 |
-| `datasource-oracle-dev.yml` | 开发 oracle 连接 | dev 库账号 |
-| `datasource-oracle-prod.yml` | 生产 oracle 连接 | prod 库账号（独立加密）|
+| `datasource-mysql-cx-dev.yml` | 开发产销库连接 | dev 库账号 |
+| `datasource-mysql-cx-prod.yml` | 生产产销库连接 | prod 库账号（独立加密）|
 
 ### 3.3 数据库集群归属（《项目开发手册》§"数据库划分"）
 
@@ -64,6 +64,8 @@ spring:
 | **pt**（平台）| `hx_ptdb` | `ptuser` | 平台基础、用户、权限、字典 |
 
 > 契约的 `dbCluster` 字段（cx/non_cx/pt）必须与实际 datasource profile 一致；doctor 体检校验。
+>
+> `bootstrap.yml` 不给 profile 静默默认值。IDEA、本地脚本、K8s ConfigMap 和 CI 都必须显式注入 `PROFILES_ACTIVE`、`DB_CLUSTER`；这样 SIT 启动不会因漏变量退回 dev，也不会因缺集群段误连 pt。
 
 ## 4. 端口分配（《项目开发手册》§"业务模块端口划分"）
 
@@ -187,5 +189,6 @@ stages:
 
 ## 变更记录
 
+- 2026-07-28 v0.17.8：dataId 纳入 datasource 类型与 DB_CLUSTER；profile 改为启动环境显式注入，阻断 dev 回退和跨库误连。
 - 2026-07-18 v0.14：明确分支治理不属于 bd 执行范围，CI 改为显式环境参数；pre/prod/production 与全部工程写工具统一护栏。
 - 2026-07-18 v0.11：新增多环境、Nacos 多 namespace 模式和生产只读护栏。

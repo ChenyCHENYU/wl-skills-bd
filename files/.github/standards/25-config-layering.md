@@ -29,7 +29,7 @@
 ┌─────────────────────────────────────────────────────┐
 │ L3 Nacos 动态配置（运行时，namespace 隔离）          │
 │  ─ application-{env}.yml                             │
-│  ─ datasource-{cluster}-{env}.yml                   │
+│  ─ datasource-{type}-{cluster}-{env}.yml            │
 │  ─ redis-{env}.yml / mq-{env}.yml                   │
 │  ─ 业务动态配置                                      │
 └─────────────────────────────────────────────────────┘
@@ -82,6 +82,7 @@ spring:
 | `NACOS_CONFIG_NAMESPACE` | 配置 namespace | dev | K8s ConfigMap |
 | `NACOS_DISCOVERY_NAMESPACE` | 服务发现 namespace | dev | K8s ConfigMap |
 | `DATASOURCE` | 数据源类型 oracle/mysql | oracle | K8s ConfigMap |
+| `DB_CLUSTER` | 数据库集群 cx/non_cx/pt | 按业务域确定 | K8s ConfigMap |
 | `DB_HOST` / `DB_PORT` / `DB_SID` | 数据库连接 | 本地 | K8s Secret |
 | `DB_USERNAME` / `DB_PASSWORD` | 数据库账号 | dev | K8s Secret |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis 连接 | 本地 | K8s Secret |
@@ -94,11 +95,11 @@ spring:
 | dataId | 内容 | namespace |
 |---|---|---|
 | `application-{env}.yml` | 环境通用配置 | 按 env |
-| `datasource-{cluster}-{env}.yml` | 数据源（cx/non_cx/pt）| 按 env |
+| `datasource-{type}-{cluster}-{env}.yml` | 数据源（mysql/oracle + cx/non_cx/pt）| 按 env |
 | `redis-{env}.yml` | Redis 配置 | 按 env |
 | `mq-{env}.yml` | MQ 配置 | 按 env |
 
-> doctor 校验 bootstrap.yml 声明的 `shared-configs` dataId 模式合规。
+> doctor 校验 bootstrap.yml 声明的 `shared-configs` dataId 模式必须同时包含 `${DATASOURCE}`、`${DB_CLUSTER}` 与 `${spring.profiles.active}`，并与 env-matrix/K8s `DB_CLUSTER` 一致。`config init` 只对已登记业务域自动判定集群；无法判定时要求显式 `--db-cluster`，禁止默认落到 pt。
 
 ---
 
@@ -309,12 +310,13 @@ spring:
         username: ${NACOS_USERNAME}
         password: ${NACOS_PASSWORD}
   profiles:
-    active: ${PROFILES_ACTIVE:dev}
+    active: ${PROFILES_ACTIVE}
 ```
 
 ```bash
 # .env.dev（L2，不进 git，.gitignore 排除）
 PROFILES_ACTIVE=dev
+DB_CLUSTER=pt
 NACOS_HOST=172.17.8.57:8848
 NACOS_CONFIG_NAMESPACE=dev
 NACOS_USERNAME=nacos
@@ -322,6 +324,8 @@ NACOS_PASSWORD=***
 DB_HOST=db-dev.internal
 DB_PORT=3306
 ```
+
+> 任何环境都显式提供 `PROFILES_ACTIVE`。本地开发通过 IDEA Run Configuration 或 `.env.dev` 注入；部署通过按模块独立的 ConfigMap 注入。禁止靠修改 `bootstrap.yml` 切环境。
 
 ### ❌ 反例（mdm-service 历史模式）
 
@@ -340,5 +344,6 @@ spring:
 
 ## 变更记录
 
+- 2026-07-28 v0.17.8：集群化 datasource dataId、未知业务域 fail-closed、profile 显式注入及 matrix/K8s 三方一致性检查。
 - 2026-07-18 v0.14：init/migrate/fix 统一 preview→planHash→confirm→原子写→回滚→复验；pre/prod/production 默认阻断。
 - 2026-07-18 v0.12：新增配置分层与多环境管理规范，落地三层分层模型 + env-matrix + config doctor/init/migrate/fix/diff + troubleshoot 工程闭环。

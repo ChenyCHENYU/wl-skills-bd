@@ -6,7 +6,7 @@
 
 | 编号 | 实现 | 默认门禁 | 说明 |
 |---|---|:---:|---|
-| B1~B25 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 SARIF/Markdown/JSON |
+| B1~B26 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 SARIF/Markdown/JSON |
 | J1 | ArchUnit | 是 | 分层依赖 |
 | J2 | Checkstyle | 是 | 命名、Javadoc、import、规模 |
 | J3 | PMD 7 | 是 | 缺陷、复杂度、性能 |

@@ -23,7 +23,7 @@
   → planHash + 人工确认 → apply
   → contract diff（前端/OpenAPI/权限）
   → contract diff --strict（wl-api-contract/OpenAPI/权限/completion）
-  → validate B1~B23
+  → validate B1~B26
   → Maven verify -Pwl-quality（J1~J5/J8）
   → DDL/权限/发布人工卡口
 ```
@@ -61,16 +61,16 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 `code-fix-be`/`fix` 只自动处理满足严格前置条件的 B3/B5。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过。其他规则转人工或结构重构。
 
-## MCP（15 个工具）
+## MCP（16 个工具）
 
 | 工具 | 作用 |
 |---|---|
-| `wls_be_validate` | B1~B23 只读扫描 |
+| `wls_be_validate` | B1~B26 只读扫描 |
 | `wls_be_doctor` | 环境与门禁诊断 |
 | `wls_be_codegen` | validate/plan/受控 apply |
 | `wls_be_contract` | show/diff 前端、OpenAPI、权限 |
 | `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
-| `wls_be_standards` | 查询 27 条规范 |
+| `wls_be_standards` | 查询 28 条规范 |
 | `wls_be_templates` | 查询 16 个模板 |
 | `wls_be_db_preview` | 只读 DDL/Expand-Contract 预览 |
 | `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |
@@ -80,6 +80,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_catalog` | 模块目录 plan/apply/check/show；默认只扫描当前模块 |
 | `wls_be_context` | 当前模块 + 一跳快照的有界上下文；不扫关联源码 |
 | `wls_be_commit` | 提交消息/range 校验与 Hook doctor |
+| `wls_be_test` | 行为契约测试 gen/scenarios（测行为不测镜像） |
 
 写工具默认只预览，并统一执行 planHash、写前重算、原子写、失败回滚和写后复验。Agent 不得自行把 `confirmApply` 设为 true 来绕过用户评审；pre/prod/production 还必须取得显式工程文件写授权。
 

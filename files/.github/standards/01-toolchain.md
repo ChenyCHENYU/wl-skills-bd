@@ -20,6 +20,7 @@
 | 4 | MyBatis-Plus | 通过 `jh4j-cloud-starter-mybatis` 间接引入 | pom 依赖树含 `mybatis-plus` | 确认 starter 未被 exclude |
 | 5 | 包结构 | 根包 `com.{company}.{product}` | src/main/java 目录树 | 按 standards/02 包名映射表确认 |
 | 6 | 必备依赖 | api/fastjson2/hutool5/hibernate-validator | pom `<dependencies>` | 补缺失依赖 |
+| 7 | 运行时依赖闭环 | 父 BOM、effective POM、fat jar 一致 | `dependency:tree` / `help:effective-pom` / `jar tf` | 禁止仅凭 compile 成功关闭 ClassNotFound |
 
 ---
 
@@ -66,7 +67,17 @@
 
 ---
 
-## 5. doctor 命令（已落地）
+## 5. Maven、IDEA 与运行时闭环
+
+1. 业务工程的 POM、当前 `java -version`、IDEA Project/Module SDK、Java Compiler target 和 Maven importer 必须一致；jh4j-cloud 3.1 当前基线为 Java 8。独立迁移 runner 可使用 JDK 17，但必须是物理隔离子工程，不能改变业务模块 target。
+2. IDEA 出现整片 Lombok/Jackson 红线时，先从根 POM 重新导入 Maven并启用注解处理；不得通过手工添加随机 jar 掩盖依赖未导入。
+3. 平台依赖优先服从父 BOM。增加或覆盖版本前必须用 `mvn dependency:tree -Dverbose` 和 `mvn help:effective-pom` 证明必要性，避免框架 jar 与运行 jar 版本错位。
+4. 完成条件至少是 `mvn clean package`、检查 fat jar 运行 classpath、启动 Spring 上下文并执行一个关键 Mapper/API 冒烟；静态文件检查、`javac` 夹具和 `mvn compile` 都不能替代运行验证。
+5. Windows IDEA 命令行过长时使用 JAR manifest/classpath file 缩短方式，不通过删除依赖解决。
+
+---
+
+## 6. doctor 命令（已落地）
 
 ```bash
 wl-skills-bd doctor
@@ -75,5 +86,6 @@ wl-skills-bd doctor
 体检 7 项：bd 已 init / Maven 工程 / ArchUnit 规则就位 / Checkstyle 规则就位 / ArchUnit 测试已接入 / pom 已配 Checkstyle / pom 已加 ArchUnit 依赖。未就绪项给修复 hint。
 
 ## 变更记录
+- 2026-07-28 v0.17.8：补 Maven/IDEA Java target、BOM 依赖仲裁与 package/启动运行时闭环。
 - 2026-07-17 v0.4 补厚（数据库类型探测决策表 + 7 项检测清单 + doctor 联动）
 - 2026-05-14 v0.0.1 骨架

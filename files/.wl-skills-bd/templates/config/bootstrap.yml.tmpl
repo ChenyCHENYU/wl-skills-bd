@@ -14,7 +14,7 @@ spring:
         shared-configs:
           - dataId: application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
             group: ${spring.cloud.nacos.config.group}
-          - dataId: datasource-${DATASOURCE:{{datasourceType}}}-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
+          - dataId: datasource-${DATASOURCE:{{datasourceType}}}-${DB_CLUSTER:{{dbCluster}}}-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
             group: ${spring.cloud.nacos.config.group}
           - dataId: redis-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}
             group: ${spring.cloud.nacos.config.group}
@@ -29,4 +29,4 @@ spring:
         username: ${spring.cloud.nacos.config.username}
         password: ${spring.cloud.nacos.config.password}
   profiles:
-    active: ${PROFILES_ACTIVE:dev}
+    active: ${PROFILES_ACTIVE}

@@ -9,7 +9,7 @@ const envMatrix = require("../lib/env-matrix");
 const configInit = require("../lib/config-init");
 const configFix = require("../lib/config-fix");
 const { runConfigDoctor } = require("../lib/config-doctor");
-const { readBootstrapProfile } = require("../lib/doctor");
+const { detectDbClusterFromDatasource, detectIdeaJavaTargets, listPomJavaTargets, readBootstrapProfile } = require("../lib/doctor");
 const troubleshoot = require("../lib/troubleshoot");
 
 function withRoot(fn) {
@@ -95,6 +95,31 @@ withRoot((root) => {
 });
 
 console.log("✅ config-layering：多模块 bootstrap/application 发现通过");
+
+withRoot((root) => {
+  const resources = path.join(root, "wl-produce-pl", "wl-produce-pl-service", "src", "main", "resources");
+  fs.mkdirSync(resources, { recursive: true });
+  fs.writeFileSync(path.join(resources, "bootstrap.yml"), [
+    "spring:",
+    "  profiles:",
+    "    active: ${PROFILES_ACTIVE}",
+    "  cloud:",
+    "    nacos:",
+    "      config:",
+    "        shared-configs:",
+    "          - dataId: datasource-${DATASOURCE:mysql}-${DB_CLUSTER:cx}-${spring.profiles.active}.yml",
+  ].join("\n"));
+  assert.strictEqual(readBootstrapProfile(root).profile, null, "无运行环境时不得伪造 dev profile");
+  assert.strictEqual(detectDbClusterFromDatasource(root, null), "cx", "应从集群化 datasource dataId 识别 cx");
+
+  fs.mkdirSync(path.join(root, ".idea"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".idea", "compiler.xml"), '<bytecodeTargetLevel target="25" />');
+  fs.writeFileSync(path.join(root, "pom.xml"), "<properties><maven.compiler.source>8</maven.compiler.source><maven.compiler.target>8</maven.compiler.target></properties>");
+  assert.deepStrictEqual(detectIdeaJavaTargets(root), [25], "应识别 IntelliJ 错误 target bytecode");
+  assert.deepStrictEqual(listPomJavaTargets(root)[0].values, [8], "应识别 Maven Java 8 target");
+});
+
+console.log("✅ config-layering：动态 profile、集群化 dataId 与 IDEA/Maven Java target 探测通过");
 
 assert.strictEqual(configLayering.checkPortRange("produce", 10301, 10301).ok, true, "env-matrix 冻结端口优先于通用范围");
 assert.strictEqual(configLayering.checkPortRange("produce", 10201, 10301).ok, false, "端口必须与项目冻结值一致");
@@ -209,6 +234,8 @@ withRoot((root) => {
   assert.strictEqual(applied.ok, true);
   assert.ok(fs.existsSync(path.join(root, ".env.huaxin.dev")), "应生成 .env.huaxin.dev");
   assert.ok(fs.existsSync(path.join(root, "deploy/huaxin/k8s-configmap-dev.yaml")), "应生成 K8s ConfigMap");
+  assert.match(fs.readFileSync(path.join(root, ".env.huaxin.dev"), "utf8"), /DB_CLUSTER=pt/, "迁移环境文件必须携带目标集群");
+  assert.match(fs.readFileSync(path.join(root, "deploy/huaxin/k8s-configmap-dev.yaml"), "utf8"), /DB_CLUSTER: "pt"/, "K8s ConfigMap 必须携带目标集群");
   const deploymentDev = fs.readFileSync(path.join(root, "deploy/huaxin/k8s-deployment-dev.yaml"), "utf8");
   const deploymentProd = fs.readFileSync(path.join(root, "deploy/huaxin/k8s-deployment-prod.yaml"), "utf8");
   assert.match(deploymentDev, /:\$\{IMAGE_TAG\}/, "镜像版本必须由发布流水线注入，不得硬编码 latest/数字标签");
@@ -269,6 +296,9 @@ withRoot((root) => {
   assert.ok(fs.existsSync(path.join(root, ".wl-skills-bd/env-matrix.yml")), "生成 env-matrix.yml");
   const bootstrap = fs.readFileSync(path.join(root, "src/main/resources/bootstrap.yml"), "utf8");
   assert.match(bootstrap, /\$\{NACOS_HOST\}/, "bootstrap 用占位符");
+  assert.match(bootstrap, /datasource-\$\{DATASOURCE:mysql\}-\$\{DB_CLUSTER:cx\}-\$\{spring\.profiles\.active\}/, "产销项目 datasource dataId 必须显式绑定 cx");
+  assert.match(bootstrap, /active:\s*\$\{PROFILES_ACTIVE\}/, "profile 必须由运行环境显式注入");
+  assert.doesNotMatch(bootstrap, /PROFILES_ACTIVE:dev/, "禁止静默回退 dev");
   // 明文密码：password: 后面直接是非 ${ 开头的字面量（不是占位符）
   assert.doesNotMatch(bootstrap, /password\s*:\s*(?!\$)\S+/, "无明文密码（password 字段必须是占位符）");
   const app = fs.readFileSync(path.join(root, "src/main/resources/application.yml"), "utf8");
@@ -277,6 +307,23 @@ withRoot((root) => {
   assert.match(envProd, /KNIFE4J_PRODUCTION=true/, "prod 关闭 knife4j");
   const envDev = fs.readFileSync(path.join(root, ".env.dev.example"), "utf8");
   assert.match(envDev, /KNIFE4J_PRODUCTION=false/, "dev 开启 knife4j");
+  assert.match(envDev, /DB_CLUSTER=cx/, "环境样例显式声明 cx");
+  assert.match(envDev, /DB_SID=hx_cxdb1/, "产销项目默认库名正确");
+  const matrix = fs.readFileSync(path.join(root, ".wl-skills-bd/env-matrix.yml"), "utf8");
+  assert.match(matrix, /cluster: cx/, "env-matrix 与 bootstrap 集群一致");
+});
+
+withRoot((root) => {
+  const unknown = configInit.buildInitPlan(root, { project: "wl-unknown", module: "unknown" });
+  assert.strictEqual(unknown.ok, false, "未知业务域禁止静默默认 pt");
+  assert.strictEqual(unknown.reason, "db-cluster-required");
+  const explicit = configInit.buildInitPlan(root, { project: "wl-unknown", module: "unknown", dbCluster: "non_cx" });
+  assert.strictEqual(explicit.ok, true, "未知业务域显式 dbCluster 后可生成");
+  assert.strictEqual(explicit.dbCluster, "non_cx");
+  const mdm = configInit.buildInitPlan(root, { project: "wl-mdm", module: "mdm" });
+  assert.strictEqual(mdm.dbCluster, "pt", "平台模块必须推断 pt");
+  const steelmaking = configInit.buildInitPlan(root, { project: "wl-produce", module: "pl" });
+  assert.strictEqual(steelmaking.dbCluster, "cx", "wl-produce 的 pl 子模块必须按项目业务域推断 cx");
 });
 
 console.log("✅ config-init：骨架生成（bootstrap/application/env×5/matrix/gitignore）通过");
@@ -284,7 +331,7 @@ console.log("✅ config-init：骨架生成（bootstrap/application/env×5/matri
 // ─── 6. config-doctor：全链路体检 ───
 withRoot((root) => {
   // 先 init
-  const initPlan = configInit.buildInitPlan(root, { project: "wl-test", module: "test", port: 9101, datasourceType: "mysql", customer: "internal" });
+  const initPlan = configInit.buildInitPlan(root, { project: "wl-test", module: "test", port: 9101, datasourceType: "mysql", dbCluster: "pt", customer: "internal" });
   configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true, planHash: initPlan.planHash });
   // 故意加明文密码
   fs.appendFileSync(path.join(root, "src/main/resources/bootstrap.yml"), "\nspring:\n  redis:\n    password: plaintext123\n");
@@ -297,6 +344,8 @@ withRoot((root) => {
   assert.ok(skeletonCheck && skeletonCheck.ok, "bootstrap 存在");
   const matrixCheck = result.checks.find((c) => c.id === "env-matrix");
   assert.ok(matrixCheck && matrixCheck.ok, "env-matrix 存在");
+  const dataIdCheck = result.checks.find((c) => c.id === "config-datasource-dataid");
+  assert.ok(dataIdCheck && dataIdCheck.ok, "datasource dataId 必须包含 DB_CLUSTER 与 profile");
   const portCheck = result.checks.find((c) => c.id === "env-port");
   assert.ok(portCheck, "端口检查存在");
 });
@@ -344,6 +393,12 @@ console.log("✅ config-fix：明文密码修复 + 复扫验证通过");
   assert.strictEqual(nacosResult.ok, true);
   assert.ok(nacosResult.matched.some((m) => m.id === "nacos-connection"));
 
+  assert.ok(troubleshoot.troubleshoot("status=403, user not found!").matched.some((m) => m.id === "nacos-auth"));
+  assert.ok(troubleshoot.troubleshoot("ClassNotFoundException: com.alibaba.excel.enums.BooleanEnum").matched.some((m) => m.id === "runtime-classpath"));
+  assert.ok(troubleshoot.troubleshoot("Invalid bound statement (not found)").matched.some((m) => m.id === "mybatis-mapper-binding"));
+  assert.ok(troubleshoot.troubleshoot("JVM target 25 配置错误").matched.some((m) => m.id === "idea-java-maven"));
+  assert.ok(troubleshoot.troubleshoot("MQBrokerException CODE: 13 DESC: the message is illegal").matched.some((m) => m.id === "rocketmq-illegal-message"));
+
   const k8sResult = troubleshoot.troubleshoot("CrashLoopBackOff");
   assert.strictEqual(k8sResult.ok, true);
   assert.ok(k8sResult.matched.some((m) => m.id === "k8s-pod"));
@@ -353,7 +408,7 @@ console.log("✅ config-fix：明文密码修复 + 复扫验证通过");
   assert.strictEqual(noMatch.reason, "no-match");
 
   const list = troubleshoot.listAllDiagnostics();
-  assert.ok(list.length >= 8, `至少 8 个诊断项，实际 ${list.length}`);
+  assert.ok(list.length >= 15, `至少 15 个诊断项，实际 ${list.length}`);
 }
 
 console.log("✅ troubleshoot：DB/Redis/Nacos/K8s 诊断 + 无匹配兜底 + 列表通过");

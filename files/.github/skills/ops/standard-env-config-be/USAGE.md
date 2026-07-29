@@ -11,11 +11,12 @@
 | 客户迁移 | `wl-skills-bd config migrate --to <customer>` | 生成 .env + K8s ConfigMap/Secret/Deployment + 迁移报告 |
 | 明文密码修复 | `wl-skills-bd config fix` | 自动改 ${VAR} 占位符 + 复扫验证 |
 | 连通性探测 | `wl-skills-bd config doctor --probe` | DB/Redis/Nacos TCP 端口可达性 |
-| 故障排查 | `wl-skills-bd troubleshoot "<错误>"` | 10 类故障诊断树 |
+| 故障排查 | `wl-skills-bd troubleshoot "<错误>"` | 15 类故障诊断树 |
 
 ## 输入（config init/migrate 需要）
 
-- 工程名（project）、业务模块（module）、端口（port）、数据源类型（oracle/mysql）
+- 工程名（project）、业务模块（module）、端口（port）、数据源类型（oracle/mysql）、数据库集群（cx/non_cx/pt）
+- 已登记业务域可从 project/rootPackage 推断集群；未知业务域必须显式 `--db-cluster`，禁止默认 pt
 - 环境差异矩阵 `.wl-skills-bd/env-matrix.yml`（客户 × 环境的 nacos/datasource/redis/k8s/secrets）
 - 真实 secret 只保存在受控 K8s Secret / Nacos / CI 平台，不进仓库
 
@@ -31,6 +32,10 @@ spring:
         namespace: ${NACOS_CONFIG_NAMESPACE}
         username: ${NACOS_USERNAME}
         password: ${NACOS_PASSWORD}
+        shared-configs:
+          - dataId: datasource-${DATASOURCE:mysql}-${DB_CLUSTER:pt}-${spring.profiles.active}.yml
+  profiles:
+    active: ${PROFILES_ACTIVE}
 
 # ❌ 明文密码（config-secret error）
 # password: DO_NOT_COMMIT
@@ -43,6 +48,7 @@ spring:
 - 无明文敏感信息（config-secret）
 - env-matrix.yml 存在 + current 客户有效
 - Nacos 配置结构完整（server-addr/namespace/group/shared-configs）
+- datasource dataId 同时包含类型、DB_CLUSTER、profile，且与 env-matrix/K8s 一致
 - K8s ConfigMap 的 PROFILES_ACTIVE/NAMESPACE 合规
 - 端口在模块范围（sale 10000-10099 等）
 - 三方一致（bootstrap profile = env-matrix current = K8s PROFILES_ACTIVE）
@@ -55,6 +61,7 @@ spring:
 
 ## 变更记录
 
+- 2026-07-28 v0.17.8：补 DB_CLUSTER fail-closed、显式 profile、集群化 dataId 与启动故障诊断闭环。
 - 2026-07-19 v0.17：K8s 产物补探针、优雅停机、非 root、只读根文件系统、能力收敛、PDB/HPA 与非 latest 镜像门。
 - 2026-07-18 v0.14：所有配置写命令统一 planHash/原子写/回滚/受保护环境护栏。
 - 2026-07-18 v0.12：本 Skill 目标已由 `config` 命令族落地；USAGE 改为指向 config 等价命令。

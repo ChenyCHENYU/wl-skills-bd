@@ -183,6 +183,7 @@ const configTool = {
       module: { type: "string", description: "init 子命令：业务模块" },
       port: { type: "number", description: "init 子命令：端口" },
       datasourceType: { type: "string", enum: ["oracle", "mysql"] },
+      dbCluster: { type: "string", enum: ["cx", "non_cx", "pt"], description: "init 子命令：数据库集群；无法从业务域推断时必填" },
       customer: { type: "string", description: "init 子命令：初始客户名" },
       overwrite: { type: "boolean", description: "init 子命令：覆盖已存在文件" },
       to: { type: "string", description: "migrate 子命令：目标客户" },
