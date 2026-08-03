@@ -100,6 +100,11 @@ TransactionSynchronizationManager.registerSynchronization(new TransactionSynchro
 });
 ```
 
+> **完成度边界**：写入 outbox 表只证明“业务事务内已记录待发事件”，不等于消息已投递；
+> 创建 inbox 表也不等于已有消费者。交付清单必须分别验证：outbox 写入、dispatcher
+> 扫描/发送/重试、broker 到达、consumer/inbox 幂等、失败补偿与可观测性。任一环缺失时，
+> API contract 的集成状态只能标为待联调，禁止宣称端到端闭环。
+
 ---
 
 ## 8. 🔴 反面教材（mdm-service 存量缺陷，禁止沿用）

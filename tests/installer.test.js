@@ -17,6 +17,22 @@ try {
   const installed = installer.applyPlan(initialPlan);
   assert.strictEqual(installed.ok, true);
   assert.strictEqual(installer.check(root).ok, true);
+
+  const eolRel = ".github/standards/01-toolchain.md";
+  const eolFile = path.join(root, eolRel);
+  const lfContent = fs.readFileSync(eolFile, "utf8").replace(/\r\n/g, "\n");
+  fs.writeFileSync(eolFile, lfContent.replace(/\n/g, "\r\n"), "utf8");
+  assert.strictEqual(
+    installer.check(root).ok,
+    true,
+    "仅 LF/CRLF 不同不应被判定为受管文件漂移",
+  );
+  const eolPlan = installer.buildPlan(root);
+  assert.strictEqual(
+    eolPlan.actions.find((item) => item.rel === eolRel).action,
+    "unchanged",
+    "Windows CRLF 检出不应被误判为本地冲突",
+  );
   fs.writeFileSync(path.join(root, ".wl-skills-bd", "profile.local.json"), JSON.stringify({
     schemaVersion: 1,
     profileId: "jh4j3-openapi3",

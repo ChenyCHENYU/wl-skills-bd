@@ -54,8 +54,13 @@
         "pagination": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["recordsPath", "totalPath"],
+          "required": ["requestCurrent", "requestSize", "defaultCurrent", "defaultSize", "maxSize", "recordsPath", "totalPath"],
           "properties": {
+            "requestCurrent": { "const": "current" },
+            "requestSize": { "const": "size" },
+            "defaultCurrent": { "const": 1 },
+            "defaultSize": { "const": 10 },
+            "maxSize": { "const": 200 },
             "recordsPath": { "const": "data.records" },
             "totalPath": { "const": "data.total" }
           }
@@ -160,7 +165,31 @@
         "required": { "type": "boolean" },
         "type": { "enum": ["string", "integer", "number", "boolean", "array", "object"] },
         "format": { "type": "string" },
-        "maxLength": { "type": "integer", "minimum": 1 },
+        "maxLength": { "type": "integer", "minimum": 1, "description": "兼容旧版契约；新契约统一写入 constraints.maxLength" },
+        "default": {},
+        "constraints": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "minLength": { "type": "integer", "minimum": 0 },
+            "maxLength": { "type": "integer", "minimum": 0 },
+            "pattern": { "type": "string", "minLength": 1 },
+            "minimum": { "type": "number" },
+            "maximum": { "type": "number" },
+            "minExclusive": { "type": "boolean" },
+            "maxExclusive": { "type": "boolean" },
+            "step": { "type": "number", "exclusiveMinimum": 0 },
+            "totalDigits": { "type": "integer", "minimum": 1 },
+            "fractionDigits": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "constraintSource": { "type": "string", "minLength": 1 },
+        "enum": { "type": "array", "minItems": 1, "uniqueItems": true },
+        "maxItems": { "type": "integer", "minimum": 1 },
+        "x-semantic-id": { "type": "string", "minLength": 1 },
+        "x-data-classification": { "type": "string", "minLength": 1 },
+        "x-masking": { "type": "string", "minLength": 1 },
         "items": {
           "type": "object",
           "required": ["type"],

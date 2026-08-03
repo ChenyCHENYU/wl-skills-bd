@@ -67,7 +67,7 @@ document-meta:
 | restore drill | 备份可用性、恢复步骤、实际 RTO/RPO 和演练日期 |
 | data review | 字段口径、分级、脱敏、留存、所有者和唯一事实源 |
 
-发布前至少执行：契约校验与 strict diff、B1~B26、`mvn verify -Pwl-quality`、目标数据库集成测试、权限负向测试、并发/幂等测试、压测、迁移演练和恢复演练。SAST、SCA、secret scan、SBOM、镜像/IaC 扫描属于 CI/安全平台职责；本包负责提醒和证据闭环，不伪装成已内置扫描器。
+发布前至少执行：契约校验与 strict diff、B1~B28、`mvn verify -Pwl-quality`、目标数据库集成测试、权限负向测试、并发/幂等测试、压测、迁移演练和恢复演练。新增框架扩展点 Bean 时必须运行最小 Spring 容器装配测试，不能只运行直接实例化的单元测试。SAST、SCA、secret scan、SBOM、镜像/IaC 扫描属于 CI/安全平台职责；本包负责提醒和证据闭环，不伪装成已内置扫描器。
 
 ## 7. 完成定义
 
@@ -75,4 +75,5 @@ document-meta:
 
 ## 变更记录
 
+- 2026-08-03 v0.17.10：发布门增加 B28 与框架扩展点容器装配测试。
 - 2026-07-19 v1：新增生产 assurance 契约、六类证据、方法安全、数据口径、并发一致性、SLA、K8s 和外部流水线边界。

@@ -30,7 +30,7 @@
 |------|------|--------|------|
 | Controller 类 | `@Tag` | name（模块名，中文）| `@Tag(name = "特征量分类")` |
 | 接口方法 | `@Operation` | summary（动作+对象）| `@Operation(summary = "查询特征量分类分页")` |
-| 分页参数 | `@Parameter` | name + description | `@Parameter(name="current", description="当前页码")` |
+| 分页请求体字段 | `@Schema` + Bean Validation | description + default + boundary | `PageDTO.current/size` 位于 POST JSON body，不是 query 参数 |
 | 隐藏参数 | `@Parameter(hidden = true)` | — | `@Parameter(hidden = true) JhPage page` |
 | DTO/VO 字段 | `@Schema` | description | `@Schema(description = "分类编码")` |
 | DTO/VO 类 | `@Schema` | description | `@Schema(description = "特征量分类DTO")` |
@@ -229,7 +229,7 @@ knife4j:
 | 缺陷 | 来源 | 整改 |
 |------|------|------|
 | @Tag 中文乱码（`"寮傚父绠＄悊"`）| 参考项目（GBK 编码 bug）| 文件存 UTF-8，IDE 编码统一 UTF-8 |
-| @Parameter 用 0 次（参数无文档）| 参考项目 | 分页/查询参数必须 @Parameter |
+| PageDTO 字段无 @Schema/校验 | 参考项目 | POST JSON body 中的 current/size/查询字段必须有 @Schema 与 Bean Validation |
 | Controller 直连 Mapper（跨层）| 参考项目 | 走 Service，见 standards/02 + ArchUnit J1 |
 | group-configs 仅 default 单组 | 参考项目 | 按 modules 拆 group（§5）|
 | **全工程 Swagger 2 注解**（mdm-service）| mdm-service `import io.swagger.annotations.Api` | 新代码用 OpenAPI 3；存量允许保留（B22 warn）；同类混用禁止（B22 error）|

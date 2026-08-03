@@ -554,3 +554,140 @@ public class MapperConfiguration {}`,
 }, (root) => assert.strictEqual(count(runBeRules(root), "B26"), 0, "非注解限制的精确 @MapperScan 可发现具体 Mapper"));
 
 console.log("✅ be-rules v0.17.8：Mapper 精确扫描、泛型契约与 XML namespace 绑定门禁通过");
+
+withFixture({
+  "pom.xml": `<project>
+  <parent><groupId>com.jhict</groupId><artifactId>jh4j-cloud</artifactId><version>3.1.0</version></parent>
+  <dependencyManagement><dependencies><dependency>
+    <groupId>com.alibaba</groupId><artifactId>easyexcel</artifactId><version>3.1.0</version>
+  </dependency></dependencies></dependencyManagement>
+  <dependencies><dependency>
+    <groupId>com.alibaba</groupId><artifactId>easyexcel</artifactId><version>2.2.5</version>
+  </dependency></dependencies>
+</project>`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B27"),
+  1,
+  "平台 BOM 管理依赖在业务 dependencies 中显式锁版本必须阻断",
+));
+
+withFixture({
+  "pom.xml": `<project>
+  <parent><groupId>com.jhict</groupId><artifactId>jh4j-cloud</artifactId><version>3.1.0</version></parent>
+  <dependencies>
+  <dependency><groupId>com.alibaba</groupId><artifactId>easyexcel</artifactId></dependency>
+  <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.9.3</version></dependency>
+</dependencies></project>`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B27"),
+  0,
+  "父 BOM 托管的依赖不写版本、普通测试依赖写版本均应通过",
+));
+
+withFixture({
+  "pom.xml": `<project>
+  <parent><groupId>org.example</groupId><artifactId>independent-parent</artifactId><version>1.0.0</version></parent>
+  <dependencies><dependency>
+    <groupId>com.alibaba</groupId><artifactId>easyexcel</artifactId><version>2.2.5</version>
+  </dependency></dependencies>
+</project>`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B27"),
+  0,
+  "非 jh4j-cloud 3.1.0 项目自行管理 EasyExcel 版本时不得误报",
+));
+
+console.log("✅ be-rules v0.17.9：平台 BOM 运行时依赖版本漂移门禁通过");
+
+const jh4jParentPom = `<project><parent>
+  <groupId>com.jhict</groupId><artifactId>jh4j-cloud</artifactId><version>3.1.0</version>
+</parent></project>`;
+
+withFixture({
+  "pom.xml": jh4jParentPom,
+  "src/main/java/demo/UnsafeHandler.java": `package demo;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import org.springframework.stereotype.Component;
+@Component
+public class UnsafeHandler implements MetaObjectHandler {
+  public void insertFill(org.apache.ibatis.reflection.MetaObject metaObject) {}
+  public void updateFill(org.apache.ibatis.reflection.MetaObject metaObject) {}
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B28"),
+  1,
+  "jh4j 工程新增未声明唯一选择的 MetaObjectHandler 必须阻断",
+));
+
+withFixture({
+  "pom.xml": jh4jParentPom,
+  "src/main/java/demo/ReplacingHandler.java": `package demo;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+@Component
+@Primary
+public class ReplacingHandler implements MetaObjectHandler {
+  public void insertFill(org.apache.ibatis.reflection.MetaObject metaObject) {}
+  public void updateFill(org.apache.ibatis.reflection.MetaObject metaObject) {}
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B28"),
+  1,
+  "仅加 @Primary 却不委托平台 Handler 会丢失框架语义，必须阻断",
+));
+
+const safeDecorator = `package demo;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+@Component
+@Primary
+public class SafeHandler implements MetaObjectHandler {
+  private final MetaObjectHandler delegate;
+  public SafeHandler(@Qualifier("metaHandlerConfig") MetaObjectHandler platformHandler) {
+    this.delegate = platformHandler;
+  }
+  public void insertFill(MetaObject metaObject) { delegate.insertFill(metaObject); }
+  public void updateFill(MetaObject metaObject) { delegate.updateFill(metaObject); }
+}`;
+
+withFixture({
+  "pom.xml": jh4jParentPom,
+  "src/main/java/demo/SafeHandler.java": safeDecorator,
+}, (root) => {
+  const issues = runBeRules(root).issues.filter((value) => value.rule === "B28");
+  assert.strictEqual(issues.length, 1, "安全装饰器仍必须有容器级回归测试证据");
+  assert.strictEqual(issues[0].severity, "warn", "缺容器测试只提醒，不误阻断存量工程");
+});
+
+withFixture({
+  "pom.xml": jh4jParentPom,
+  "src/main/java/demo/SafeHandler.java": safeDecorator,
+  "src/test/java/demo/SafeHandlerTest.java": `package demo;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+class SafeHandlerTest {
+  void resolves(org.springframework.context.ApplicationContext context) {
+    context.getBean(MetaObjectHandler.class);
+  }
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B28"),
+  0,
+  "@Primary + 限定委托 + 按类型解析容器测试应完整通过",
+));
+
+withFixture({
+  "pom.xml": `<project><parent>
+    <groupId>org.example</groupId><artifactId>app-parent</artifactId><version>1.0.0</version>
+  </parent></project>`,
+  "src/main/java/demo/CustomHandler.java": safeDecorator.replace("SafeHandler", "CustomHandler"),
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B28"),
+  0,
+  "非兼容矩阵中的父工程不得套用 jh4j 专属扩展点约束",
+));
+
+console.log("✅ be-rules v0.17.10：框架扩展点 Bean 唯一性、委托语义与容器测试门禁通过");

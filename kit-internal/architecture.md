@@ -29,7 +29,7 @@ L3 CLI 适配              L3 MCP 适配
 L4 工程产物  Java/XML/DDL/tests/contracts/catalog/docs + standards/skills/quality config
                     │
                     ▼
-L5 验证  B1~B26 + J1~J8 + strict contract diff + assurance evidence + package self-check
+L5 验证  B1~B28 + J1~J8 + strict contract diff + assurance evidence + package self-check
                     │
                     ▼
 L6 人工卡口  DDL/数据、权限发布、环境部署、破坏性 API、业务重构
@@ -46,7 +46,7 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 | `lib/contract.js` | JSON Schema 和跨字段语义校验 | 自然语言需求解析 |
 | `lib/codegen.js` | 17+N 产物、planHash、业务保护区、Flyway 不可变、冲突、事务回滚与完成度证据 | 执行 DDL |
 | `lib/collaboration.js` | manifest 渲染，前端/OpenAPI/权限差异 | 修改前端或权限平台 |
-| `lib/be-rules.js` | B1~B26 只读扫描与证据 | 自动修复 |
+| `lib/be-rules.js` | B1~B28 只读扫描与证据 | 自动修复 |
 | `lib/safe-fix.js` | B3/B5 条件安全修复、备份、恢复、复扫 | 业务语义重构 |
 | `lib/doctor.js` | 工具链/Profile/门禁/租户证据 | 安装 Maven 或修改 POM |
 | `lib/config-*.js` / `lib/env-matrix.js` | 配置骨架、矩阵、迁移计划、体检、脱敏修复与 TCP 探测 | 写 Nacos/数据库/K8s 或自动部署 |

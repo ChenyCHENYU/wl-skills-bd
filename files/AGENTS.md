@@ -10,7 +10,7 @@
 4. 软删列和值以“受管 profile + 未受管 profile.local”合并结果为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`。Entity、Service、Mapper、DDL、rules.local 与 MyBatis-Plus 运行值必须一致。受管更新/软删使用 `ID + COMPANY_ID + 有效标记 + REVISION` 显式原子 SQL，详情返回 revision。
 5. DDL、数据写入、权限发布和破坏性 API 变更必须展示差异并等待人工确认；MCP 不执行数据库写入。
 6. codegen 使用机器契约，先 plan 后 apply；apply 必须携带相同 planHash 与显式确认。
-7. 最终验证执行 B1~B26 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。
+7. 最终验证执行 B1~B28 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。新增框架 SPI Bean 必须有最小 Spring 容器装配测试。
 8. 生产契约必须满足 standards/28：SLO/RTO/RPO、安全、数据治理、一致性、韧性与六类证据缺一不可；外部评审不得由工具伪造。
 8. 修复器只自动处理安全白名单 B3/B5，写后强制复扫；不得猜权限、SQL、租户、异常或业务文档。
 9. 每个生成/修复步骤后运行对应验证；error 未清零不得宣称完成。
@@ -37,7 +37,7 @@ wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可
 wl-skills-bd contract diff wl-contract.json --frontend <api.md> --openapi <openapi.json> --permissions <permissions.json> --strict
 wl-skills-bd db preview wl-contract.json
 wl-skills-bd permissions export wl-contract.json
-wl-skills-bd validate . --strict           # B1~B26
+wl-skills-bd validate . --strict           # B1~B28
 wl-skills-bd test gen wl-contract.json    # 行为契约测试（测行为不测镜像）
 wl-skills-bd test scenarios wl-contract.json
 ```

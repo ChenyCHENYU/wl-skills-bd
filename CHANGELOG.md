@@ -4,6 +4,41 @@
 
 ---
 
+## [Unreleased]
+
+## [0.17.10] - 2026-08-03（框架扩展点 Bean 与容器测试闭环）
+
+### Added
+
+- 新增 B28：仅在兼容矩阵确认的 jh4j 父框架中，检查平台已提供的 Spring 扩展点；业务同类型 Bean 必须明确唯一选择、显式委托平台实现，避免 `NoUniqueBeanDefinitionException` 和平台审计语义丢失。
+- 兼容矩阵新增 `frameworkExtensionPoints`，首批登记 MyBatis-Plus `MetaObjectHandler`、平台 Bean `metaHandlerConfig` 与必须委托的 `insertFill/updateFill`，规则不绑定客户、业务模块或表名。
+- 新增框架扩展点最小 Spring 容器测试规范：真实注册平台 Bean 与业务 Bean，按接口类型解析候选；只直接实例化业务类的单元测试不再作为装配正确证据。
+
+### Fixed
+
+- installer 对受管文本资产统一按 LF 计算内容身份，Windows `core.autocrlf` 产生的 CRLF 不再被误判为 132 个本地冲突；真实内容改动仍保持零写入阻断和备份保护。
+- 明确日期空字符串应在持久化边界归一为 `null` 后交平台 Handler 填充，禁止通过关闭数据库严格模式或逐 Service 补丁掩盖类型错误。
+- README、AGENTS、CLAUDE、standards 07/14/28、规则目录和任务映射统一升级为 B1~B28。
+
+## [0.17.9] - 2026-08-01（通用契约与运行时边界闭环）
+
+### Added
+
+- 新增 B27：阻断 jh4j-cloud 父 BOM 管理的运行时依赖被业务子模块显式锁版本，
+  首批覆盖 EasyExcel，避免“编译通过、Spring 扫描时 ClassNotFound”。
+- 统一交付 profile 固化分页默认值 `current=1,size=10,maxSize=200`，生成的
+  PageDTO 同步提供默认值与最大值校验。
+- `wl-api-contract` 输出数据库可证明的字符串长度和 DECIMAL 精度，并携带
+  `constraintSource`，供前端表单与页面定义做精确闭环。
+- `contract diff` 将默认值、字段边界、来源、枚举和数据分级等元数据纳入 C106 精确比对；
+  人类可读 api.md 同步展示“边界/来源”，避免机器块正确但页面实现漂移。
+- 修正运行时 OpenAPI 比对：`queryPage` 的 `current/size` 按真实 Controller 作为 POST JSON body
+  字段核对，并校验 OpenAPI 可表达的长度、正则、范围与步长边界。
+
+### Fixed
+
+- PageDTO 的默认每页条数使用具名常量，保持 `current=1,size=10` 契约不变，同时通过真实 Maven Checkstyle `MagicNumber` 质量门。
+
 ## [0.17.8] - 2026-07-28（炼钢实战故障闭环固化）
 
 ### Added

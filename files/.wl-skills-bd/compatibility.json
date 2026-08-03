@@ -4,6 +4,11 @@
     {
       "profile": "jh4j3-openapi3",
       "jh4jCloud": "3.1.0",
+      "parentBom": {
+        "groupId": "com.jhict",
+        "artifactId": "jh4j-cloud",
+        "version": "3.1.0"
+      },
       "java": "8",
       "springBootMajor": "2",
       "coreEntityFields": [
@@ -25,7 +30,21 @@
         "setUpdateProp"
       ],
       "tenantProvider": "com.jhict.common.auth.util.AuthUtil#getLoginCompanyId",
-      "pagination": "com.jhict.common.data.mybatis.entity.JhPage<T>"
+      "pagination": "com.jhict.common.data.mybatis.entity.JhPage<T>",
+      "parentManagedDependencies": [
+        "com.alibaba:easyexcel"
+      ],
+      "frameworkExtensionPoints": [
+        {
+          "interface": "com.baomidou.mybatisplus.core.handlers.MetaObjectHandler",
+          "frameworkBeanName": "metaHandlerConfig",
+          "frameworkImplementation": "com.jhict.common.data.mybatis.config.MetaHandlerConfig",
+          "delegateMethods": [
+            "insertFill",
+            "updateFill"
+          ]
+        }
+      ]
     }
   ]
 }

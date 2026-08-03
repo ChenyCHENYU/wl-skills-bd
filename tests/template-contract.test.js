@@ -44,8 +44,12 @@ assert.match(entity, /@Version[\s\S]*private Integer revision/);
 
 const vo = read("VO.java.tmpl");
 const pageVo = read("PageVO.java.tmpl");
+const pageDto = read("PageDTO.java.tmpl");
 assert.doesNotMatch(vo, /extends\s+\{\{Entity\}\}/, "VO 禁止继承 Entity");
 assert.doesNotMatch(pageVo, /extends\s+\{\{Entity\}\}/, "PageVO 禁止继承 Entity");
+assert.match(pageDto, /private static final long DEFAULT_PAGE_SIZE = \{\{pageDefaultSize\}\}L;/);
+assert.match(pageDto, /private Long size = DEFAULT_PAGE_SIZE;/);
+assert.doesNotMatch(pageDto, /private Long size = \{\{pageDefaultSize\}\}L;/, "分页默认值禁止以魔术数字写入字段声明");
 
 const controller = read("Controller.java.tmpl");
 assert.match(controller, /ApiResult<JhPage<\{\{Entity\}\}PageVO>>/);

@@ -9,7 +9,8 @@
 - 标准操作：`queryPage`、`getById/{id}`、`save`、`updateById`、`deleteById/{id}`；
 - HTTP 方法：POST、GET、POST、PUT、DELETE；
 - 响应：`{ code, message, data }`，业务成功码 `2000`；
-- 分页：`data.records` / `data.total`；
+- 分页请求：`queryPage` 使用 POST JSON body，`current/size` 与查询条件同属 `pageRequest`；默认 1/10、size 最大 200；
+- 分页响应：`data.records` / `data.total`；
 - 主键是 string，更新使用 `id + revision` 乐观锁。
 
 因此存在三种合法路径：

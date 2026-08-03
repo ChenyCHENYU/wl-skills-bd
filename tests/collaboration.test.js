@@ -26,6 +26,21 @@ assert.deepStrictEqual(manifest.completion.openQuestions, []);
 assert.strictEqual(manifest.transport.successCode, 2000);
 assert.strictEqual(manifest.transport.pagination.recordsPath, "data.records");
 assert.strictEqual(manifest.transport.pagination.totalPath, "data.total");
+assert.strictEqual(manifest.transport.pagination.defaultCurrent, 1);
+assert.strictEqual(manifest.transport.pagination.defaultSize, 10);
+assert.strictEqual(manifest.transport.pagination.maxSize, 200);
+assert.deepStrictEqual(
+  manifest.models.pageRequest.find((field) => field.name === "size").constraints,
+  { fractionDigits: 0, maximum: 200, minimum: 1, totalDigits: 10 },
+);
+assert.deepStrictEqual(
+  manifest.models.createRequest.find((field) => field.name === "categoryCode").constraints,
+  { maxLength: 64 },
+);
+assert.strictEqual(
+  manifest.models.createRequest.find((field) => field.name === "categoryCode").constraintSource,
+  "db-contract:MDM_FEATURE_CATEGORY.CATEGORY_CODE",
+);
 assert.strictEqual(manifest.operations.page.externalPath, "/mdm/mdmFeatureCategory/queryPage");
 assert.strictEqual(manifest.operations.update.method, "PUT");
 assert.ok(manifest.models.detailResponse.some((field) => field.name === "revision"), "详情必须返回乐观锁 revision");
@@ -33,12 +48,21 @@ assert.deepStrictEqual(buildManifest(loaded.contract, loaded.profile, loaded.del
 
 const markdown = renderMarkdown(manifest);
 assert.match(markdown, /```wl-api-contract/);
+assert.match(markdown, /maximum=200/);
+assert.match(markdown, /delivery-profile:transport\.pagination/);
 assert.deepStrictEqual(extractManifest(markdown), manifest);
 assert.strictEqual(compareManifest(manifest, extractManifest(markdown)).ok, true);
 assert.strictEqual(compareManifest(manifest, extractManifest(markdown), { strict: true }).ok, true);
 const stale = JSON.parse(JSON.stringify(manifest));
 stale.operations.update.externalPath = "/wrong/update";
 assert.strictEqual(compareManifest(manifest, stale).ok, false);
+
+const staleBoundary = structuredClone(manifest);
+staleBoundary.models.pageRequest.find((field) => field.name === "size").constraints.maximum = 1000;
+assert.ok(
+  compareManifest(manifest, staleBoundary).errors.some((item) => item.path === "models.pageRequest.size.constraints"),
+  "前后端字段边界漂移必须由 C106 阻断",
+);
 
 const wrongProfile = structuredClone(manifest);
 wrongProfile.source.profile = "another-profile";
@@ -76,6 +100,9 @@ function objectSchema(fields, required = []) {
       type: field.type,
       ...(field.format ? { format: field.format } : {}),
       ...(field.items ? { items: field.items } : {}),
+      ...(field.constraints ? Object.fromEntries(Object.entries(field.constraints)
+        .filter(([name]) => !["totalDigits", "fractionDigits"].includes(name))
+        .map(([name, value]) => [{ minExclusive: "exclusiveMinimum", maxExclusive: "exclusiveMaximum", step: "multipleOf" }[name] || name, value])) : {}),
     }])),
   };
 }
@@ -99,10 +126,6 @@ const openapi = {
     [manifest.operations.page.controllerPath]: {
       post: {
         "x-permission": manifest.operations.page.permission,
-        parameters: [
-          { name: "current", in: "query", schema: { type: "integer" } },
-          { name: "size", in: "query", schema: { type: "integer" } },
-        ],
         requestBody: jsonRequest(refs.page),
         responses: { 200: jsonResponse({ $ref: "#/components/schemas/PageEnvelope" }) },
       },
@@ -138,7 +161,7 @@ const openapi = {
   },
   components: {
     schemas: {
-      PageRequest: objectSchema(manifest.models.pageRequest.filter((field) => !["current", "size"].includes(field.name))),
+      PageRequest: objectSchema(manifest.models.pageRequest, ["current", "size"]),
       CreateRequest: objectSchema(manifest.models.createRequest, manifest.models.createRequest.filter((field) => field.required).map((field) => field.name)),
       UpdateRequest: objectSchema(manifest.models.updateRequest, manifest.models.updateRequest.filter((field) => field.required).map((field) => field.name)),
       Detail: objectSchema(manifest.models.detailResponse, ["id", "revision"]),
@@ -158,6 +181,9 @@ const openapi = {
 const openapiResult = compareOpenApi(manifest, openapi);
 assert.strictEqual(openapiResult.ok, true, JSON.stringify(openapiResult, null, 2));
 assert.strictEqual(openapiResult.warnings.length, 0);
+openapi.components.schemas.PageRequest.properties.size.maximum = 1000;
+assert.ok(compareOpenApi(manifest, openapi).errors.some((item) => item.path === "operations.page.requestBody.size.maximum"));
+openapi.components.schemas.PageRequest.properties.size.maximum = 200;
 delete openapi.components.schemas.Detail.properties.revision;
 assert.ok(compareOpenApi(manifest, openapi).errors.some((item) => item.code === "C206"));
 
