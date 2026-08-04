@@ -7,6 +7,10 @@ import lombok.ToString;
 {{#createImports}}
 import {{.}};
 {{/createImports}}
+{{#createHasCrossFieldRules}}
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import javax.validation.constraints.AssertTrue;
+{{/createHasCrossFieldRules}}
 
 /**
  * 新增{{apiDesc}}请求 DTO。
@@ -32,4 +36,14 @@ public class {{Entity}}CreateDTO {
     private {{fieldType}} {{field}};
 
     {{/createFields}}
+    {{#createCrossFieldRules}}
+    /** {{source}} */
+    @JsonIgnore
+    @AssertTrue(message = "{{message}}")
+    public boolean {{methodName}}() {
+        return {{startField}} == null || {{endField}} == null
+                || {{startField}}.compareTo({{endField}}) {{operator}};
+    }
+
+    {{/createCrossFieldRules}}
 }

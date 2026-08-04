@@ -154,7 +154,8 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 10. **受管 UPDATE/软删必须原子化**：WHERE 同时包含 `ID`、`COMPANY_ID`、profile 有效标记、`REVISION = expectedRevision`，SET 中执行 `REVISION = REVISION + 1`；影响行数不是 1 即视为越权/已删除/并发冲突
 11. **动态 WHERE 不算安全边界**：禁止仅依赖 `<where><if .../></where>`，也禁止 `WHERE 1=1/TRUE`；租户和有效标记谓词必须无条件常驻
 12. **Mapper 绑定必须闭环（B26）**：具体 Mapper 可发现；泛型基础 Mapper 不注册；XML `namespace` 与 Java 接口全限定名逐字符一致且全工程唯一
-13. **真实构建和启动验证不可省略**：静态扫描通过后仍需 `mvn clean package`；至少启动一次并执行一个 Mapper 查询，防止资源未打包、`mapper-locations` 错误或运行 classpath 漂移
+13. **资源位置必须闭环（B26）**：项目本地显式配置 `mybatis-plus.mapper-locations` 时，其 glob 必须覆盖实际 Mapper XML；配置完全来自远程配置中心时不得凭空判错，但启动冒烟仍必须验证 statement 已注册
+14. **真实构建和启动验证不可省略**：静态扫描通过后仍需 `mvn clean package`；至少启动一次并执行一个 Mapper 查询，防止资源未打包、`mapper-locations` 错误或运行 classpath 漂移
 
 ---
 
@@ -171,6 +172,8 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 ---
 
 ## 变更记录
+
+- 2026-08-04 v0.18.0：B26 增加本地 `mapper-locations` 与实际 XML 资源 glob 的一致性检查；远程配置缺少本地证据时不误报。
 
 - 2026-07-28 v0.17.8：补 B26 Mapper 扫描/泛型契约/XML namespace 闭环，并要求 package + 启动查询冒烟。
 - 2026-07-22 v0.17.2：软删除列和值改为 profile 驱动，默认示例与项目覆盖口径分离。

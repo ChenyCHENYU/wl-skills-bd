@@ -40,7 +40,7 @@ assert.doesNotMatch(plan, /patch-codegen/);
 assert.strictEqual(taskRouter.getTask("add-api").mode, "incremental-contract");
 assert.deepStrictEqual(taskRouter.buildRuleSubset("add-api"), ["B1", "B2", "B5", "B8", "B12", "B20", "B24", "B25", "B26"]);
 assert.deepStrictEqual(taskRouter.buildRuleSubset("add-field"), ["B3", "B4", "B7", "B18", "B25", "B26"]);
-assert.strictEqual(taskRouter.buildRuleSubset("audit").length, 28);
+assert.strictEqual(taskRouter.buildRuleSubset("audit").length, 29);
 assert.strictEqual(taskRouter.buildRuleSubset("config-op").length, 0);
 assert.deepStrictEqual(taskRouter.buildJavaGateSubset("new-service"), ["J1", "J2", "J3", "J8"]);
 assert.strictEqual(taskRouter.listTasks().length, 8);

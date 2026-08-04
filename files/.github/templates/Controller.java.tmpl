@@ -53,9 +53,9 @@ public class {{Entity}}Controller {
 
     @Operation(summary = "查询{{apiDesc}}分页")
     @PreAuthorize("@pms.hasPermission('{{pagePermission}}')")
-    @PostMapping("queryPage")
+    @{{pageHttpAnnotation}}("{{pageOperationPath}}")
     public ApiResult<JhPage<{{Entity}}PageVO>> query{{Entity}}Page(
-            @RequestBody @Validated {{Entity}}PageDTO params) {
+            {{pageRequestAnnotation}} {{Entity}}PageDTO params) {
         JhPage<{{Entity}}PageVO> page = new JhPage<>();
         page.setCurrent(params.getCurrent());
         page.setSize(params.getSize());
@@ -65,29 +65,29 @@ public class {{Entity}}Controller {
 
     @Operation(summary = "主键查询{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{detailPermission}}')")
-    @GetMapping("getById/{id}")
+    @{{detailHttpAnnotation}}("{{detailOperationPath}}")
     {{getByIdControllerDeclaration}} {
         return ApiResult.success("查询成功", {{entity}}Service.getById(id));
     }
 
     @Operation(summary = "新增{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{createPermission}}')")
-    @PostMapping("save")
-    public ApiResult<String> save(@RequestBody @Validated {{Entity}}CreateDTO dto) {
+    @{{createHttpAnnotation}}("{{createOperationPath}}")
+    public ApiResult<String> save({{createRequestAnnotation}} {{Entity}}CreateDTO dto) {
         return ApiResult.success("新增成功", {{entity}}Service.save(dto));
     }
 
     @Operation(summary = "修改{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{updatePermission}}')")
-    @PutMapping("updateById")
-    public ApiResult<Void> updateById(@RequestBody @Validated {{Entity}}UpdateDTO dto) {
+    @{{updateHttpAnnotation}}("{{updateOperationPath}}")
+    public ApiResult<Void> updateById({{updateRequestAnnotation}} {{Entity}}UpdateDTO dto) {
         {{entity}}Service.updateById(dto);
         return ApiResult.success("更新成功", null);
     }
 
     @Operation(summary = "删除{{apiDesc}}")
     @PreAuthorize("@pms.hasPermission('{{removePermission}}')")
-    @DeleteMapping("deleteById/{id}")
+    @{{removeHttpAnnotation}}("{{removeOperationPath}}")
     {{deleteByIdControllerDeclaration}} {
         {{entity}}Service.deleteById(id);
         return ApiResult.success("删除成功", null);

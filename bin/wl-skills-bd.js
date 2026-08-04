@@ -65,6 +65,7 @@ function printCodegenPlan(plan) {
   for (const item of plan.actions) {
     console.log(`${labels[item.action] || item.action}  ${item.rel}${item.reason ? ` (${item.reason})` : ""}`);
   }
+  for (const warning of plan.warnings || []) console.warn(`⚠ Profile 提示：${warning}`);
   console.log(`\nplanHash: ${plan.planHash}`);
   console.log(`汇总：${JSON.stringify(plan.summary)}`);
 }
@@ -177,9 +178,13 @@ function commandCodegen(args) {
       contractId: result.contract && result.contract.contractId,
       profile: result.profile && result.profile.id,
       errors: result.errors,
+      warnings: result.warnings || [],
     };
     if (has(allArgs, "--json")) printJson(output);
-    else if (result.ok) console.log(`✅ 契约有效：${output.contractId} (${output.profile})`);
+    else if (result.ok) {
+      console.log(`✅ 契约有效：${output.contractId} (${output.profile})`);
+      for (const warning of output.warnings) console.warn(`⚠ Profile 提示：${warning}`);
+    }
     else for (const error of result.errors) console.error(`${error.path}: ${error.message}`);
     return result.ok ? 0 : 1;
   }
@@ -582,7 +587,7 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B28 快速规则
+  validate     执行 B1~B29 快速规则
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）

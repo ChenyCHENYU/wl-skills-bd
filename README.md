@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.17.10-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.18.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -24,15 +24,24 @@
 | 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
 | 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
+| 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径和 B29 分页 DTO 闭环 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、服务/API/库表全局去重、codegen 上下文哈希门禁 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
-| 快速审计 | B1~B28（含 Redis/敏感写/方法安全/敏感日志/Mapper 绑定/父 BOM 依赖/框架扩展点 Bean/限流熔断/定时任务/Swagger/巨型 Service）；text/JSON/Markdown/SARIF |
+| 快速审计 | B1~B29（含 Redis/敏感写/方法安全/敏感日志/Mapper 绑定与资源位置/父 BOM 依赖/框架扩展点 Bean/Profile 分页/限流熔断/定时任务/Swagger/巨型 Service）；text/JSON/Markdown/SARIF |
 | Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
 | AI 接入 | 16 个 MCP 工具，CLI/MCP 复用同一 `lib/` 实现和同一 JSON Schema |
+
+### v0.18.0 项目口径与边界契约闭环
+
+- **Profile 是生效事实源**：包内 `POST + current=1,size=10,maxSize=200` 只是无项目配置时的基线；项目显式 GET、默认 20 或其他安全口径允许并报告覆盖，生成代码、契约和 DTO 与生效 Profile 不一致才阻断。
+- **写入/查询边界分离**：数据库列宽和精度进入写入/响应约束；查询条件只有显式 `queryConstraints` 才生成校验，避免把可输入文字的字段误套数值规则或把存储宽度机械套到检索框。
+- **跨字段与上下文可证明**：时间先后通过 `validationRules.chronology` 声明；`contextSource=server` 的公司、用户等可信字段禁止进入请求 DTO，客户端上下文按操作精确携带。
+- **运行期资源闭环**：B26 同时核对实际 Mapper XML 与本地 `mapper-locations`；B28 要求容器按接口解析唯一 Bean 并验证装饰器委托；B29 按生效 Profile 检查 PageDTO 默认值和上限。
+- **通用而非业务定制**：执行器不内置客户、模块、表名、字段名或状态值，所有差异只来自项目契约、Profile、兼容矩阵和显式证据。
 
 ### v0.17.10 框架扩展点运行闭环
 
@@ -47,7 +56,7 @@
 
 - **不绑定业务域**：执行规则和模板不内置客户名、模块名、表名、页面路径、字典值或业务状态；业务差异只允许来自项目契约、Profile、兼容矩阵和显式本地覆盖。
 - **字段边界可追溯**：VARCHAR 长度、DECIMAL 总位数/小数位、必填和默认值从数据库契约生成到 `wl-api-contract`，并携带 `constraintSource`；不按 Java 属性名或中文标签猜规则。
-- **分页前后端同源**：交付 Profile 与 PageDTO 模板统一 `current=1,size=10,maxSize=200`，查询分页位于 POST JSON body；OpenAPI 和前端握手按相同模型核对。
+- **分页前后端同源**：无项目配置时基线为 `current=1,size=10,maxSize=200` 与 POST JSON body；项目存在 Delivery Profile 时以其方法、载荷位置和分页口径为准，OpenAPI 和前端握手按同一生效模型核对。
 - **依赖门精准激活**：B27 仅在工程实际继承兼容矩阵中已验证的父 BOM 时生效，只阻断该 BOM 已管理依赖的子模块显式版本漂移；其他父工程和非受管依赖不误报。
 - **真实运行闭环**：静态通过不等于可交付；必须继续完成 Maven 编译/测试/打包、fat jar 依赖检查、应用启动、配置中心加载、服务注册和首个真实 Mapper 查询。
 - **安全修复边界**：没有机器证据时只报告缺口，不推测字段、不自动改表、不自动补消费者，也不为通过扫描改写业务语义。
@@ -114,7 +123,7 @@ wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm
 - 2 个测试骨架：ServiceTest、ControllerTest；
 - 2 个协作产物：`backend-contract.json`、`api.md`。
 
-每个需要 body 的业务命令额外生成一个 `OperationRequestDTO`。分页的 `current/size` 与查询条件全部位于 JSON body；字段必须显式声明 `writable`，状态等命令字段应设为 `false`。
+每个需要 body 的业务命令额外生成一个 `OperationRequestDTO`。分页的 `current/size`、查询方法和载荷位置由生效 Delivery Profile 决定（内置基线使用 POST JSON body）；字段必须显式声明 `writable`，状态等命令字段应设为 `false`。
 
 DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。生产变更继续由 DBA/CD 和人工审批负责。
 
@@ -220,7 +229,7 @@ mvn verify -Pwl-quality
 
 | 工具 | 写入 | 作用 |
 |---|:---:|---|
-| `wls_be_validate` | 否 | B1~B28 扫描 |
+| `wls_be_validate` | 否 | B1~B29 扫描 |
 | `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
 | `wls_be_contract` | 否 | 协作契约 show/diff（前端/OpenAPI/权限/kit api.md） |
@@ -349,13 +358,13 @@ bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点�
 
 | 任务 | 模式 | 触发词 | 规则子集 |
 |---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B28 子集 + J |
+| new-service | full | 新开发/全套CRUD | B1-B29 子集 + J |
 | add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26 |
 | add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26 |
 | add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26 |
 | fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28 |
 | refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28 |
-| audit | readonly | 审计/体检 | B1-B28 |
+| audit | readonly | 审计/体检 | B1-B29 |
 | config-op | config | 配置/连不上 | config-doctor |
 
 **路由与安全写链**：

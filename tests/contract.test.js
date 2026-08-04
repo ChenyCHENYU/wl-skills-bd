@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { buildContext, validateContract } = require("../lib/contract");
+require("./contract-boundary.test");
 
 const ROOT = path.resolve(__dirname, "..");
 const example = JSON.parse(fs.readFileSync(
@@ -91,10 +92,17 @@ try {
   fs.mkdirSync(contractDir, { recursive: true });
   const driftedProfile = structuredClone(valid.deliveryProfile);
   driftedProfile.transport.operations.update.method = "POST";
+  driftedProfile.transport.pagination.defaultSize = 20;
+  driftedProfile.transport.pagination.maxSize = 1000;
   fs.writeFileSync(path.join(contractDir, "wl-delivery-profile.v1.json"), JSON.stringify(driftedProfile), "utf8");
   const drifted = validateContract(example, { projectRoot: driftRoot });
-  assert.strictEqual(drifted.ok, false);
-  assert.ok(drifted.errors.some((error) => /统一交付 profile 漂移/.test(error.message)));
+  assert.strictEqual(drifted.ok, true, JSON.stringify(drifted.errors));
+  assert.ok(drifted.warnings.some((warning) => /operations\.update/.test(warning)));
+  assert.ok(drifted.warnings.some((warning) => /pagination/.test(warning)));
+  const driftedContext = buildContext(drifted.contract, drifted.profile, drifted.deliveryProfile);
+  assert.strictEqual(driftedContext.updateHttpAnnotation, "PostMapping");
+  assert.strictEqual(driftedContext.pageDefaultSize, 20);
+  assert.strictEqual(driftedContext.pageMaxSize, 1000);
 } finally {
   fs.rmSync(driftRoot, { recursive: true, force: true });
 }

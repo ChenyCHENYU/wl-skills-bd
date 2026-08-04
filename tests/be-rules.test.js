@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("assert");
+require("./be-mapper-resource.test");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -659,8 +660,8 @@ withFixture({
   "src/main/java/demo/SafeHandler.java": safeDecorator,
 }, (root) => {
   const issues = runBeRules(root).issues.filter((value) => value.rule === "B28");
-  assert.strictEqual(issues.length, 1, "安全装饰器仍必须有容器级回归测试证据");
-  assert.strictEqual(issues[0].severity, "warn", "缺容器测试只提醒，不误阻断存量工程");
+  assert.strictEqual(issues.length, 2, "安全装饰器仍必须有容器唯一性和平台委托两类回归证据");
+  assert.ok(issues.every((issue) => issue.severity === "warn"), "缺回归测试只提醒，不误阻断存量工程");
 });
 
 withFixture({
@@ -668,15 +669,29 @@ withFixture({
   "src/main/java/demo/SafeHandler.java": safeDecorator,
   "src/test/java/demo/SafeHandlerTest.java": `package demo;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+@SpringBootTest
 class SafeHandlerTest {
-  void resolves(org.springframework.context.ApplicationContext context) {
+  void resolves(ApplicationContext context) {
     context.getBean(MetaObjectHandler.class);
+  }
+  @Test void delegates() {
+    MetaObjectHandler delegate = mock(MetaObjectHandler.class);
+    SafeHandler handler = new SafeHandler(delegate);
+    handler.insertFill(null);
+    handler.updateFill(null);
+    verify(delegate).insertFill(null);
+    verify(delegate).updateFill(null);
   }
 }`,
 }, (root) => assert.strictEqual(
   count(runBeRules(root), "B28"),
   0,
-  "@Primary + 限定委托 + 按类型解析容器测试应完整通过",
+  "@Primary + 限定委托 + 真实容器唯一解析 + delegate 调用验证应完整通过",
 ));
 
 withFixture({
@@ -691,3 +706,37 @@ withFixture({
 ));
 
 console.log("✅ be-rules v0.17.10：框架扩展点 Bean 唯一性、委托语义与容器测试门禁通过");
+
+const pageDto1000 = `package demo;
+import javax.validation.constraints.Max;
+public class SamplePageDTO {
+  private static final long DEFAULT_PAGE_SIZE = 20L;
+  private Long current = 1L;
+  @Max(value = 1000, message = "too large")
+  private Long size = DEFAULT_PAGE_SIZE;
+}`;
+
+withFixture({
+  "src/main/java/demo/SamplePageDTO.java": pageDto1000,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B29"),
+  2,
+  "未声明项目 Profile 时，20/1000 必须被识别为相对基线 10/200 的实现漂移",
+));
+
+const customDeliveryProfile = JSON.parse(fs.readFileSync(
+  path.join(__dirname, "..", "files", ".wl-skills-bd", "contracts", "wl-delivery-profile.v1.json"),
+  "utf8",
+));
+customDeliveryProfile.transport.pagination.defaultSize = 20;
+customDeliveryProfile.transport.pagination.maxSize = 1000;
+withFixture({
+  ".wl-skills-bd/contracts/wl-delivery-profile.v1.json": JSON.stringify(customDeliveryProfile),
+  "src/main/java/demo/SamplePageDTO.java": pageDto1000,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root), "B29"),
+  0,
+  "项目 Profile 明确采用 20/1000 时必须兼容，不得按包内基线误报",
+));
+
+console.log("✅ be-rules v0.18：分页 DTO 按生效 Profile 校验并兼容项目级默认值通过");

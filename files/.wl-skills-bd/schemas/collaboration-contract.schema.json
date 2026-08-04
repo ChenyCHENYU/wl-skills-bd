@@ -56,13 +56,13 @@
           "additionalProperties": false,
           "required": ["requestCurrent", "requestSize", "defaultCurrent", "defaultSize", "maxSize", "recordsPath", "totalPath"],
           "properties": {
-            "requestCurrent": { "const": "current" },
-            "requestSize": { "const": "size" },
-            "defaultCurrent": { "const": 1 },
-            "defaultSize": { "const": 10 },
-            "maxSize": { "const": 200 },
-            "recordsPath": { "const": "data.records" },
-            "totalPath": { "const": "data.total" }
+            "requestCurrent": { "type": "string", "minLength": 1 },
+            "requestSize": { "type": "string", "minLength": 1 },
+            "defaultCurrent": { "type": "integer", "minimum": 1 },
+            "defaultSize": { "type": "integer", "minimum": 1 },
+            "maxSize": { "type": "integer", "minimum": 1, "maximum": 10000 },
+            "recordsPath": { "type": "string", "minLength": 1 },
+            "totalPath": { "type": "string", "minLength": 1 }
           }
         },
         "controllerBasePath": { "$ref": "#/$defs/path" },
@@ -89,6 +89,10 @@
     "relations": {
       "type": "array",
       "items": { "type": "object" }
+    },
+    "validationRules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/validationRule" }
     },
     "models": {
       "type": "object",
@@ -152,6 +156,20 @@
         "kind": { "type": "string" },
         "idFrom": { "enum": ["path", "body", "none"] },
         "summary": { "type": "string" }
+      }
+    },
+    "validationRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "startField", "endField", "operations", "message", "source", "allowEqual"],
+      "properties": {
+        "kind": { "const": "chronology" },
+        "startField": { "type": "string", "minLength": 1 },
+        "endField": { "type": "string", "minLength": 1 },
+        "allowEqual": { "type": "boolean" },
+        "operations": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["create", "update", "page"] } },
+        "message": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 }
       }
     },
     "model": { "type": "array", "items": { "$ref": "#/$defs/field" } },

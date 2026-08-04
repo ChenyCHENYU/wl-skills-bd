@@ -177,11 +177,17 @@
           "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
           "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
           "requiredOnCreate": { "type": "boolean", "default": false },
+          "requiredOnQuery": { "type": "boolean", "default": false, "description": "仅当查询接口契约明确要求时启用；不得由数据库 NOT NULL 推导" },
           "writable": { "type": "boolean", "default": false, "description": "必须显式声明；状态/审批等命令字段应为 false" },
           "queryMode": { "enum": ["none", "eq", "like"], "default": "none" },
           "detail": { "type": "boolean", "default": true },
           "list": { "type": "boolean", "default": true },
           "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+          "constraints": { "$ref": "#/$defs/constraints", "description": "新增/修改请求约束；未声明时只使用可确定的数据库存储边界" },
+          "constraintSource": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "queryConstraints": { "$ref": "#/$defs/constraints", "description": "查询请求专用约束；禁止从数据库列长度或精度机械继承" },
+          "queryConstraintSource": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "contextSource": { "enum": ["client", "server"], "default": "client", "description": "server 字段由认证/服务上下文产生，不得进入客户端请求 DTO" },
           "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 design-model field.id" },
           "semanticId": { "$ref": "#/$defs/stableId", "description": "企业级数据语义/指标口径稳定 ID" },
           "definition": { "type": "string", "minLength": 1, "maxLength": 500 },
@@ -221,6 +227,11 @@
       "description": "可选，主从关联。当前只支持一对多；从表用独立 contract 描述。",
       "items": { "$ref": "#/$defs/relation" }
     },
+    "validationRules": {
+      "type": "array",
+      "description": "可选，显式跨字段请求校验；不得按字段名称猜测",
+      "items": { "$ref": "#/$defs/validationRule" }
+    },
     "alter": {
       "type": "object",
       "additionalProperties": false,
@@ -240,6 +251,41 @@
   "$defs": {
     "stableId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$" },
     "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "constraints": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "minLength": { "type": "integer", "minimum": 0, "maximum": 4000 },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+        "pattern": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "minExclusive": { "type": "boolean" },
+        "maxExclusive": { "type": "boolean" },
+        "totalDigits": { "type": "integer", "minimum": 1, "maximum": 65 },
+        "fractionDigits": { "type": "integer", "minimum": 0, "maximum": 30 }
+      }
+    },
+    "validationRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "startField", "endField", "operations", "message", "source"],
+      "properties": {
+        "kind": { "const": "chronology" },
+        "startField": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "endField": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "allowEqual": { "type": "boolean", "default": true },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["create", "update", "page"] }
+        },
+        "message": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 300 }
+      }
+    },
     "customField": {
       "type": "object",
       "additionalProperties": false,

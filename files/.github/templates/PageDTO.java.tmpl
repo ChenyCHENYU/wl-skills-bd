@@ -7,6 +7,10 @@ import lombok.ToString;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+{{#pageHasCrossFieldRules}}
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import javax.validation.constraints.AssertTrue;
+{{/pageHasCrossFieldRules}}
 {{#pageDtoImports}}
 import {{.}};
 {{/pageDtoImports}}
@@ -38,6 +42,9 @@ public class {{Entity}}PageDTO {
     private Long size = DEFAULT_PAGE_SIZE;
 
     {{#queryFields}}
+    {{#validationAnnotations}}
+    {{.}}
+    {{/validationAnnotations}}
     {{#excludeFromToString}}
     @ToString.Exclude
     {{/excludeFromToString}}
@@ -45,4 +52,14 @@ public class {{Entity}}PageDTO {
     private {{fieldType}} {{field}};
 
     {{/queryFields}}
+    {{#pageCrossFieldRules}}
+    /** {{source}} */
+    @JsonIgnore
+    @AssertTrue(message = "{{message}}")
+    public boolean {{methodName}}() {
+        return {{startField}} == null || {{endField}} == null
+                || {{startField}}.compareTo({{endField}}) {{operator}};
+    }
+
+    {{/pageCrossFieldRules}}
 }

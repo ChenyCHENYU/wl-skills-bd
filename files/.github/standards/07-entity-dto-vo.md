@@ -26,7 +26,7 @@ private Integer revision;
 - `XxxCreateDTO`：不含 id、companyId、isDelete、revision、审计字段。
 - `XxxUpdateDTO`：必须含 String id 和 Integer revision，只包含可修改字段。
 - `XxxPageDTO`：含受校验的 `current/size` 和可选查询条件，不含可信租户字段；
-  默认 `current=1,size=10`，`size` 上限 200。请求不传分页值时仍使用默认值，
+  默认值和上限读取生效 Delivery Profile，无项目覆盖时基线为 `current=1,size=10,maxSize=200`。请求不传分页值时仍使用默认值，
   防止前端漏参造成空指针；超过上限由 Bean Validation 返回可理解的参数错误。
 - `Xxx{Operation}RequestDTO`：每个自定义命令独立生成，按契约包含 `id` 或 `ids` 及业务请求字段；批量 `ids` 必须非空且最多 1000 条。
 
@@ -67,9 +67,16 @@ private Integer revision;
 1. jh4j-cloud 已提供 `MetaObjectHandler`（Bean 名 `metaHandlerConfig`）。业务模块不得再注册一个没有唯一选择声明的同类型 Bean，否则 MyBatis-Plus 创建 `sqlSessionFactory` 时会因候选 Bean 不唯一而启动失败（B28）。
 2. 业务确需修正平台填充前的输入时，应使用装饰器：业务 Handler 标记 `@Primary`，通过 `@Qualifier("metaHandlerConfig")` 注入平台 Handler，只做最小归一化后委托平台 `insertFill/updateFill`。禁止重新实现并替换平台公司、用户、组织、应用编号和审计字段语义。
 3. `EntityUtil`、Bean 拷贝或反序列化产生的日期空字符串必须在持久化边界归一为 `null`，再由平台 Handler 填充；禁止把 `""` 写入 `DATE/DATETIME/TIMESTAMP` 列，也不得通过关闭数据库严格模式掩盖类型错误。
+
+## 6. 字段边界与上下文来源
+
+1. 数据库存储长度、DECIMAL 精度和写入业务边界进入 Create/Update DTO；查询条件只有契约显式声明 `queryConstraints` 时才生成长度、数值或正则校验，禁止按字段名或表列宽猜查询规则。
+2. 每组显式业务边界必须携带 `constraintSource/queryConstraintSource`；来源不足时保持待确认，不生成误导性的数字、长度或时间规则。
+3. 跨字段起止时间必须通过 `validationRules.chronology` 声明并生成对象级校验，不能只校验单字段格式。
+4. `contextSource=server` 的公司、用户、组织等可信上下文不得进入请求 DTO；`client` 上下文只允许出现在契约声明的操作中。
 4. 新增任何框架 SPI/扩展点 Bean 时，除单元行为测试外，必须增加最小 Spring 容器测试：真实注册平台 Bean 与业务 Bean，并按接口类型 `getBean(...)`，证明上下文可启动且唯一候选正确。仅直接 `new` 业务实现的测试不能发现 Bean 冲突。
 
-## 6. 机器门禁
+## 7. 机器门禁
 
 - template-contract：模板引用字段必须由基类或 Entity 实际声明。
 - codegen compile fixture：所有生成类型必须编译。
@@ -78,6 +85,7 @@ private Integer revision;
 
 ## 变更记录
 
+- 2026-08-04 v0.18.0：分页口径改为生效 Profile 驱动；写入/查询约束、时间顺序和客户端/服务端上下文分离。
 - 2026-08-03 v0.17.10：平台 `MetaObjectHandler` 装饰、空串日期归一和容器级唯一性测试闭环。
 - 2026-08-01 v0.17.9：分页默认 1/10、机器字段边界来源和共享 DTO 非静默丢字段闭环。
 

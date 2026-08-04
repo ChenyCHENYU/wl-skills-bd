@@ -10,6 +10,10 @@ import {{.}};
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+{{#updateHasCrossFieldRules}}
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import javax.validation.constraints.AssertTrue;
+{{/updateHasCrossFieldRules}}
 
 /**
  * 修改{{apiDesc}}请求 DTO。
@@ -43,4 +47,14 @@ public class {{Entity}}UpdateDTO {
     private {{fieldType}} {{field}};
 
     {{/updateFields}}
+    {{#updateCrossFieldRules}}
+    /** {{source}} */
+    @JsonIgnore
+    @AssertTrue(message = "{{message}}")
+    public boolean {{methodName}}() {
+        return {{startField}} == null || {{endField}} == null
+                || {{startField}}.compareTo({{endField}}) {{operator}};
+    }
+
+    {{/updateCrossFieldRules}}
 }
