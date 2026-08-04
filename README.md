@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.18.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.18.1-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -13,7 +13,7 @@
 
 | 能力 | 已落地内容 |
 |---|---|
-| 工程资产生命周期 | `init/update/diff/check/clean`；manifest 增量更新、冲突零写入、强制覆盖前备份 |
+| 工程资产生命周期 | `init/update/diff/check/clean`；manifest 增量更新、冲突零写入、强制覆盖前备份、安装中途失败自动回滚 |
 | 契约生成 | 严格 `wl-contract.json` → 15 个固定工程产物 + 按命令生成的请求 DTO + 2 个前后端协作产物 |
 | 业务扩展（v0.9） | `customOperations` 业务命令/状态机、`relations` 主从关联、`alter` ALTER TABLE、`indexes` 自定义索引、可选 `export`、`externalId` 跨包桥接 |
 | 数据安全护栏（v0.10/v0.14） | B13~B19：Redis TTL/Redisson 锁/禁用命令、物理删禁令/全表写禁令/批量分批、受保护环境只读护栏、二次确认 |
@@ -43,6 +43,13 @@
 - **运行期资源闭环**：B26 同时核对实际 Mapper XML 与本地 `mapper-locations`；B28 要求容器按接口解析唯一 Bean 并验证装饰器委托；B29 按生效 Profile 检查 PageDTO 默认值和上限。
 - **通用而非业务定制**：执行器不内置客户、模块、表名、字段名或状态值，所有差异只来自项目契约、Profile、兼容矩阵和显式证据。
 
+### v0.18.1 安装事务闭环
+
+- **预检阻断仍为零写入**：本地改动冲突未显式 `--force` 时，不写任何受管文件和 manifest。
+- **写入异常自动回滚**：复制、目录创建或 manifest 写入任一环节失败，恢复所有已改/已删/已新增文件与原 manifest，并清理本次失败事务的临时备份，不留下半安装状态。
+- **成功覆盖仍可恢复**：正常 `--force` 覆盖继续保留 `.wl-skills-bd/.state/backups/<timestamp>/` 备份；事务回滚不替代人工审计和备份。
+- **通用边界**：能力只作用于本包 manifest 受管资产，不读取或改写客户业务代码、数据库、Nacos 或项目 Profile。
+
 ### v0.17.10 框架扩展点运行闭环
 
 - **跨平台升级不误报**：受管文本资产比较会归一化 LF/CRLF；Windows Git 换行转换不会再被当成本地定制，真实内容差异仍会阻断覆盖并要求人工确认。
@@ -71,7 +78,7 @@ npx @agile-team/wl-skills-bd doctor
 npx @agile-team/wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
 ```
 
-`init` 会写入受管 manifest。重复执行不会盲目覆盖本地修改；用 `diff` 查看漂移，用 `check` 验证安装完整性，用 `update` 增量升级，用 `clean --dry-run` 先预览可清理资产。
+`init` 会写入受管 manifest。重复执行不会盲目覆盖本地修改；用 `diff` 查看漂移，用 `check` 验证安装完整性，用 `update` 增量升级，用 `clean --dry-run` 先预览可清理资产。冲突时零写入，中途 I/O 异常时自动回滚；只有显式 `--force` 才覆盖冲突并保留备份。
 
 ## 大型工程模块目录与精准上下文
 

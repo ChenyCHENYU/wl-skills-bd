@@ -69,7 +69,41 @@ try {
   assert.strictEqual(fs.existsSync(path.join(root, installer.MANIFEST_NAME)), false);
 
   assert.throws(() => resolveWithin(root, "../outside"), /非法相对路径|路径越界/);
-  console.log("✅ installer：manifest、零写入冲突、备份、clean 保护与路径边界通过");
+
+  const rollbackRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-installer-rollback-"));
+  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-installer-source-"));
+  try {
+    fs.writeFileSync(path.join(sourceRoot, "a.txt"), "before-a\n");
+    fs.writeFileSync(path.join(sourceRoot, "b.txt"), "before-b\n");
+    assert.strictEqual(
+      installer.applyPlan(installer.buildPlan(rollbackRoot, { sourceRoot })).ok,
+      true,
+    );
+    const manifestBefore = fs.readFileSync(path.join(rollbackRoot, installer.MANIFEST_NAME));
+    fs.writeFileSync(path.join(sourceRoot, "a.txt"), "after-a\n");
+    fs.writeFileSync(path.join(sourceRoot, "b.txt"), "after-b\n");
+    const failingPlan = installer.buildPlan(rollbackRoot, { sourceRoot });
+    fs.unlinkSync(path.join(sourceRoot, "b.txt"));
+    const rolledBack = installer.applyPlan(failingPlan);
+    assert.strictEqual(rolledBack.ok, false);
+    assert.strictEqual(rolledBack.reason, "write-failed-rolled-back");
+    assert.strictEqual(rolledBack.rolledBack, true);
+    assert.strictEqual(fs.readFileSync(path.join(rollbackRoot, "a.txt"), "utf8"), "before-a\n");
+    assert.deepStrictEqual(
+      fs.readFileSync(path.join(rollbackRoot, installer.MANIFEST_NAME)),
+      manifestBefore,
+      "中途失败必须恢复原 manifest",
+    );
+    assert.strictEqual(
+      fs.existsSync(path.join(rollbackRoot, ".wl-skills-bd", ".state", "backups", rolledBack.backupId)),
+      false,
+      "失败事务完成回滚后不得残留本次临时备份目录",
+    );
+  } finally {
+    fs.rmSync(rollbackRoot, { recursive: true, force: true });
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+  console.log("✅ installer：manifest、零写入冲突、备份、clean 保护、事务回滚与路径边界通过");
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

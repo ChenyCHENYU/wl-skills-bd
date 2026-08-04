@@ -86,6 +86,9 @@ function commandInstall(command, args) {
   const result = installer.applyPlan(plan, { dryRun, force });
   if (!has(args, "--json") && result.blocked.length) {
     console.error("\n存在本地修改冲突，本次零写入。请先处理 diff；确需覆盖时使用 --force，原文件会备份。");
+  } else if (!has(args, "--json") && !result.ok) {
+    console.error(`\n安装写入失败：${result.reason}${result.message ? `；${result.message}` : ""}`);
+    if (result.rolledBack) console.error("已自动恢复到执行前状态，没有保留半安装结果。");
   }
   return result.ok ? 0 : 2;
 }
