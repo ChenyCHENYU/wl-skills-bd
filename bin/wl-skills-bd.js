@@ -590,7 +590,7 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B29 快速规则
+  validate     执行 B1~B30 快速规则并输出 Controller 端点清单
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）

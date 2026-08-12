@@ -3,7 +3,7 @@
 /**
  * beRulesTools — MCP 工具：包装 lib/be-rules.js
  *
- * 暴露 wls_be_validate（扫描工程输出 B1~B29 偏差）。
+ * 暴露 wls_be_validate（扫描工程输出 B1~B30 偏差与 Controller 端点清单）。
  * 对标 kit 的 mcp/tools/projectTools.js，但后端无需网关，只读扫描。
  */
 
@@ -37,12 +37,12 @@ function handleValidate(args) {
 
   const relScan = args.path ? normalizeRel(args.path) : undefined;
 
-  const { issues, suppressed, stats } = runBeRules(target, { scanRel: relScan, quick: args.quick === true });
+  const { endpoints, issues, suppressed, stats } = runBeRules(target, { scanRel: relScan, quick: args.quick === true });
 
   if (issues.length === 0) {
     return {
-      text: "✅ 未发现 B1~B12 违规。\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。",
-      structuredContent: { ok: true, ...stats, issues: [], suppressed: suppressed.length },
+      text: `✅ 未发现 B1~B30 违规；已盘点 ${endpoints.length} 个 Controller 端点。\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。`,
+      structuredContent: { ok: true, ...stats, endpoints, issues: [], suppressed: suppressed.length },
     };
   }
 
@@ -77,6 +77,7 @@ function handleValidate(args) {
       warn: stats.warn,
       total: stats.total,
       byRule: stats.byRule,
+      endpoints,
       issues: issues.slice(0, 100),
       suppressed: suppressed.length,
     },

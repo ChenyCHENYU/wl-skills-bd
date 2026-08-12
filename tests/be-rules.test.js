@@ -740,3 +740,45 @@ withFixture({
 ));
 
 console.log("✅ be-rules v0.18：分页 DTO 按生效 Profile 校验并兼容项目级默认值通过");
+
+const controller = (className, basePath, methodName, methodPath) => `package demo;
+import org.springframework.web.bind.annotation.*;
+@RequestMapping("${basePath}")
+public class ${className} {
+  @PostMapping("${methodPath}")
+  public void ${methodName}() {}
+}`;
+
+withFixture({
+  "src/main/java/demo/FirstController.java": controller("FirstController", "/demo", "save", "/save"),
+  "src/main/java/demo/SecondController.java": controller("SecondController", "/demo", "saveAgain", "/save"),
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B30"), 1, "相同 HTTP 方法+完整路径必须阻断");
+  assert.strictEqual(result.endpoints.length, 2, "必须保留可审计的 Controller endpoint 清单");
+  assert.strictEqual(result.endpoints[0].path, "/demo/save");
+});
+
+withFixture({
+  "src/main/java/demo/QueryController.java": `package demo;
+import org.springframework.web.bind.annotation.*;
+@RequestMapping(path = "/demo")
+public class QueryController {
+  @GetMapping
+  public void list() {}
+  @RequestMapping(path = "/query", method = RequestMethod.POST)
+  public void query() {}
+  @PostMapping(consumes = "application/json")
+  public void consume() {}
+}`,
+}, (root) => {
+  const result = runBeRules(root);
+  assert.strictEqual(count(result, "B30"), 0);
+  assert.deepStrictEqual(result.endpoints.map((item) => `${item.method} ${item.path}`), [
+    "GET /demo",
+    "POST /demo",
+    "POST /demo/query",
+  ]);
+});
+
+console.log("✅ be-rules v0.18.2：Controller 完整路由清单与重复端点门禁通过");
