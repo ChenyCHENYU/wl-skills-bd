@@ -134,8 +134,16 @@ db/migration/
 - SQL 方言 fixture：Oracle/MySQL 分别验证。
 - contract/schema diff：Entity、迁移和契约字段一致。
 
+## 8. 源头一致性与漂移对账（v0.19，B31）
+
+- 需求文档表结构必须提取为机器可读镜像 `docs/db-spec/*.json`（tables[].name/cname/fields[]），随文档变更同步更新；缺失时 B31 仅提示不阻断。
+- 表/字段实现与文档不一致：未登记豁免 → B31 error；经审批改名须登记 `.wl-skills-bd/naming-waivers.json`（from/to/reason/approvedBy/date，可选 baselineFields），豁免项永久保留 warn 标识，不得静默放行。
+- 线上库结构变更只允许两条路径：Flyway 迁移（codegen 生成、DBA/CD 执行）或经审批的现场变更（事后必须 `wl-skills-bd db executed` 回执入 DDL 账本）。
+- `wl-skills-bd db drift --snapshot <file>` 定期对账：无源列/无主表 = error（疑似绕过审批直接改库）。
+- 禁止对已执行迁移文件做任何修改（Flyway 不可变）；禁止在受管库上手写 ALTER 而不落迁移或账本。
+
 ## 变更记录
 
-- 2026-07-18 v0.14：ALTER 强制 expand/contract 分阶段；expand 仅兼容扩展，contract drop 需 approvalRef；增加只读 verification SQL、Flyway 版本不可变和 DDL_PREVIEW 门禁。
+- 2026-08-20 v0.19：新增 B31 源头一致性（docs/db-spec ↔ 契约）、naming-waivers 审批豁免通道、db drift 漂移对账与 DDL 执行账本（db executed/ledger）、catalog rules 注册表自检。\n- 2026-07-18 v0.14：ALTER 强制 expand/contract 分阶段；expand 仅兼容扩展，contract drop 需 approvalRef；增加只读 verification SQL、Flyway 版本不可变和 DDL_PREVIEW 门禁。
 - 2026-07-18 v0.9：契约 `alter` 字段自动生成 ALTER SQL（add/modify/drop）+ Expand-Contract 阶段标注；`indexes` 字段渲染自定义索引；Rollback.md 含变更类型与 Expand-Contract 段。
 - 2026-07-18 v0.8：删除重复旧章节，修正 Flyway rollback、软删唯一键与批处理规则，引入 expand-contract。

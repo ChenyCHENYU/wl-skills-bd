@@ -377,8 +377,65 @@ function commandDb(args) {
   const [subcommand = "preview", contractArg, ...rest] = args;
   const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
   const root = targetRoot(allArgs);
+
+  if (subcommand === "drift") {
+    const snapshot = option(allArgs, "--snapshot");
+    if (!snapshot) {
+      console.error("db drift 需要 --snapshot <结构快照.json>（DBA/只读账号导出：[{table,columns:[...]}]）");
+      return 1;
+    }
+    const drift = require("../lib/db-drift");
+    const snapshotFile = path.resolve(root, snapshot);
+    const result = drift.detectDrift(root, snapshotFile, {
+      tablePrefix: option(allArgs, "--prefix", "pl_"),
+    });
+    if (has(allArgs, "--json")) printJson(result);
+    else {
+      for (const item of result.issues) {
+        const mark = item.severity === "error" ? "❌" : "⚠️ ";
+        console.log(`${mark} [${item.kind}] ${item.message}`);
+      }
+      console.log(`\n汇总：表 ${result.summary.tables}，无源变更 ${result.summary.errors}，已审批 ${result.summary.warns}，账本 ${result.summary.ledgerEntries} 条`);
+    }
+    return result.ok ? 0 : 1;
+  }
+
+  if (subcommand === "executed") {
+    const drift = require("../lib/db-drift");
+    const required = ["--table", "--approval-ref"];
+    for (const flag of required) {
+      if (!option(allArgs, flag)) {
+        console.error(`db executed 需要 ${flag}（执行回执入账本，drift 检测据此放行并保留标识）`);
+        return 1;
+      }
+    }
+    const entry = {
+      table: option(allArgs, "--table"),
+      column: option(allArgs, "--column") || null,
+      planHash: option(allArgs, "--plan-hash") || null,
+      approvalRef: option(allArgs, "--approval-ref"),
+      executedBy: option(allArgs, "--by") || "dba",
+      note: option(allArgs, "--note") || "",
+    };
+    const result = drift.appendLedger(root, entry);
+    if (has(allArgs, "--json")) printJson({ ok: true, ...result, entry });
+    else console.log(`✅ 已记入 DDL 执行账本（${result.total} 条）：${result.file}`);
+    return 0;
+  }
+
+  if (subcommand === "ledger") {
+    const drift = require("../lib/db-drift");
+    const ledger = drift.loadLedger(root);
+    if (has(allArgs, "--json")) printJson(ledger);
+    else if (ledger.executed.length === 0) console.log("DDL 执行账本为空");
+    else for (const e of ledger.executed) {
+      console.log(`${e.recordedAt} ${e.table}${e.column ? "." + e.column : ".*"} 审批:${e.approvalRef} 执行:${e.executedBy}${e.planHash ? " plan:" + e.planHash : ""}${e.note ? " — " + e.note : ""}`);
+    }
+    return 0;
+  }
+
   if (subcommand !== "preview") {
-    console.error(`未知 db 子命令：${subcommand}（当前只支持 preview）`);
+    console.error(`未知 db 子命令：${subcommand}（支持 preview / drift / executed / ledger）`);
     return 1;
   }
   if (!contractArg || contractArg.startsWith("-")) {
@@ -402,22 +459,15 @@ function commandDb(args) {
     database: loaded.contract.database,
     migrationSql,
     indexes: loaded.contract.indexes || [],
+    note: "DDL 只生成不执行：生产变更由 DBA/CD 按审批执行，执行后用 db executed 入账本，db drift 对账。",
   };
   if (has(allArgs, "--json")) printJson(output);
   else {
-    console.log(`DDL 预览（${output.migrationKind}）— ${output.contractId} [${output.database}]`);
-    console.log(`迁移文件：${output.migrationFile}`);
-    console.log("");
-    console.log(migrationSql);
-    if (output.indexes.length > 0) {
-      console.log(`\n自定义索引：${output.indexes.length} 个`);
-      for (const idx of output.indexes) console.log(`  ${idx.unique ? "UNIQUE " : ""}${idx.name} (${idx.columns.join(", ")})`);
-    }
-    console.log("\n本预览只读；写入仍需通过 codegen plan/apply。");
+    console.log(`契约 ${output.contractId} → ${output.migrationKind} ${output.migrationFile}`);
+    console.log(output.migrationSql);
   }
   return 0;
 }
-
 function commandPermissions(args) {
   const [subcommand = "export", contractArg, ...rest] = args;
   const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
@@ -462,6 +512,20 @@ function commandPermissions(args) {
 function commandCatalog(args) {
   const catalog = require("../lib/project-catalog");
   const [subcommand = "plan", ...rest] = args;
+  if (subcommand === "rules") {
+    const ruleRegistry = require("../lib/rule-registry");
+    const packageRoot = path.resolve(__dirname, "..");
+    const result = ruleRegistry.checkRuleRegistry(packageRoot);
+    if (has(rest, "--json")) printJson(result);
+    else {
+      for (const item of result.issues) {
+        const mark = item.severity === "error" ? "❌" : item.severity === "warn" ? "⚠️ " : "ℹ️ ";
+        console.log(`${mark} ${item.message}`);
+      }
+      console.log(`\n汇总：规则 ${result.summary.rules} 条，error ${result.summary.errors}，warn ${result.summary.warns}`);
+    }
+    return result.ok ? 0 : 1;
+  }
   const root = targetRoot(rest);
   const moduleId = option(rest, "--module");
   if (subcommand === "show") {

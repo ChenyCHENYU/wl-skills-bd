@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-08-20（数据库源头一致性闭环）
+
+从事故反推的四方对账与豁免通道：需求文档镜像（docs/db-spec）↔ 契约 ↔ Flyway 迁移 ↔ 线上库快照。
+
+- B31 源头一致性：文档表/字段逐项对照契约；未登记豁免的改名/漏实现 error 阻断；无 docs/db-spec 时仅提示
+- naming-waivers 审批豁免：`.wl-skills-bd/naming-waivers.json` 登记改名映射与字段基线（baselineFields），豁免永久保留 warn 追溯标识，绝不静默
+- `db drift --snapshot`：线上结构快照对账契约+迁移+DDL 账本；无源列/无主表 error（绕过审批直接改库的机器检测）；不连接数据库
+- `db executed --table --column --approval-ref`：DDL 执行回执入账本（.wl-skills-bd/.state/ddl-ledger.json），drift 据此放行并保留标识；`db ledger` 审计
+- `catalog rules`：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 有真实输出（防幽灵规则）、J 系列如实标注依赖项目接线
+- 标准 12 新增第 8 节；AGENTS 快速命令与 README 新章节同步
+
 ## [0.18.2] - 2026-08-12（Controller 真实路由闭环）
 
 ### Added
