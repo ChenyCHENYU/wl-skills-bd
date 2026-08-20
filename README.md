@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.18.2-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.19.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -43,7 +43,7 @@
 - **运行期资源闭环**：B26 同时核对实际 Mapper XML 与本地 `mapper-locations`；B28 要求容器按接口解析唯一 Bean并验证装饰器委托；B29 按生效 Profile 检查 PageDTO 默认值和上限；B30 输出 Controller 真实端点清单并阻断重复方法+路径。
 - **通用而非业务定制**：执行器不内置客户、模块、表名、字段名或状态值，所有差异只来自项目契约、Profile、兼容矩阵和显式证据。
 
-### v0.18.2 Controller 真实端点闭环
+### 0.19.0 Controller 真实端点闭环
 
 - `validate` 结果包含从源码提取的 `endpoints[]`（HTTP 方法、完整路径、处理方法、文件和行号）。
 - B30 阻断重复完整路由，避免新增接口被同路径覆盖或前端调用到不存在的隐式地址。
