@@ -175,21 +175,26 @@ function commandCodegen(args) {
   }
   if (subcommand === "validate") {
     const result = loadContract(contractArg, { projectRoot: root });
+    const sourceConsistency = result.ok
+      ? require("../lib/db-spec").checkContractAgainstDbSpec(root, result.contract, { source: result.file, profile: result.profile })
+      : null;
+    const sourceErrors = sourceConsistency ? sourceConsistency.issues.filter((item) => item.severity === "error") : [];
     const output = {
-      ok: result.ok,
+      ok: result.ok && sourceErrors.length === 0,
       contractFile: result.file,
       contractId: result.contract && result.contract.contractId,
       profile: result.profile && result.profile.id,
-      errors: result.errors,
-      warnings: result.warnings || [],
+      errors: [...(result.errors || []), ...sourceErrors.map((item) => ({ path: "$.databaseSource", message: item.message }))],
+      warnings: [...(result.warnings || []), ...(sourceConsistency ? sourceConsistency.issues.filter((item) => item.severity === "warn").map((item) => item.message) : [])],
+      sourceConsistency,
     };
     if (has(allArgs, "--json")) printJson(output);
-    else if (result.ok) {
+    else if (output.ok) {
       console.log(`✅ 契约有效：${output.contractId} (${output.profile})`);
       for (const warning of output.warnings) console.warn(`⚠ Profile 提示：${warning}`);
     }
-    else for (const error of result.errors) console.error(`${error.path}: ${error.message}`);
-    return result.ok ? 0 : 1;
+    else for (const error of output.errors) console.error(`${error.path}: ${error.message}`);
+    return output.ok ? 0 : 1;
   }
   if (!["plan", "apply"].includes(subcommand)) {
     console.error(`未知 codegen 子命令：${subcommand}`);
@@ -402,10 +407,10 @@ function commandDb(args) {
 
   if (subcommand === "executed") {
     const drift = require("../lib/db-drift");
-    const required = ["--table", "--approval-ref"];
+    const required = ["--table", "--approval-ref", "--source-ref"];
     for (const flag of required) {
       if (!option(allArgs, flag)) {
-        console.error(`db executed 需要 ${flag}（执行回执入账本，drift 检测据此放行并保留标识）`);
+        console.error(`db executed 需要 ${flag}（现场变更仅获短期宽限，必须及时回写文档/契约/Flyway）`);
         return 1;
       }
     }
@@ -414,8 +419,10 @@ function commandDb(args) {
       column: option(allArgs, "--column") || null,
       planHash: option(allArgs, "--plan-hash") || null,
       approvalRef: option(allArgs, "--approval-ref"),
+      sourceRef: option(allArgs, "--source-ref"),
       executedBy: option(allArgs, "--by") || "dba",
       note: option(allArgs, "--note") || "",
+      expiresAt: option(allArgs, "--expires-at") || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
     const result = drift.appendLedger(root, entry);
     if (has(allArgs, "--json")) printJson({ ok: true, ...result, entry });
@@ -448,7 +455,16 @@ function commandDb(args) {
     else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
     return 1;
   }
-  const migrationSql = codegen.renderMigration(loaded.contract);
+  const dbSpec = require("../lib/db-spec");
+  const sourceConsistency = dbSpec.checkContractAgainstDbSpec(root, loaded.contract, { source: loaded.file, profile: loaded.profile });
+  const sourceErrors = sourceConsistency.issues.filter((item) => item.severity === "error");
+  if (sourceErrors.length > 0) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: sourceErrors, sourceConsistency });
+    else for (const error of sourceErrors) console.error(`数据库事实源门禁：${error.message}`);
+    return 1;
+  }
+  const sourceTable = sourceConsistency.spec.tables.get(String(loaded.contract.entity.table).toLowerCase());
+  const migrationSql = codegen.renderMigration(loaded.contract, loaded.profile, sourceTable);
   const migrationFile = codegen.migrationFileBase(loaded.contract);
   const isAlter = Boolean(loaded.contract.alter);
   const output = {
@@ -459,7 +475,14 @@ function commandDb(args) {
     database: loaded.contract.database,
     migrationSql,
     indexes: loaded.contract.indexes || [],
-    note: "DDL 只生成不执行：生产变更由 DBA/CD 按审批执行，执行后用 db executed 入账本，db drift 对账。",
+    sourceConsistency: {
+      ok: sourceConsistency.ok,
+      fingerprint: sourceConsistency.fingerprint,
+      specTables: sourceConsistency.spec.tables.size,
+      warnings: sourceConsistency.issues.filter((item) => item.severity === "warn").map((item) => item.message),
+    },
+    executionPolicy: dbSpec.executionPolicy(loaded.contract.environment),
+    note: "DDL 只生成不执行；结构正确性门禁所有环境一致。dev/sit 一次审批后连续执行，pre/prod 由 DBA/CD 按变更单执行。",
   };
   if (has(allArgs, "--json")) printJson(output);
   else {
@@ -654,7 +677,7 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B30 快速规则并输出 Controller 端点清单
+  validate     执行 B1~B31 快速规则并输出 Controller 端点及数据库事实源差异
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）

@@ -9,17 +9,17 @@
 
     <!-- 显式列出字段，禁止 SELECT *（standards/06）-->
     <sql id="BaseColumns">
-        t.ID               AS id,
+        t.{{idColumn}}               AS id,
         {{#columns}}
         t.{{COLUMN}}            AS {{field}},
         {{/columns}}
-        t.COMPANY_ID       AS companyId,
+        t.{{companyIdColumn}}       AS companyId,
         t.{{softDeleteColumn}}        AS isDelete,
-        t.REVISION         AS revision,
-        t.CREATE_USER_NO   AS createUserNo,
-        t.CREATE_DATE_TIME AS createDateTime,
-        t.UPDATE_USER_NO   AS updateUserNo,
-        t.UPDATE_DATE_TIME AS updateDateTime
+        t.{{revisionColumn}}         AS revision,
+        t.{{createUserNoColumn}}   AS createUserNo,
+        t.{{createDateTimeColumn}} AS createDateTime,
+        t.{{updateUserNoColumn}}   AS updateUserNo,
+        t.{{updateDateTimeColumn}} AS updateDateTime
     </sql>
 
     <!-- 分页查询：动态条件 + 软删除常驻 -->
@@ -31,7 +31,7 @@
             <!-- 软删除条件常驻：{{softDeleteComment}} -->
             AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
             <!-- 租户值只能由 Service 从 AuthUtil 注入，禁止从请求 DTO 获取 -->
-            AND t.COMPANY_ID = #{companyId}
+            AND t.{{companyIdColumn}} = #{companyId}
             <if test="param != null">
                 {{#queryConditions}}
                 <if test="param.{{field}} != null and param.{{field}} != ''">
@@ -46,7 +46,7 @@
                 {{/likeConditions}}
             </if>
         </where>
-        ORDER BY t.CREATE_DATE_TIME DESC
+        ORDER BY t.{{createDateTimeColumn}} DESC
     </select>
 
     <!-- 按 ID + 租户查询详情（用于复杂详情联表场景的起点；默认 getById 由 Service.lambdaQuery 兜底） -->
@@ -55,8 +55,8 @@
         <include refid="BaseColumns"/>
         FROM {{table}} t
         WHERE t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
-          AND t.COMPANY_ID = #{companyId}
-          AND t.ID = #{id}
+          AND t.{{companyIdColumn}} = #{companyId}
+          AND t.{{idColumn}} = #{id}
     </select>
 
     <!-- 写操作统一使用显式租户 SQL 加载实体，避免 Wrapper 条件遗漏且便于静态审计。 -->
@@ -64,8 +64,8 @@
         SELECT
         <include refid="BaseColumns"/>
         FROM {{table}} t
-        WHERE t.ID = #{id}
-          AND t.COMPANY_ID = #{companyId}
+        WHERE t.{{idColumn}} = #{id}
+          AND t.{{companyIdColumn}} = #{companyId}
           AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
     </select>
 
@@ -73,9 +73,9 @@
         SELECT
         <include refid="BaseColumns"/>
         FROM {{table}} t
-        WHERE t.COMPANY_ID = #{companyId}
+        WHERE t.{{companyIdColumn}} = #{companyId}
           AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
-          AND t.ID IN
+          AND t.{{idColumn}} IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -90,27 +90,27 @@
                 {{COLUMN}} = #{entity.{{field}}},
             </if>
             {{/columns}}
-            UPDATE_USER_NO = #{entity.updateUserNo},
-            UPDATE_DATE_TIME = #{entity.updateDateTime},
-            REVISION = REVISION + 1
+            {{updateUserNoColumn}} = #{entity.updateUserNo},
+            {{updateDateTimeColumn}} = #{entity.updateDateTime},
+            {{revisionColumn}} = {{revisionColumn}} + 1
         </set>
-        WHERE ID = #{entity.id}
-          AND COMPANY_ID = #{companyId}
+        WHERE {{idColumn}} = #{entity.id}
+          AND {{companyIdColumn}} = #{companyId}
           AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
-          AND REVISION = #{expectedRevision}
+          AND {{revisionColumn}} = #{expectedRevision}
     </update>
 
     <!-- 当前 profile 软删除口径：{{softDeleteComment}}；禁止物理 DELETE。 -->
     <update id="softDeleteAtomic">
         UPDATE {{table}}
         SET {{softDeleteColumn}} = {{softDeleteDeletedValue}},
-            UPDATE_USER_NO = #{entity.updateUserNo},
-            UPDATE_DATE_TIME = #{entity.updateDateTime},
-            REVISION = REVISION + 1
-        WHERE ID = #{entity.id}
-          AND COMPANY_ID = #{companyId}
+            {{updateUserNoColumn}} = #{entity.updateUserNo},
+            {{updateDateTimeColumn}} = #{entity.updateDateTime},
+            {{revisionColumn}} = {{revisionColumn}} + 1
+        WHERE {{idColumn}} = #{entity.id}
+          AND {{companyIdColumn}} = #{companyId}
           AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
-          AND REVISION = #{entity.revision}
+          AND {{revisionColumn}} = #{entity.revision}
     </update>
 
 </mapper>

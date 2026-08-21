@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-22（数据库事实源强门禁）
+
+### Added
+
+- 新增 standards/29：文档基线表必须同名复用，字段名称/大小写/顺序/类型/可空性/默认值/注释精确对账；扩展字段末尾追加，新表/字段必须登记业务依据与审批。
+- B31 接入 `codegen validate/plan/apply` 与 `db preview`，事实源 fingerprint 进入 planHash；DDL 预览展示基线门禁和环境执行通道。
+- 数据库快照支持字段全属性漂移检测；现场 DDL 账本改为有期限宽限，不能永久替代文档、契约和 Flyway。
+- 新增数据库治理回归测试，覆盖基线复用、换序/类型/注释漂移、扩展审批、SIT 单次审批连续执行及快照对账。
+
+### Changed
+
+- MySQL 物理表、字段、索引及治理 SQL 统一 `lower_snake_case`；Oracle 继续 `UPPER_SNAKE_CASE`。移除 MySQL DDL 的显式 `ENGINE=InnoDB`，避免 OceanBase 兼容层告警。
+- dev/sit 保持完整结构门禁，但流程收敛为一次 planHash 审批后连续执行；pre/prod 保留 DBA/CD、备份恢复和变更窗口。
+- 废止用 `naming-waivers` 长期掩盖文档表改名的做法；文档不合理必须先经业务确认并修订事实源。
+
 ## [0.19.0] - 2026-08-20（数据库源头一致性闭环）
 
 从事故反推的四方对账与豁免通道：需求文档镜像（docs/db-spec）↔ 契约 ↔ Flyway 迁移 ↔ 线上库快照。

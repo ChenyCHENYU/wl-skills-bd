@@ -35,6 +35,26 @@ try {
   assert.strictEqual(diff.status, 0, diff.stdout + diff.stderr);
 
   const contract = ".github/templates/examples/feature-category.contract.json";
+  fs.mkdirSync(path.join(root, "docs", "db-spec"), { recursive: true });
+  fs.writeFileSync(path.join(root, "docs", "db-spec", "feature-category.json"), `${JSON.stringify({
+    tables: [{
+      name: "MDM_FEATURE_CATEGORY",
+      comment: "特征量分类",
+      fields: [
+        { name: "ID", dbType: "VARCHAR2(64 CHAR)", comment: "主键ID" },
+        { name: "CATEGORY_CODE", dbType: "VARCHAR2(64 CHAR)", comment: "分类编码" },
+        { name: "CATEGORY_NAME", dbType: "VARCHAR2(200 CHAR)", comment: "分类名称" },
+        { name: "SORT_ORDER", dbType: "NUMBER(10)", comment: "排序号" },
+        { name: "COMPANY_ID", dbType: "VARCHAR2(64 CHAR)", comment: "公司/租户ID" },
+        { name: "IS_DELETE", dbType: "NUMBER(1)", comment: "有效标记：1=有效，0=已删除" },
+        { name: "REVISION", dbType: "NUMBER(10)", comment: "乐观锁版本号" },
+        { name: "CREATE_USER_NO", dbType: "VARCHAR2(64 CHAR)", comment: "创建人工号" },
+        { name: "UPDATE_USER_NO", dbType: "VARCHAR2(64 CHAR)", comment: "更新人工号" },
+        { name: "CREATE_DATE_TIME", dbType: "VARCHAR2(19 CHAR)", comment: "创建时间" },
+        { name: "UPDATE_DATE_TIME", dbType: "VARCHAR2(19 CHAR)", comment: "更新时间" },
+      ],
+    }],
+  }, null, 2)}\n`, "utf8");
   fs.mkdirSync(path.join(root, "contracts", "feature"), { recursive: true });
   fs.copyFileSync(path.join(root, contract), path.join(root, "contracts", "feature", "feature-category.json"));
   fs.writeFileSync(path.join(root, ".wl-skills-bd", "catalog.config.json"), `${JSON.stringify({

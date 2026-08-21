@@ -8,109 +8,181 @@ const dbSpec = require("../lib/db-spec");
 const dbDrift = require("../lib/db-drift");
 const ruleRegistry = require("../lib/rule-registry");
 const { runBeRules } = require("../lib/be-rules");
+const { renderMysqlMigration } = require("../lib/codegen");
 
 const ROOT = path.resolve(__dirname, "..");
 
+function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
 function makeProject() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-b31-"));
-  fs.mkdirSync(path.join(dir, "docs", "db-spec"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "docs", "contracts", "db", "pl_heat_process"), { recursive: true });
-  fs.mkdirSync(path.join(dir, ".wl-skills-bd"), { recursive: true });
-  fs.writeFileSync(path.join(dir, "docs", "db-spec", "spec.json"), JSON.stringify({
-    tables: [
-      { name: "pl_charge", cname: "进程跟踪", fields: ["id", "heat_id", "start_time", "end_time"] },
-      { name: "pl_slab_main", cname: "坯料", fields: ["id", "slab_no", "apply_jugde_status"] },
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-b31-"));
+  writeJson(path.join(root, "docs", "db-spec", "produce.json"), {
+    tables: [{
+      name: "pl_charge",
+      comment: "进程跟踪",
+      fields: [
+        { name: "id", dbType: "varchar(64)", nullable: false, comment: "主键ID" },
+        { name: "heat_id", dbType: "varchar(64)", nullable: false, comment: "炉次ID" },
+        { name: "start_time", dbType: "datetime(3)", nullable: true, comment: "开始时间" },
+        { name: "company_id", dbType: "varchar(64)", nullable: false, comment: "公司/租户ID" },
+        { name: "is_delete", dbType: "tinyint(1)", nullable: false, defaultValue: 1, comment: "有效标记：1=有效，0=已删除" },
+        { name: "revision", dbType: "int", nullable: false, defaultValue: 0, comment: "乐观锁版本号" },
+        { name: "create_user_no", dbType: "varchar(64)", nullable: true, comment: "创建人工号" },
+        { name: "update_user_no", dbType: "varchar(64)", nullable: true, comment: "更新人工号" },
+        { name: "create_date_time", dbType: "varchar(19)", nullable: true, comment: "创建时间" },
+        { name: "update_date_time", dbType: "varchar(19)", nullable: true, comment: "更新时间" },
+      ],
+    }],
+  });
+  return root;
+}
+
+function contract(fields = [
+  { column: "heat_id", dbType: "varchar(64)", nullable: false, comment: "炉次ID" },
+  { column: "start_time", dbType: "datetime(3)", nullable: true, comment: "开始时间" },
+]) {
+  return {
+    database: "mysql",
+    entity: { table: "pl_charge", description: "进程跟踪" },
+    fields,
+  };
+}
+
+// 精确匹配：表名、顺序、类型、nullable、注释全部通过。
+{
+  const root = makeProject();
+  const result = dbSpec.checkContractAgainstDbSpec(root, contract(), { strictMissing: true });
+  assert.strictEqual(result.ok, true, JSON.stringify(result.issues));
+  assert.ok(result.fingerprint, "事实源必须形成 fingerprint 并进入计划身份");
+}
+
+// 字段换序、类型和注释漂移必须阻断，不能只检查“字段存在”。
+{
+  const root = makeProject();
+  const result = dbSpec.checkContractAgainstDbSpec(root, contract([
+    { column: "start_time", dbType: "varchar(19)", nullable: true, comment: "时间" },
+    { column: "heat_id", dbType: "varchar(64)", nullable: false, comment: "炉次ID" },
+  ]), { strictMissing: true });
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.issues.some((issue) => /第 1 个业务字段/.test(issue.message)), "换序必须给出精确证据");
+}
+
+// 扩展字段只能末尾追加，且必须登记用途、来源和审批。
+{
+  const root = makeProject();
+  const extended = contract([
+    ...contract().fields,
+    { column: "route_code", dbType: "varchar(32)", nullable: true, comment: "路由编码" },
+  ]);
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, extended, { strictMissing: true }).ok, false);
+  writeJson(path.join(root, ".wl-skills-bd", "db-governance.json"), {
+    schemaVersion: 1,
+    enforcement: "strict",
+    extensionTables: [],
+    extensionFields: [{
+      table: "pl_charge", column: "route_code", purpose: "记录上游路由", reason: "基线无路由字段",
+      sourceRef: "REQ-100", approvedBy: "owner", approvalRef: "DB-100",
+    }],
+    waivers: [],
+  });
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, extended, { strictMissing: true }).ok, true);
+  const sourceTable = dbSpec.loadDbSpec(root).tables.get("pl_charge");
+  const ddl = renderMysqlMigration({ ...extended, contractId: "PL-CHARGE" }, undefined, sourceTable);
+  const orderedColumns = [
+    "id", "heat_id", "start_time", "company_id", "is_delete", "revision",
+    "create_user_no", "update_user_no", "create_date_time", "update_date_time", "route_code",
+  ];
+  for (let index = 1; index < orderedColumns.length; index += 1) {
+    assert.ok(
+      ddl.indexOf(`    ${orderedColumns[index - 1]} `) < ddl.indexOf(`    ${orderedColumns[index]} `),
+      `${orderedColumns[index]} 必须按文档基线顺序生成，扩展字段只能位于末尾`,
+    );
+  }
+  const inserted = contract([
+    { column: "route_code", dbType: "varchar(32)", nullable: true, comment: "路由编码" },
+    ...contract().fields,
+  ]);
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, inserted, { strictMissing: true }).ok, false, "扩展字段插入基线中间必须阻断");
+}
+
+// 文档外新表无登记时阻断；有完整业务依据才能通过。
+{
+  const root = makeProject();
+  const extra = { database: "mysql", entity: { table: "pl_route_event", description: "路由事件" }, fields: [{ column: "event_code", dbType: "varchar(32)", comment: "事件编码" }] };
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, extra, { strictMissing: true }).ok, false);
+  writeJson(path.join(root, ".wl-skills-bd", "db-governance.json"), {
+    schemaVersion: 1,
+    extensionTables: [{
+      table: "pl_route_event", purpose: "独立事件流", reason: "与进程表生命周期和基数不同",
+      sourceRef: "REQ-200", approvedBy: "owner", approvalRef: "DB-200",
+    }],
+    extensionFields: [], waivers: [],
+  });
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, extra, { strictMissing: true }).ok, true);
+}
+
+// 安装后的受管项目缺文档镜像必须 fail-closed；裸目录审计只给迁移提示。
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-empty-"));
+  writeJson(path.join(root, ".wl-skills-bd", "config.json"), { databaseGovernance: { enforceDocumentMirror: true } });
+  assert.strictEqual(dbSpec.checkContractAgainstDbSpec(root, contract()).ok, false);
+  const bare = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-bare-"));
+  const result = runBeRules(bare, {});
+  const b31 = (result.rawIssues || result.issues || []).filter((issue) => issue.rule === "B31");
+  assert.ok(b31.every((issue) => issue.severity === "warn"));
+}
+
+// 环境只影响流程强度，不影响结构门禁。
+{
+  assert.strictEqual(dbSpec.executionPolicy("sit").approvalMode, "single-approval-continuous");
+  assert.deepStrictEqual(dbSpec.executionPolicy("sit").steps, ["precheck", "migrate", "validate", "postcheck", "business-smoke"]);
+  assert.strictEqual(dbSpec.executionPolicy("prod").lane, "protected");
+}
+
+// 代码不得继续引用已退役或未登记的同域表；Flyway 历史文件不追杀。
+{
+  const root = makeProject();
+  const mapper = path.join(root, "src", "main", "resources", "mapper", "LegacyMapper.xml");
+  fs.mkdirSync(path.dirname(mapper), { recursive: true });
+  fs.writeFileSync(mapper, "<mapper><select id=\"x\">SELECT id FROM pl_heat_process</select></mapper>", "utf8");
+  const result = dbSpec.checkCodeTableReferences(root);
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.issues[0].message.includes("pl_heat_process"));
+}
+
+// 快照可检测顺序/类型/注释；现场账本只有带期限的短期宽限，不是永久事实源。
+{
+  const root = makeProject();
+  writeJson(path.join(root, "snapshot.json"), [{
+    table: "pl_charge",
+    comment: "进程跟踪",
+    columns: [
+      { name: "id", ordinal: 1, dbType: "varchar(64)", nullable: false, comment: "主键ID" },
+      { name: "start_time", ordinal: 2, dbType: "varchar(19)", nullable: true, comment: "错误注释" },
+      { name: "heat_id", ordinal: 3, dbType: "varchar(64)", nullable: false, comment: "炉次ID" },
+      { name: "ghost_col", ordinal: 4, dbType: "varchar(10)" },
     ],
-  }));
-  fs.writeFileSync(path.join(dir, "docs", "contracts", "db", "pl_heat_process", "wl-contract.json"), JSON.stringify({
-    entity: { table: "pl_heat_process" },
-    fields: [{ column: "ID" }, { column: "HEAT_ID" }, { column: "START_TIME" }, { column: "END_TIME" }],
-  }));
-  return dir;
+  }]);
+  const result = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.issues.some((issue) => issue.kind === "column-order"));
+  assert.ok(result.issues.some((issue) => issue.kind === "column-type"));
+  assert.ok(result.issues.some((issue) => issue.kind === "unclaimed-column" && issue.column === "ghost_col"));
+  dbDrift.appendLedger(root, {
+    table: "pl_charge", column: "ghost_col", approvalRef: "CHG-1", sourceRef: "INC-1", executedBy: "dba",
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  });
+  const after = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
+  assert.ok(after.issues.some((issue) => issue.kind === "approved-drift" && issue.severity === "warn"));
 }
 
-// ── B31：文档 ↔ 契约 ──────────────────────────────────────────
-{
-  const dir = makeProject();
-  const contracts = new Map([["pl_heat_process", new Set(["id", "heat_id", "start_time", "end_time"])]]);
-  const result = dbSpec.checkDocContractConsistency(dir, contracts);
-  const errors = result.issues.filter((i) => i.severity === "error");
-  assert.strictEqual(errors.length, 2, "pl_charge 与 pl_slab_main 均未在契约中，应各报一个 error");
-  assert.ok(errors.every((e) => e.message.includes("pl_charge") || e.message.includes("pl_slab_main")), "error 应指向缺失表");
-}
-
-// ── B31：豁免登记后转 warn，且豁免目标缺失仍报错 ─────────────
-{
-  const dir = makeProject();
-  fs.writeFileSync(path.join(dir, ".wl-skills-bd", "naming-waivers.json"), JSON.stringify({
-    waivers: [
-      { from: "pl_charge", to: "pl_heat_process", reason: "建模演进", approvedBy: "tester", date: "2026-08-20" },
-    ],
-  }));
-  const contracts = new Map([["pl_heat_process", new Set(["id", "heat_id", "start_time", "end_time"])]]);
-  const result = dbSpec.checkDocContractConsistency(dir, contracts);
-  const renamedWarn = result.issues.find((i) => i.severity === "warn" && i.message.includes("已审批改名"));
-  assert.ok(renamedWarn, "豁免改名应降为 warn 并保留追溯信息");
-  assert.ok(renamedWarn.message.includes("tester"), "warn 应携带审批人");
-  assert.strictEqual(result.issues.filter((i) => i.severity === "error").length, 1, "pl_slab_main 仍未豁免，保持 error");
-}
-
-// ── B31：字段基线豁免 ─────────────────────────────────────────
-{
-  const dir = makeProject();
-  fs.writeFileSync(path.join(dir, "docs", "contracts", "db", "pl_heat_process", "wl-contract.json"), JSON.stringify({
-    entity: { table: "pl_slab" },
-    fields: [{ column: "ID" }, { column: "SLAB_NO" }],
-  }));
-  fs.writeFileSync(path.join(dir, ".wl-skills-bd", "naming-waivers.json"), JSON.stringify({
-    waivers: [
-      { from: "pl_slab_main", to: "pl_slab", reason: "拆分", approvedBy: "tester", date: "2026-08-20", baselineFields: ["id", "slab_no"] },
-    ],
-  }));
-  const contracts = new Map([["pl_slab", new Set(["id", "slab_no"])]]);
-  const result = dbSpec.checkDocContractConsistency(dir, contracts);
-  const fieldError = result.issues.find((i) => i.severity === "error" && i.message.includes("apply_jugde_status"));
-  assert.ok(fieldError, "文档字段 apply_jugde_status 未落实且不在基线，应报 error");
-}
-
-// ── B31：validate 集成（error 计入 stats，无 db-spec 时仅 warn）──
-{
-  const dir = makeProject();
-  const result = runBeRules(dir, {});
-  assert.ok(result.stats.byRule.B31 >= 2, `B31 应进入 validate 结果（实际 ${result.stats.byRule.B31 || 0}）`);
-  assert.ok(result.stats.error >= 2, "B31 error 应计入阻断统计");
-}
-{
-  const empty = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-empty-"));
-  const result = runBeRules(empty, {});
-  const b31 = (result.rawIssues || result.issues || []).filter((i) => i.rule === "B31");
-  assert.ok(b31.every((i) => i.severity === "warn"), "无 db-spec 目录时 B31 只提示不阻断");
-}
-
-// ── db drift：无源列 / 无主表 / 账本放行 ────────────────────────
-{
-  const dir = makeProject();
-  fs.writeFileSync(path.join(dir, "snapshot.json"), JSON.stringify([
-    { table: "pl_heat_process", columns: ["ID", "HEAT_ID", "START_TIME", "END_TIME", "GHOST_COL"] },
-    { table: "pl_fin_plan", columns: ["ID"] },
-  ]));
-  const result = dbDrift.detectDrift(dir, path.join(dir, "snapshot.json"));
-  assert.strictEqual(result.ok, false, "存在无源变更时应失败");
-  assert.ok(result.issues.some((i) => i.kind === "unclaimed-column" && i.column === "ghost_col"), "无源列应被检出");
-  assert.ok(result.issues.some((i) => i.kind === "unclaimed-table" && i.table === "pl_fin_plan"), "无主表应被检出");
-
-  dbDrift.appendLedger(dir, { table: "pl_heat_process", column: "ghost_col", approvalRef: "CHG-1", executedBy: "dba" });
-  const after = dbDrift.detectDrift(dir, path.join(dir, "snapshot.json"));
-  const approved = after.issues.find((i) => i.kind === "approved-drift");
-  assert.ok(approved && approved.severity === "warn", "账本内列应转为 warn 标识");
-  assert.strictEqual(after.issues.filter((i) => i.severity === "error").length, 1, "仅剩无主表 error");
-}
-
-// ── rule-registry：catalog 自检 ────────────────────────────────
 {
   const result = ruleRegistry.checkRuleRegistry(ROOT);
-  assert.strictEqual(result.ok, true, `包内 catalog 应自检通过（问题：${result.issues.filter((i) => i.severity === "error").map((i) => i.message).join("; ")}）`);
-  assert.ok(result.summary.rules >= 39, "应至少登记 39 条规则（含 B31）");
+  assert.strictEqual(result.ok, true, result.issues.map((issue) => issue.message).join("; "));
+  assert.ok(result.summary.rules >= 39);
 }
 
-console.log("✅ db-spec/db-drift/rule-registry 全部断言通过");
+console.log("✅ 数据库事实源：基线复用、全属性顺序、扩展审批、环境分级与快照漂移门禁通过");

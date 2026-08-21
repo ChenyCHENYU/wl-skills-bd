@@ -1,6 +1,27 @@
 # 使用指南：db-migration
 
-> CREATE、受限 ALTER 和索引由契约 codegen 自动生成。包只写工程内 migration/评审材料，不连接数据库或执行 DDL；复杂回填和跨库数据迁移仍需人工设计。
+> CREATE、受限 ALTER 和索引由契约 codegen 自动生成。生成前先通过 `docs/db-spec` 事实源门禁；包只写工程内 migration/评审材料，不连接数据库或执行 DDL。
+
+## 先建立文档镜像
+
+`docs/db-spec/*.json` 必须忠实提取已评审数据库设计文档，字段数组顺序就是数据库基线顺序。文档表必须同名复用；不足时先在末尾扩字段，只有独立业务边界确有必要才新建表。合法扩展复制 `.wl-skills-bd/db-governance.example.json` 为 `db-governance.json`，登记用途、原因、来源、审批人和审批号。
+
+`codegen validate/plan/apply` 与 `db preview` 共用同一门禁；表名、字段大小写/顺序/类型/可空性/默认值/注释或扩展登记有一项不符即零写入。
+
+```json
+{
+  "tables": [{
+    "name": "pl_charge",
+    "comment": "进程跟踪",
+    "fields": [
+      { "name": "id", "dbType": "varchar(64)", "nullable": false, "comment": "主键ID" },
+      { "name": "heat_id", "dbType": "varchar(64)", "nullable": false, "comment": "炉次ID" }
+    ]
+  }]
+}
+```
+
+受管表镜像必须列出完整物理字段（含治理字段）；数组顺序就是目标列序。不要从现有代码或数据库反向猜文档缺失值。
 
 ## 新资源 CREATE
 
@@ -61,6 +82,7 @@ expand 版本只做兼容扩展：
 |---|---|---|
 | 字符串 | `VARCHAR2(N CHAR)` | `VARCHAR(N)` |
 | 自增 | 团队序列/主键策略 | 团队主键策略或 AUTO_INCREMENT |
+| 命名 | `UPPER_SNAKE_CASE` | `lower_snake_case` |
 | 注释 | 独立 `COMMENT ON` | 列/表定义内 COMMENT |
 | 布尔 | 数字/字符约定 | TINYINT/数字约定 |
 
@@ -68,10 +90,10 @@ expand 版本只做兼容扩展：
 
 ## 验收
 
-1. 人工评审目标库、SQL、索引和恢复策略；
+1. 人工评审文档镜像、目标库、SQL、索引和恢复策略；
 2. 在受控测试环境执行正向脚本；
 3. 执行契约中的 verification SQL 和业务回归；
-4. 由 DBA/CD 审批生产执行；
+4. dev/sit 一次审批后连续执行整链；pre/prod 由 DBA/CD 按变更单执行；
 5. 失败时按已审批方案处置并留审计记录。
 
 任何步骤都不得因“AI 已生成”而跳过。

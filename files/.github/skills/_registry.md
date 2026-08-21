@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.17.9）
+# Backend Skills 注册表（v0.20.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 frontmatter 严格一致，改一处必须同步另一处。
@@ -38,14 +38,18 @@
 
 | 任务类型 | 模式 | 触发词 | 规则子集 | 工具 |
 |---|---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B26 子集 + J | codegen |
-| add-api | 路由 | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26 | codegen 增量 |
-| add-field | 路由 | 加字段/落库 | B3/B4/B7/B18/B25/B26 | codegen + db |
-| add-business-cmd | 路由 | 状态机/审批 | B5/B8/B17/B20/B24/B25/B26 | codegen 增量 |
-| fix-bug | 路由 | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26 | safe-fix + troubleshoot |
-| refactor | 路由 | 重构/优化 | B5-B12/B23/B24/B25/B26 | validate |
-| audit | readonly | 审计/体检 | B1-B26 | doctor + validate |
+| new-service | full | 新开发/全套CRUD | B1-B31 子集 + J | codegen |
+| add-api | 路由 | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31 | codegen 增量 |
+| add-field | 路由 | 加字段/落库 | B3/B4/B7/B18/B25/B26/B31 | codegen + db |
+| add-business-cmd | 路由 | 状态机/审批 | B5/B8/B17/B20/B24/B25/B26/B31 | codegen 增量 |
+| fix-bug | 路由 | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31 | safe-fix + troubleshoot |
+| refactor | 路由 | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30/B31 | validate |
+| audit | readonly | 审计/体检 | B1-B31 | doctor + validate |
 | config-op | config | 配置/连不上 | config-doctor L0~L8 | config + troubleshoot |
+
+## v0.20 数据库事实源门禁
+
+建表、加字段、Entity/Mapper 生成和数据库审计必须触发 `data/db-migration` 并读取 standards/29。文档表同名复用；字段全属性/顺序一致；扩展字段只在末尾且有来源/审批，新表必须说明基线表为何不能承载。dev/sit 一次审批连续执行，不能降低结构正确性门禁。
 
 `task` 是只读指挥层：识别意图→给 Skill/规则/步骤，不直接写代码；写操作统一走 codegen plan/apply（planHash+确认）或 safe-fix/config。
 
