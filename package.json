@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.20.0",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、代码生成、质量门与数据治理闭环（v0.20.0：数据库文档基线复用 + 全属性顺序门禁 + 环境分级执行）",
+  "version": "0.20.1",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、代码生成、质量门与数据治理闭环（v0.20.1：数据库文档基线复用 + 全属性顺序门禁 + 环境分级执行）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
