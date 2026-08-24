@@ -75,8 +75,8 @@ const serviceTest = read("ServiceTest.java.tmpl");
 assert.match(serviceTest, /<wl-custom name="tests">/);
 
 const mapperXml = read("Mapper.xml.tmpl");
-assert.match(mapperXml, /COMPANY_ID\s*=\s*#\{companyId\}/);
-assert.match(mapperXml, /AND \{\{softDeleteColumn\}\} = \{\{softDeleteActiveValue\}\}[\s\S]*AND REVISION = #\{expectedRevision\}/, "原子更新必须同时约束 profile 有效标记和版本");
+assert.match(mapperXml, /\{\{companyIdColumn\}\}\s*=\s*#\{companyId\}/);
+assert.match(mapperXml, /AND \{\{softDeleteColumn\}\} = \{\{softDeleteActiveValue\}\}[\s\S]*AND \{\{revisionColumn\}\} = #\{expectedRevision\}/, "原子更新必须同时约束 profile 有效标记和版本");
 assert.match(mapperXml, /SET \{\{softDeleteColumn\}\} = \{\{softDeleteDeletedValue\}\}/);
 assert.doesNotMatch(mapperXml, /IS_DELETE\s*=\s*[01]/, "Mapper 软删除值禁止硬编码");
 const executableMapperXml = mapperXml.replace(/<!--[\s\S]*?-->/g, "");

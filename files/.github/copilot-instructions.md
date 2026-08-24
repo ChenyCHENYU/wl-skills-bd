@@ -1,6 +1,6 @@
 # Copilot Instructions — wl-skills-bd 后端主入口
 
-本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 28 条。
+本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 29 条。
 
 ## 技术基线
 
@@ -23,7 +23,7 @@
   → planHash + 人工确认 → apply
   → contract diff（前端/OpenAPI/权限）
   → contract diff --strict（wl-api-contract/OpenAPI/权限/completion）
-  → validate B1~B31（quick/staged 需查看 coverage）
+  → validate B1~B31
   → Maven verify -Pwl-quality（J1~J5/J8）
   → DDL/权限/发布人工卡口
 ```
@@ -65,12 +65,12 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 | 工具 | 作用 |
 |---|---|
-| `wls_be_validate` | B1~B31 只读扫描；默认摘要，返回 coverage/status，支持 quick/staged/changed |
+| `wls_be_validate` | B1~B31 只读扫描 |
 | `wls_be_doctor` | 环境与门禁诊断 |
 | `wls_be_codegen` | validate/plan/受控 apply |
 | `wls_be_contract` | show/diff 前端、OpenAPI、权限 |
 | `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
-| `wls_be_standards` | 查询 28 条规范 |
+| `wls_be_standards` | 查询 29 条规范 |
 | `wls_be_templates` | 查询 16 个模板 |
 | `wls_be_db_preview` | 只读 DDL/Expand-Contract 预览 |
 | `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |

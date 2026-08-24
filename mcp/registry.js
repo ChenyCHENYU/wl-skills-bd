@@ -115,10 +115,10 @@ const fixTool = {
 
 const standardsTool = {
   name: "wls_be_standards",
-  description: "查询 28 条后端规范。无参返回索引；id=01~28 返回指定全文。只读。",
+  description: "查询 29 条后端规范。无参返回索引；id=01~29 返回指定全文。只读。",
   inputSchema: {
     type: "object",
-    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-8])$" } },
+    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-9])$" } },
     additionalProperties: false,
   },
   handle(args) {

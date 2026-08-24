@@ -6,19 +6,38 @@
 
 ## [Unreleased]
 
-## [0.20.0] - 2026-08-24（事实索引、双向漂移与验证链精益化）
+## [0.20.2] - 2026-08-24（验证覆盖、环境预检与 MCP 精益化）
 
 ### Added
 
-- 统一 Source Index：B31 与 db-drift 只读取 catalog 登记/兼容回退的契约根和迁移根，避免各节点自行猜目录或全仓扫描。
-- db-drift 双向检查期望表/列与线上快照，新增缺表 error；DDL 回执强制 planHash、migrationHash、审批号、scope 和显式 confirm，receipt 幂等并带账本锁。
-- Java/Javac/Maven 预检与 doctor 工具路径/实际 Java 版本证据；Java 8 fixture 不再等到深层编译阶段才暴露环境错误。
-- MCP validate 支持 B1~B31、rules/detail/maxItems/maxBytes/staged/changed，默认摘要并明确 complete/partial 覆盖；contract/db/test 默认不重复返回大正文。
+- Java/Javac/Maven 预检与 doctor 工具路径/实际 Java 版本证据；质量夹具显式锁定 Java 8 compiler 参数，避免本机 Maven settings 注入高版本导致误判。
+- validate/MCP 返回 complete/partial coverage 与 skippedRules；MCP 支持 rules/detail/maxItems/maxBytes/staged/changed，默认摘要以降低上下文 token。
 
 ### Changed
 
-- 原子文本/JSON 写入使用随机 O_EXCL 临时文件、权限 0600、fsync 和目录同步，降低并发临时文件冲突与掉电半写风险。
-- `npm test` 纳入 db-consistency 回归；版本/规则自检动态覆盖 catalog 中全部 B 规则（含 B31）。
+- 原子文本/JSON 写入使用随机 O_EXCL 临时文件、0600、fsync 和目录同步；db-drift/DDL 账本沿用远端全属性事实源并增加 fail-closed/缺表对账、幂等回执和并发锁。
+- npm test 纳入 db-consistency 回归；版本自检动态覆盖 catalog 中全部 B 规则。
+
+## [0.20.1] - 2026-08-22（数据库治理发布补丁）
+
+### Changed
+
+- 以 patch 版本正式发布 0.20 数据库事实源治理能力，并同步 npm 包、锁文件、README 徽章及安装模板版本标识。
+
+## [0.20.0] - 2026-08-22（数据库事实源强门禁）
+
+### Added
+
+- 新增 standards/29：文档基线表必须同名复用，字段名称/大小写/顺序/类型/可空性/默认值/注释精确对账；扩展字段末尾追加，新表/字段必须登记业务依据与审批。
+- B31 接入 `codegen validate/plan/apply` 与 `db preview`，事实源 fingerprint 进入 planHash；DDL 预览展示基线门禁和环境执行通道。
+- 数据库快照支持字段全属性漂移检测；现场 DDL 账本改为有期限宽限，不能永久替代文档、契约和 Flyway。
+- 新增数据库治理回归测试，覆盖基线复用、换序/类型/注释漂移、扩展审批、SIT 单次审批连续执行及快照对账。
+
+### Changed
+
+- MySQL 物理表、字段、索引及治理 SQL 统一 `lower_snake_case`；Oracle 继续 `UPPER_SNAKE_CASE`。移除 MySQL DDL 的显式 `ENGINE=InnoDB`，避免 OceanBase 兼容层告警。
+- dev/sit 保持完整结构门禁，但流程收敛为一次 planHash 审批后连续执行；pre/prod 保留 DBA/CD、备份恢复和变更窗口。
+- 废止用 `naming-waivers` 长期掩盖文档表改名的做法；文档不合理必须先经业务确认并修订事实源。
 
 ## [0.19.0] - 2026-08-20（数据库源头一致性闭环）
 

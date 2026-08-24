@@ -4,11 +4,13 @@
 > - 变更类型：`{{migrationKind}}`
 > - 阶段：`{{migrationPhase}}`
 > - 风险等级：`{{ddlRiskLevel}}`
+> - 文档镜像门禁：`{{dbSourceGateStatus}}`（{{dbSourceSpecTables}} 张基线表，fingerprint `{{dbSourceFingerprint}}`）
+> - 环境执行通道：`{{executionLane}} / {{executionApprovalMode}}`
 {{#ddlApprovalRef}}
 > - 审批单：`{{ddlApprovalRef}}`
 {{/ddlApprovalRef}}
 
-本报告只用于评审，`wl-skills-bd` 不连接数据库、不执行 SQL。执行前必须由应用负责人与 DBA 核对表量、锁影响、窗口、备份和回滚策略。
+本报告只用于评审，`wl-skills-bd` 不连接数据库、不执行 SQL。结构正确性门禁在所有环境相同；流程强度按环境分级：{{executionRule}}
 
 ## 正向 SQL
 
@@ -29,6 +31,8 @@
 ## 人工确认清单
 
 - [ ] Flyway 版本全局唯一，未改写任何已应用 migration。
+- [ ] 表名、字段名/大小写、字段顺序、类型、可空性、默认值、注释与 `docs/db-spec` 一致。
+- [ ] 文档基线表已优先复用；扩展字段只在末尾，扩展表/字段均有来源、用途与审批登记。
 - [ ] SQL 目标库与 `dbCluster` 归属一致。
 - [ ] expand 变更先部署兼容应用；contract 变更已有审批单且备份可用。
 - [ ] 已评估 DDL 锁表时长、超时、索引空间和主从延迟。

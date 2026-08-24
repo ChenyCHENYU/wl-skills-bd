@@ -40,7 +40,7 @@
 ## 字段命名
 
 - Java 字段：camelCase（`categoryCode` / `createDateTime`）
-- 数据库字段：UPPER_SNAKE_CASE（`CATEGORY_CODE` / `CREATE_DATE_TIME`）
+- 数据库字段按方言统一：Oracle `UPPER_SNAKE_CASE`（`CATEGORY_CODE`），MySQL `lower_snake_case`（`category_code`）；同一 schema 禁止混用
 - Mapper XML 联表/VO 查询必须显式 `AS camelCase`；简单 Entity 查询可使用 MyBatis-Plus 驼峰映射
 
 ## 常量命名

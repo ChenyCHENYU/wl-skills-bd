@@ -20,7 +20,7 @@
 ③ contract diff ──► wl-api-contract + OpenAPI 3 + 权限清单 + completion 差异
   │
   ▼
-④ validate ──► B1~B31 text/json/markdown/SARIF（quick/staged 明确 partial 覆盖）
+④ validate ──► B1~B31 text/json/markdown/SARIF
   │
   ▼
 ⑤ Maven quality ──► ArchUnit + Checkstyle + PMD7 + SpotBugs + Spotless + JaCoCo
@@ -98,7 +98,7 @@ wl-skills-bd validate . --strict
 wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```
 
-B1~B31 独立执行；忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。quick/staged 的 skippedRules 不能当作完整通过，需补一次 full 扫描；error 未清零不得进入下一阶段。
+B1~B31 独立执行；数据库 B31 不接受代码行抑制绕过事实源门禁。其他忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。error 未清零不得进入下一阶段。
 
 ## ⑤ Java/Maven 质量门
 

@@ -134,17 +134,19 @@ db/migration/
 - SQL 方言 fixture：Oracle/MySQL 分别验证。
 - contract/schema diff：Entity、迁移和契约字段一致。
 
-## 8. 源头一致性与漂移对账（v0.20，B31）
+## 10. 源头一致性与漂移对账（v0.20，B31）
 
-- 需求文档表结构必须提取为机器可读镜像 `docs/db-spec/*.json`（tables[].name/cname/fields[]），随文档变更同步更新；缺失时 B31 仅提示不阻断。
-- 表/字段实现与文档不一致：未登记豁免 → B31 error；经审批改名须登记 `.wl-skills-bd/naming-waivers.json`（from/to/reason/approvedBy/date，可选 baselineFields），豁免项永久保留 warn 标识，不得静默放行。
-- 线上库结构变更只允许两条路径：Flyway 迁移（codegen 生成、DBA/CD 执行）或经审批的现场变更（事后必须 `wl-skills-bd db executed` 回执入 DDL 账本）。
-- `wl-skills-bd db drift --snapshot <file>` 定期双向对账：期望表/列缺失、无源列/无主表 = error（疑似漏迁移或绕过审批直接改库）；契约与迁移根由 Source Index 显式登记，不扫描整个项目猜事实。
-- `db executed` 回执必须绑定 64 位 `planHash`、`migrationHash`、审批号、`scope` 和 `--confirm`；重复 receipt 幂等，账本解析失败时 drift fail-closed。
-- 禁止对已执行迁移文件做任何修改（Flyway 不可变）；禁止在受管库上手写 ALTER 而不落迁移或账本。
+- 需求文档表结构必须提取为 `docs/db-spec/*.json`，按原顺序记录表名、表注释、字段名/大小写，并尽可能记录类型、可空性、默认值和注释。受管项目缺失镜像时 codegen/db preview 直接阻断。
+- 文档表必须同名复用，不再允许用 naming waiver 长期掩盖表改名。文档不合理先由业务确认并修订文档，不能先按代码建另一张表。
+- 扩展字段只能追加在文档字段末尾；扩展表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、来源、审批人和审批号。
+- `codegen validate/plan/apply`、`db preview` 与 B31 共用同一门禁，事实源 fingerprint 进入 planHash。
+- `wl-skills-bd db drift --snapshot <file>` 对账线上结构；无源列/无主表为 error。现场执行账本仅用于临时取证，不能替代文档、契约和 Flyway 回写。
+- 详细的基线复用、退役和环境分级规则见 standards/29。
 
 ## 变更记录
 
-- 2026-08-20 v0.19：新增 B31 源头一致性（docs/db-spec ↔ 契约）、naming-waivers 审批豁免通道、db drift 漂移对账与 DDL 执行账本（db executed/ledger）、catalog rules 注册表自检。\n- 2026-07-18 v0.14：ALTER 强制 expand/contract 分阶段；expand 仅兼容扩展，contract drop 需 approvalRef；增加只读 verification SQL、Flyway 版本不可变和 DDL_PREVIEW 门禁。
+- 2026-08-22 v0.20：事实源门禁升级为表/字段全属性与顺序对账，基线表必须复用，扩展需登记；流程按环境分级。
+- 2026-08-20 v0.19：新增 B31 源头一致性、db drift 漂移对账与 DDL 执行账本、catalog rules 注册表自检。
+- 2026-07-18 v0.14：ALTER 强制 expand/contract 分阶段；expand 仅兼容扩展，contract drop 需 approvalRef；增加只读 verification SQL、Flyway 版本不可变和 DDL_PREVIEW 门禁。
 - 2026-07-18 v0.9：契约 `alter` 字段自动生成 ALTER SQL（add/modify/drop）+ Expand-Contract 阶段标注；`indexes` 字段渲染自定义索引；Rollback.md 含变更类型与 Expand-Contract 段。
 - 2026-07-18 v0.8：删除重复旧章节，修正 Flyway rollback、软删唯一键与批处理规则，引入 expand-contract。

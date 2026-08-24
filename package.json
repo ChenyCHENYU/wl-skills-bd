@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.20.0",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、生产安全契约、代码生成、质量门、MCP 与数据治理闭环（v0.20.0：Source Index、双向漂移对账、Java 预检与精简 MCP 输出）",
+  "version": "0.20.2",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、生产安全契约、代码生成、质量门、MCP 与数据治理闭环（v0.20.2：验证覆盖、Java 预检、精简 MCP 与安全写链）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"

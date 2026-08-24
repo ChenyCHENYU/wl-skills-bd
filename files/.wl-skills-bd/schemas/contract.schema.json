@@ -172,11 +172,13 @@
         "required": ["name", "column", "javaType", "dbType", "comment", "writable"],
         "properties": {
           "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
-          "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "column": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "description": "Oracle 必须大写，MySQL 必须小写；运行时按方言强校验" },
           "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime", "List<String>", "List<Long>"] },
           "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
           "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
           "requiredOnCreate": { "type": "boolean", "default": false },
+          "nullable": { "type": "boolean", "description": "物理列可空性；与 API requiredOnCreate 分离" },
+          "defaultValue": { "description": "物理默认值；仅在数据库设计文档明确给出时声明" },
           "requiredOnQuery": { "type": "boolean", "default": false, "description": "仅当查询接口契约明确要求时启用；不得由数据库 NOT NULL 推导" },
           "writable": { "type": "boolean", "default": false, "description": "必须显式声明；状态/审批等命令字段应为 false" },
           "queryMode": { "enum": ["none", "eq", "like"], "default": "none" },
@@ -212,7 +214,7 @@
         "required": ["name", "columns"],
         "properties": {
           "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 30 },
-          "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" } },
+          "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
           "unique": { "type": "boolean", "default": false }
         }
       }
@@ -353,7 +355,7 @@
         "type": { "enum": ["one-to-many"], "description": "当前仅支持一对多" },
         "detailEntity": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
         "detailContractId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,79}$" },
-        "joinColumn": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "从表外键列名" },
+        "joinColumn": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "description": "从表外键列名；大小写按数据库方言" },
         "cascadeSoftDelete": { "type": "boolean", "default": false, "description": "主表软删时同步软删从表" },
         "exposeQuery": { "type": "boolean", "default": true, "description": "主 Controller 暴露 queryXxxByParentId 接口" },
         "externalId": { "$ref": "#/$defs/stableId" }
@@ -365,7 +367,7 @@
       "properties": {
         "type": { "enum": ["add", "drop", "modify"] },
         "field": { "$ref": "#/$defs/alterField", "description": "add 时必填；expand 新增列必须允许 NULL" },
-        "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "drop/modify 时必填" },
+        "column": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "description": "drop/modify 时必填" },
         "fromDbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$", "description": "modify 时必填，用于评审变更前类型" },
         "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$", "description": "modify 时必填" },
         "comment": { "type": "string", "minLength": 1, "maxLength": 100, "description": "modify 时必填" },
@@ -378,11 +380,13 @@
       "required": ["name", "column", "javaType", "dbType", "comment"],
       "properties": {
         "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
-        "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "column": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
         "javaType": { "enum": ["String", "Integer", "Long", "Boolean", "BigDecimal", "LocalDate", "LocalDateTime", "List<String>", "List<Long>"] },
         "dbType": { "type": "string", "pattern": "^[A-Z][A-Z0-9_(), ]*$" },
         "comment": { "type": "string", "minLength": 1, "maxLength": 100 },
         "requiredOnCreate": { "const": false },
+        "nullable": { "const": true, "description": "expand 新列必须先允许 NULL" },
+        "defaultValue": { "description": "设计文档明确给出时声明" },
         "queryMode": { "enum": ["none", "eq", "like"] },
         "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 }
       }
@@ -395,7 +399,7 @@
         "required": ["name", "columns"],
         "properties": {
           "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 64 },
-          "columns": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" } },
+          "columns": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
           "unique": { "type": "boolean", "default": false }
         }
       }

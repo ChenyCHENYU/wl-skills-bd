@@ -17,6 +17,7 @@ risk: 🔴 高风险（必经人工确认）
 🚀 已触发技能 db-migration/SKILL.md
 ✅ 已读取 standards/index.md             → 任务类型 D
 ✅ 已读取 standards/12-database-ddl.md   → 建表规则
+✅ 已读取 standards/29-database-source-governance.md → 文档基线与扩展门禁
 ✅ 已读取 standards/11-security-permission.md → 租户字段强制
 ⚠️ 高风险操作：将生成预览文件，等待人工确认
 ```
@@ -24,6 +25,8 @@ risk: 🔴 高风险（必经人工确认）
 ## 前置检查
 
 - [ ] Entity 已存在（建表场景）或字段映射已明确（ALTER 场景）
+- [ ] `docs/db-spec/*.json` 已从已评审文档提取，目标表名、表注释和有序字段完整
+- [ ] 文档表已优先同名复用；扩展字段位于末尾且已登记，新增表已说明原表为何不能承载
 - [ ] 业务唯一键已确认（用于建唯一索引）
 - [ ] database/dbCluster/Flyway version/verificationSql/rollbackStrategy 已明确
 - [ ] ALTER 已选择 `phase=expand|contract`；contract 已取得可追溯 approvalRef
@@ -60,6 +63,12 @@ reports/DDL_PREVIEW_{yyyymmdd_HHmm}.md                    ← 人工确认材料
 - ALTER TABLE DROP COLUMN（ADD 的反向）+ 数据恢复
 - ALTER TABLE MODIFY 回原类型
 
+## 环境分级确认
+
+- dev/sit：结构门禁不降级；一次 planHash 审批后连续跑完 precheck、migrate、validate、postcheck、冒烟，不在每个只读步骤重复等待。
+- uat：业务负责人和执行人确认同一冻结包后连续执行。
+- pre/prod：变更单、DBA/CD、备份/恢复、窗口和观察证据齐备后执行。
+
 ## 🔴 强制人工确认
 
 ```
@@ -70,7 +79,7 @@ reports/DDL_PREVIEW_{yyyymmdd_HHmm}.md                    ← 人工确认材料
 
 请人工执行以下步骤：
 1. 评审 reports/DDL_PREVIEW_{ts}.md
-2. 在测试环境执行正向脚本
+2. 在测试环境按环境通道连续执行正向脚本与验证
 3. 验证业务无回归后由 DBA / CD 流水线执行生产环境
 4. 失败时按已审批的恢复/roll-forward/人工回退方案处置
 
@@ -80,6 +89,8 @@ AI 不会直接执行任何 DDL。
 ## 约束
 
 - 一切 DDL 必有恢复/roll-forward 方案；禁止把反向 SQL 命名为 Flyway `V...__rollback.sql`
+- 文档表不得改名或被同义扩展表架空；字段名/大小写/顺序/类型/可空性/默认值/注释必须与镜像一致
+- 新字段只能在文档字段末尾追加，新表/字段必须在 db-governance 中登记用途、来源和审批
 - verificationSql 只允许单条无注释、无锁、无副作用的 SELECT；禁止分号、FOR UPDATE、SLEEP/BENCHMARK 和序列取值
 - 唯一索引不得把 `IS_DELETE` 当作重复软删解决方案；索引列必须存在且不得重复
 - VARCHAR2 必用 `CHAR` 语义

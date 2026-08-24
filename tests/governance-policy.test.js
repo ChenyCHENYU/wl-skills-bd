@@ -16,17 +16,17 @@ const baseContract = {
   database: "mysql",
   entity: { table: "pl_test", name: "PlTest", description: "测试实体" },
   fields: [
-    { column: "NAME", dbType: "VARCHAR(64)", javaType: "String", comment: "名称" },
+    { column: "name", dbType: "VARCHAR(64)", javaType: "String", comment: "名称" },
   ],
   indexes: [],
 };
 
 function softDeleteValueOf(sql, activeValue, deletedValue) {
-  // 从 DDL 提取 IS_DELETE 列定义，确认 DEFAULT 值和注释
+  // 从 DDL 提取 is_delete 列定义，确认 DEFAULT 值和注释
   return {
-    defaultIs: sql.includes(`IS_DELETE TINYINT(1) NOT NULL DEFAULT ${activeValue}`),
+    defaultIs: sql.includes(`is_delete TINYINT(1) NOT NULL DEFAULT ${activeValue}`),
     commentHas: sql.includes(`有效标记：${activeValue}=有效，${deletedValue}=已删除`),
-    indexUsesIsDelete: sql.includes("(COMPANY_ID, IS_DELETE)"),
+    indexUsesIsDelete: sql.includes("(company_id, is_delete)"),
   };
 }
 
@@ -38,9 +38,9 @@ function fail(label, msg) { throw new Error("❌ " + label + ": " + msg); }
 console.log("=== 1. 默认值兜底（无 profile，等价历史行为）===");
 {
   const mysql = renderMysqlMigration(baseContract);
-  assert.ok(mysql.includes("IS_DELETE TINYINT(1) NOT NULL DEFAULT 1"), "默认应为 1有效");
+  assert.ok(mysql.includes("is_delete TINYINT(1) NOT NULL DEFAULT 1"), "默认应为 1有效");
   assert.ok(mysql.includes("有效标记：1=有效，0=已删除"), "默认注释应为 1/0");
-  assert.ok(mysql.includes("CREATE_DATE_TIME VARCHAR(19)"), "默认时间应为 VARCHAR(19)");
+  assert.ok(mysql.includes("create_date_time VARCHAR(19)"), "默认时间应为 VARCHAR(19)");
   ok("MySQL 默认 1有效/0删除 + VARCHAR(19) 兜底");
 
   const oracle = renderOracleMigration(baseContract);
@@ -58,9 +58,9 @@ console.log("\n=== 2. 华新策略 0有效/4删除（codegen）===");
 {
   const walsinProfile = { softDelete: { activeValue: 0, deletedValue: 4 } };
   const mysql = renderMysqlMigration(baseContract, walsinProfile);
-  assert.ok(mysql.includes("IS_DELETE TINYINT(1) NOT NULL DEFAULT 0"), "华新默认应为 0有效");
+  assert.ok(mysql.includes("is_delete TINYINT(1) NOT NULL DEFAULT 0"), "华新默认应为 0有效");
   assert.ok(mysql.includes("有效标记：0=有效，4=已删除"), "华新注释应为 0/4");
-  assert.ok(mysql.includes("(COMPANY_ID, IS_DELETE)"), "索引仍用 IS_DELETE");
+  assert.ok(mysql.includes("(company_id, is_delete)"), "索引仍用 is_delete");
   ok("MySQL 0有效/4删除 + 正确注释 + 索引");
 
   const oracle = renderOracleMigration(baseContract, walsinProfile);
@@ -73,7 +73,7 @@ console.log("\n=== 3. 治理时间类型自定义（DATETIME(3)）===");
 {
   const profile = { auditTime: { mysqlType: "DATETIME(3)", oracleType: "TIMESTAMP(3)" } };
   const mysql = renderMysqlMigration(baseContract, profile);
-  assert.ok(mysql.includes("CREATE_DATE_TIME DATETIME(3)"), "应生成 DATETIME(3)");
+  assert.ok(mysql.includes("create_date_time DATETIME(3)"), "应生成 DATETIME(3)");
   assert.ok(!mysql.includes("VARCHAR(19)"), "不应再出现 VARCHAR(19)");
   ok("MySQL DATETIME(3) 覆盖");
 

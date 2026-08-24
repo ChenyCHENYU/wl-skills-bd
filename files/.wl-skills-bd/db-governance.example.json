@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "enforcement": "strict",
+  "extensionTables": [
+    {
+      "table": "pl_example_extension",
+      "purpose": "仅示例：文档基线确实无法承载时的新业务实体",
+      "reason": "仅示例：写明为什么扩字段仍不能解决",
+      "sourceRef": "REQ-EXAMPLE-001",
+      "approvedBy": "业务负责人",
+      "approvalRef": "DB-EXAMPLE-001"
+    }
+  ],
+  "extensionFields": [
+    {
+      "table": "pl_example_baseline",
+      "column": "example_extension_code",
+      "purpose": "仅示例：基线字段不足时追加的业务字段",
+      "reason": "仅示例：写明字段来源和不可复用字段",
+      "sourceRef": "REQ-EXAMPLE-002",
+      "approvedBy": "业务负责人",
+      "approvalRef": "DB-EXAMPLE-002"
+    }
+  ],
+  "waivers": [
+    {
+      "kind": "field-property",
+      "table": "pl_example_baseline",
+      "column": "legacy_code",
+      "property": "dbType",
+      "reason": "仅示例：存量上游暂不能同步类型，禁止用于表名或字段顺序豁免",
+      "sourceRef": "UPSTREAM-EXAMPLE-003",
+      "approvedBy": "业务负责人",
+      "approvalRef": "DB-EXAMPLE-003"
+    }
+  ]
+}

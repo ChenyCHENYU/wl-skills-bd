@@ -49,14 +49,20 @@ assert.strictEqual(validate(contractWithoutApproval).ok, false, "contract 删除
 
 const mysql = structuredClone(example);
 mysql.database = "mysql";
-mysql.entity.table = "MDM_FEATURE_CATEGORY_MY";
+mysql.entity.table = "mdm_feature_category_my";
+for (const field of mysql.fields) field.column = field.column.toLowerCase();
 mysql.fields[0].dbType = "VARCHAR(64)";
 mysql.fields[1].dbType = "VARCHAR(200)";
 mysql.fields[2].dbType = "INT";
-mysql.indexes = [{ name: "UK_CATEGORY_CODE", columns: ["COMPANY_ID", "CATEGORY_CODE"], unique: true }];
+mysql.indexes = [{ name: "uk_category_code", columns: ["company_id", "category_code"], unique: true }];
 const mysqlLoaded = validate(mysql);
 assert.strictEqual(mysqlLoaded.ok, true, JSON.stringify(mysqlLoaded.errors));
-assert.match(renderMigration(mysqlLoaded.contract), /UNIQUE KEY UK_CATEGORY_CODE \(COMPANY_ID, CATEGORY_CODE\) USING BTREE/);
+const mysqlSql = renderMigration(mysqlLoaded.contract);
+assert.match(mysqlSql, /UNIQUE KEY uk_category_code \(company_id, category_code\) USING BTREE/);
+assert.doesNotMatch(mysqlSql, /ENGINE=InnoDB/i, "OceanBase/MySQL 兼容 DDL 不应硬编码 InnoDB");
+const mixedCaseMysql = structuredClone(mysql);
+mixedCaseMysql.fields[0].column = "CATEGORY_CODE";
+assert.strictEqual(validate(mixedCaseMysql).ok, false, "MySQL 物理列必须统一 lower_snake_case");
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-db-safety-"));
 try {

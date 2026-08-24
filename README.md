@@ -2,10 +2,10 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.20.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.20.2-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
-[![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
+[![Standards](https://img.shields.io/badge/standards-29-orange.svg)]()
 
 当前唯一经过验证的生成 Profile 是 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。包内能力以机器 Schema、兼容矩阵和回归测试为准，不从存量业务代码猜约定。
 
@@ -25,6 +25,7 @@
 | 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
+| 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、服务/API/库表全局去重、codegen 上下文哈希门禁 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
@@ -43,7 +44,7 @@
 - **运行期资源闭环**：B26 同时核对实际 Mapper XML 与本地 `mapper-locations`；B28 要求容器按接口解析唯一 Bean并验证装饰器委托；B29 按生效 Profile 检查 PageDTO 默认值和上限；B30 输出 Controller 真实端点清单并阻断重复方法+路径。
 - **通用而非业务定制**：执行器不内置客户、模块、表名、字段名或状态值，所有差异只来自项目契约、Profile、兼容矩阵和显式证据。
 
-### 0.19.0 Controller 真实端点闭环
+### v0.18.2 Controller 真实端点闭环
 
 - `validate` 结果包含从源码提取的 `endpoints[]`（HTTP 方法、完整路径、处理方法、文件和行号）。
 - B30 阻断重复完整路由，避免新增接口被同路径覆盖或前端调用到不存在的隐式地址。
@@ -200,16 +201,19 @@ wl-skills-bd contract diff wl-contract.json \
 
 核对范围包括 Profile/协议、资源、API_CONFIG、HTTP 方法/路径、查询/请求/响应字段、`code=2000`、分页、`revision`、权限码和双方 completion。与前端 `wl-skills-kit` 的独立边界和严格握手见 [前后端契约指南](files/.github/guides/frontend-backend-contract.md)。
 
-## 数据库源头一致性闭环（v0.20）
+## 数据库事实源闭环（v0.20）
 
-针对 2026-08-20 生产事故（表实现时 32 张擅自改名、判定字段漏实现、pl_slab_main 被现场直接加列、pl_fin_plan 无主出现在库中）建立的四方对账与豁免通道：
+针对 2026-08-20 数据库治理事故（文档表被改名/架空、字段漏建、现场直接加列、扩展表无来源、SIT 重复审批返工）建立可执行门禁：
 
 **事实源链条**：需求文档镜像（`docs/db-spec/*.json`）↔ 契约（wl-contract.json）↔ Flyway 迁移 ↔ 线上库快照。
 
-- **B31 源头一致性**：文档表/字段逐项对照契约；未登记豁免的改名/漏实现 → error 阻断；已审批豁免 → warn 保留可追溯标识（理由/审批人/日期）。无 `docs/db-spec/` 时 B31 仅提示不阻断。
-- **豁免登记**：`.wl-skills-bd/naming-waivers.json` 登记 `from→to` 改名映射与字段基线（baselineFields），豁免永不静默——validate/doctor 输出持续可见。
-- **`wl-skills-bd db drift --snapshot <file>`**：线上结构快照（DBA/只读账号导出的 `[{table,columns:[...]}]`）对账契约+迁移+DDL 账本；无源列/无主表 → error（绕过审批直接改库的机器检测），账本内变更 → warn 标识。
-- **`wl-skills-bd db executed --table X --column Y --scope column --plan-hash <sha256> --migration-hash <sha256> --approval-ref <单号> --confirm`**：DDL 执行回执入 `.wl-skills-bd/.state/ddl-ledger.json`；必须绑定预览计划、迁移内容和显式确认，重复回执幂等；drift 据此放行并保留审计痕迹；`db ledger` 查看全部执行记录。
+- **B31 精确门禁**：文档表必须同名复用；字段名称与大小写、顺序、类型、可空性、默认值、注释逐项对账。受管项目缺少 `docs/db-spec` 时，codegen 和 db preview 零写入阻断。
+- **扩展有依据**：基线不足先在原表末尾追加；新表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、需求/上游来源、审批人和审批号。旧 naming waiver 不再允许长期掩盖表改名。
+- **生成链同门**：B31、`codegen validate/plan/apply`、`db preview` 使用同一校验，文档/治理 fingerprint 进入 planHash；MySQL 生成器只接受并生成 `lower_snake_case`，Oracle 保持 `UPPER_SNAKE_CASE`。
+- **`wl-skills-bd db drift --snapshot <file>`**：推荐快照携带列序、类型、可空性、默认值和注释，精确对账文档与契约；无源表/字段或属性漂移均 error。
+- **现场变更只给短期宽限**：`db executed` 必须带 `--source-ref` 和审批号，默认 24 小时到期；到期前必须回写文档、契约和 Flyway，账本不再充当永久第二事实源。
+- **严结构、简流程**：dev/sit 的结构门禁不降级，但一次 planHash 审批后连续执行 precheck → migrate → validate → postcheck → 冒烟；pre/prod 才要求变更单、DBA/CD、备份恢复和窗口。
+- **可重建**：CI 用空 schema 跑 Flyway 全量 migrate/validate，再与全属性快照对账；真正恢复依赖数据备份/日志 + Git 中不可变迁移，DBeaver 临时导出不作为事实源。
 - **`wl-skills-bd catalog rules`**：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 的规则在扫描器有真实输出（杜绝幽灵规则）、J 系列如实标注"依赖项目 pom 接线"。
 
 安全边界不变：DDL 只生成不执行；本包不连接数据库（drift 用离线快照）；生产变更仍由 DBA/CD 审批执行，执行后用 `db executed` 回执闭环。
@@ -261,7 +265,7 @@ mvn verify -Pwl-quality
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
 | `wls_be_contract` | 否 | 协作契约 show/diff（前端/OpenAPI/权限/kit api.md） |
 | `wls_be_safe_fix` | 条件 | B3/B5 安全修复闭环 |
-| `wls_be_standards` | 否 | 读取 28 条规范 |
+| `wls_be_standards` | 否 | 读取 29 条规范 |
 | `wls_be_templates` | 否 | 读取 16 个模板 |
 | `wls_be_db_preview` | 否 | 只读预览 CREATE/ALTER DDL + Expand-Contract 阶段 |
 | `wls_be_export_permissions` | 条件 | 导出权限码为 kit SYS_PERMISSION_INFO.md 片段 |
@@ -386,12 +390,12 @@ bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点�
 | 任务 | 模式 | 触发词 | 规则子集 |
 |---|---|---|---|
 | new-service | full | 新开发/全套CRUD | B1-B31 子集 + J |
-| add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30 |
-| add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26 |
-| add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26 |
-| fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30 |
-| refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30 |
-| audit | readonly | 审计/体检 | B1-B31（quick/staged 仅 partial，必须补 full） |
+| add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31 |
+| add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26/B31 |
+| add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26/B31 |
+| fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31 |
+| refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30/B31 |
+| audit | readonly | 审计/体检 | B1-B31 |
 | config-op | config | 配置/连不上 | config-doctor |
 
 **路由与安全写链**：

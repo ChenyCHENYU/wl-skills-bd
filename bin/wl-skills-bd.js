@@ -34,11 +34,7 @@ function printJson(value) {
 }
 
 function stagedFiles(root) {
-  const result = spawnSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
-    cwd: root,
-    encoding: "utf8",
-    windowsHide: true,
-  });
+  const result = spawnSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"], { cwd: root, encoding: "utf8", windowsHide: true });
   if (result.status !== 0) return [];
   return (result.stdout || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
 }
@@ -187,21 +183,26 @@ function commandCodegen(args) {
   }
   if (subcommand === "validate") {
     const result = loadContract(contractArg, { projectRoot: root });
+    const sourceConsistency = result.ok
+      ? require("../lib/db-spec").checkContractAgainstDbSpec(root, result.contract, { source: result.file, profile: result.profile })
+      : null;
+    const sourceErrors = sourceConsistency ? sourceConsistency.issues.filter((item) => item.severity === "error") : [];
     const output = {
-      ok: result.ok,
+      ok: result.ok && sourceErrors.length === 0,
       contractFile: result.file,
       contractId: result.contract && result.contract.contractId,
       profile: result.profile && result.profile.id,
-      errors: result.errors,
-      warnings: result.warnings || [],
+      errors: [...(result.errors || []), ...sourceErrors.map((item) => ({ path: "$.databaseSource", message: item.message }))],
+      warnings: [...(result.warnings || []), ...(sourceConsistency ? sourceConsistency.issues.filter((item) => item.severity === "warn").map((item) => item.message) : [])],
+      sourceConsistency,
     };
     if (has(allArgs, "--json")) printJson(output);
-    else if (result.ok) {
+    else if (output.ok) {
       console.log(`✅ 契约有效：${output.contractId} (${output.profile})`);
       for (const warning of output.warnings) console.warn(`⚠ Profile 提示：${warning}`);
     }
-    else for (const error of result.errors) console.error(`${error.path}: ${error.message}`);
-    return result.ok ? 0 : 1;
+    else for (const error of output.errors) console.error(`${error.path}: ${error.message}`);
+    return output.ok ? 0 : 1;
   }
   if (!["plan", "apply"].includes(subcommand)) {
     console.error(`未知 codegen 子命令：${subcommand}`);
@@ -408,25 +409,22 @@ function commandDb(args) {
         const mark = item.severity === "error" ? "❌" : "⚠️ ";
         console.log(`${mark} [${item.kind}] ${item.message}`);
       }
-      if (result.summary) console.log(`\n汇总：表 ${result.summary.tables}，期望表 ${result.summary.expectedTables}，error ${result.summary.errors}，warn ${result.summary.warns}，账本 ${result.summary.ledgerEntries} 条`);
+      console.log(`\n汇总：表 ${result.summary.tables}，期望表 ${result.summary.expectedTables || "?"}，error ${result.summary.errors}，warn ${result.summary.warns}，账本 ${result.summary.ledgerEntries} 条`);
     }
     return result.ok ? 0 : 1;
   }
 
   if (subcommand === "executed") {
     const drift = require("../lib/db-drift");
-    const required = ["--table", "--approval-ref", "--plan-hash", "--migration-hash"];
+    const required = ["--table", "--approval-ref", "--source-ref", "--plan-hash", "--migration-hash"];
     for (const flag of required) {
       if (!option(allArgs, flag)) {
-        const detail = flag === "--plan-hash" || flag === "--migration-hash"
-          ? "（必须是 64 位 SHA-256，用于绑定预览计划和实际迁移）"
-          : "（执行回执入账本，drift 检测据此放行并保留标识）";
-        console.error(`db executed 需要 ${flag}${detail}`);
+        console.error(`db executed 需要 ${flag}（回执必须绑定事实源、审批、计划和迁移内容）`);
         return 1;
       }
     }
     if (!has(allArgs, "--confirm")) {
-      console.error("db executed 必须显式提供 --confirm；仅预览/未确认的回执不得写入账本");
+      console.error("db executed 必须显式提供 --confirm；未确认回执不得写入账本");
       return 1;
     }
     const entry = {
@@ -436,11 +434,10 @@ function commandDb(args) {
       planHash: option(allArgs, "--plan-hash"),
       migrationHash: option(allArgs, "--migration-hash"),
       approvalRef: option(allArgs, "--approval-ref"),
+      sourceRef: option(allArgs, "--source-ref"),
       executedBy: option(allArgs, "--by") || "dba",
-      environment: option(allArgs, "--environment") || undefined,
-      database: option(allArgs, "--database") || undefined,
-      migrationVersion: option(allArgs, "--migration-version") || undefined,
       note: option(allArgs, "--note") || "",
+      expiresAt: option(allArgs, "--expires-at") || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
     const result = drift.appendLedger(root, entry, { confirm: true });
     if (has(allArgs, "--json")) printJson({ ...result, entry });
@@ -448,9 +445,7 @@ function commandDb(args) {
       console.error(`DDL 执行回执未写入：${result.reason || "invalid-receipt"}`);
       for (const error of result.errors || []) console.error(`  - ${error}`);
       return 2;
-    } else {
-      console.log(`✅ 已记入 DDL 执行账本${result.idempotent ? "（幂等，无重复记录）" : ""}（${result.total} 条）：${result.file}`);
-    }
+    } else console.log(`✅ 已记入 DDL 执行账本${result.idempotent ? "（幂等，无重复记录）" : ""}（${result.total} 条）：${result.file}`);
     return result.ok ? 0 : 2;
   }
 
@@ -458,7 +453,6 @@ function commandDb(args) {
     const drift = require("../lib/db-drift");
     const ledger = drift.loadLedger(root);
     if (has(allArgs, "--json")) printJson(ledger);
-    else if (ledger.corrupt) console.error(`DDL 执行账本损坏或不可解析：${ledger.file}`);
     else if (ledger.executed.length === 0) console.log("DDL 执行账本为空");
     else for (const e of ledger.executed) {
       console.log(`${e.recordedAt} ${e.table}${e.column ? "." + e.column : ".*"} 审批:${e.approvalRef} 执行:${e.executedBy}${e.planHash ? " plan:" + e.planHash : ""}${e.note ? " — " + e.note : ""}`);
@@ -480,7 +474,16 @@ function commandDb(args) {
     else for (const error of loaded.errors) console.error(`${error.path}: ${error.message}`);
     return 1;
   }
-  const migrationSql = codegen.renderMigration(loaded.contract);
+  const dbSpec = require("../lib/db-spec");
+  const sourceConsistency = dbSpec.checkContractAgainstDbSpec(root, loaded.contract, { source: loaded.file, profile: loaded.profile });
+  const sourceErrors = sourceConsistency.issues.filter((item) => item.severity === "error");
+  if (sourceErrors.length > 0) {
+    if (has(allArgs, "--json")) printJson({ ok: false, errors: sourceErrors, sourceConsistency });
+    else for (const error of sourceErrors) console.error(`数据库事实源门禁：${error.message}`);
+    return 1;
+  }
+  const sourceTable = sourceConsistency.spec.tables.get(String(loaded.contract.entity.table).toLowerCase());
+  const migrationSql = codegen.renderMigration(loaded.contract, loaded.profile, sourceTable);
   const migrationFile = codegen.migrationFileBase(loaded.contract);
   const isAlter = Boolean(loaded.contract.alter);
   const output = {
@@ -491,7 +494,14 @@ function commandDb(args) {
     database: loaded.contract.database,
     migrationSql,
     indexes: loaded.contract.indexes || [],
-    note: "DDL 只生成不执行：生产变更由 DBA/CD 按审批执行，执行后用 db executed 入账本，db drift 对账。",
+    sourceConsistency: {
+      ok: sourceConsistency.ok,
+      fingerprint: sourceConsistency.fingerprint,
+      specTables: sourceConsistency.spec.tables.size,
+      warnings: sourceConsistency.issues.filter((item) => item.severity === "warn").map((item) => item.message),
+    },
+    executionPolicy: dbSpec.executionPolicy(loaded.contract.environment),
+    note: "DDL 只生成不执行；结构正确性门禁所有环境一致。dev/sit 一次审批后连续执行，pre/prod 由 DBA/CD 按变更单执行。",
   };
   if (has(allArgs, "--json")) printJson(output);
   else {
@@ -686,7 +696,7 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B31 规则并输出 Controller 端点清单（--quick/--staged 会标注 partial）
+  validate     执行 B1~B31 快速规则并输出 Controller 端点及数据库事实源差异
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
@@ -730,7 +740,7 @@ db 示例：
   wl-skills-bd db preview wl-contract.json
   wl-skills-bd db drift --snapshot reports/db-snapshot.json
   wl-skills-bd db executed --table pl_order --column status --scope column \
-    --plan-hash <sha256> --migration-hash <sha256> --approval-ref CHG-123 --confirm
+    --plan-hash <sha256> --migration-hash <sha256> --source-ref REQ-123 --approval-ref CHG-123 --confirm
   wl-skills-bd db ledger --json
 
 permissions 示例：

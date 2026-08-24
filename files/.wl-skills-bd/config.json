@@ -4,5 +4,10 @@
   "contractFile": "wl-contract.json",
   "ruleCatalog": ".wl-skills-bd/rules/catalog.json",
   "profileDirectory": ".wl-skills-bd/profiles",
-  "localOverride": ".wl-skills-bd/config.local.json"
+  "localOverride": ".wl-skills-bd/config.local.json",
+  "databaseGovernance": {
+    "enforceDocumentMirror": true,
+    "specDirectory": "docs/db-spec",
+    "governanceFile": ".wl-skills-bd/db-governance.json"
+  }
 }
