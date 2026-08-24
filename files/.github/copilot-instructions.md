@@ -23,7 +23,7 @@
   → planHash + 人工确认 → apply
   → contract diff（前端/OpenAPI/权限）
   → contract diff --strict（wl-api-contract/OpenAPI/权限/completion）
-  → validate B1~B26
+  → validate B1~B31（quick/staged 需查看 coverage）
   → Maven verify -Pwl-quality（J1~J5/J8）
   → DDL/权限/发布人工卡口
 ```
@@ -65,7 +65,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 | 工具 | 作用 |
 |---|---|
-| `wls_be_validate` | B1~B26 只读扫描 |
+| `wls_be_validate` | B1~B31 只读扫描；默认摘要，返回 coverage/status，支持 quick/staged/changed |
 | `wls_be_doctor` | 环境与门禁诊断 |
 | `wls_be_codegen` | validate/plan/受控 apply |
 | `wls_be_contract` | show/diff 前端、OpenAPI、权限 |

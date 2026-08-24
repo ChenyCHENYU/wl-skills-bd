@@ -1,7 +1,7 @@
 ---
 name: convention-audit-be
 description: |
-  后端工程只读审计：B1~B26、多格式报告、ArchUnit/Checkstyle/PMD7/SpotBugs/Spotless、生产 assurance 与人工语义检查。
+  后端工程只读审计：B1~B31、多格式报告、ArchUnit/Checkstyle/PMD7/SpotBugs/Spotless、生产 assurance 与人工语义检查。
   支持全量和 quick 模式，输出可追踪指纹、豁免理由和后续处理分流。
   典型触发：「规范审计」「代码体检」「全量扫描」「检查代码」「代码质量」「复扫验证」
 status: ✅ 已落地
@@ -25,7 +25,7 @@ stage: ⑧ 审计
 ## 执行
 
 ```bash
-# 全量 B1~B26
+# 全量 B1~B31
 wl-skills-bd validate <范围> --strict
 
 # 跳过 B9~B12 设计级慢规则，适合快速反馈
@@ -44,7 +44,7 @@ mvn verify
 
 | 层 | 执行器 | 重点 |
 |---|---|---|
-| 快速规则 | B1~B26 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性/方法安全/敏感日志/Mapper绑定 |
+| 快速规则 | B1~B31 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性/方法安全/敏感日志/Mapper绑定/数据库源头一致性 |
 | 架构 | ArchUnit J1 | Controller→Mapper、层依赖、循环依赖 |
 | 规范 | Checkstyle J2 | 命名、import、Javadoc、文件结构 |
 | 代码问题 | PMD7 J3 | Java 规则主门禁 |
@@ -59,6 +59,7 @@ DDL 执行授权、数据回填、权限分配、API 破坏性变更和业务状
 - B3/B5 且满足严格前置条件：可交 `code-fix-be`/`fix plan`；
 - B1/B2/B4/B7/B8/B12：提供证据与人工方案，不生成猜测式修复；
 - B26：核对扫描前缀、泛型 Mapper 注册和 XML namespace，再跑真实 Maven package/启动查询；
+- B31：复用 Source Index 对账契约/迁移显式根；缺表/缺列/无源变更转 db-drift 离线快照确认，不扫描整个工程猜表；
 - B6/B9/B10/B11：进入结构重构设计；
 - DDL：转 `db-migration`，只生成 diff/恢复说明；
 - 修复后必须复跑原范围和 Maven 门禁。

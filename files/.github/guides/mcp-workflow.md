@@ -6,7 +6,7 @@
 
 | 工具 | 类型 | 作用 |
 |---|---|---|
-| `wls_be_validate` | 只读 | B1~B23 扫描，支持相对路径和 quick |
+| `wls_be_validate` | 只读 | B1~B31 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status |
 | `wls_be_doctor` | 只读 | JDK/Maven/Profile/质量门/租户证据诊断 |
 | `wls_be_codegen` | 受控写 | contract validate/plan/apply，17+N 个受管产物 |
 | `wls_be_contract` | 只读 | 协作契约 show；前端/OpenAPI/权限 diff |

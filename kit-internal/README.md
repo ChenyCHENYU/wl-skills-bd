@@ -16,4 +16,4 @@
 
 ## 当前版本
 
-- v0.18.2：28 条 standards、12 个 Skill、16 个模板/17+N 个生成产物、7 个配置模板、B1~B30、J1~J8、16 个 MCP 工具；补写入/查询约束分离、跨字段时间顺序、上下文来源、Profile HTTP/分页口径、Mapper 资源路径、框架扩展点容器测试与 Controller 真实端点闭环，全部由契约/Profile/兼容矩阵驱动，不绑定具体业务模块。
+- v0.20.0：28 条 standards、12 个 Skill、16 个模板/17+N 个生成产物、7 个配置模板、B1~B31、J1~J8、16 个 MCP 工具；新增 Source Index、db-drift 双向缺表/缺列对账、强绑定幂等 DDL receipt、Java 8 环境预检，以及默认摘要/显式 coverage 的低 token MCP 输出。

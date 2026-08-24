@@ -6,6 +6,20 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-24（事实索引、双向漂移与验证链精益化）
+
+### Added
+
+- 统一 Source Index：B31 与 db-drift 只读取 catalog 登记/兼容回退的契约根和迁移根，避免各节点自行猜目录或全仓扫描。
+- db-drift 双向检查期望表/列与线上快照，新增缺表 error；DDL 回执强制 planHash、migrationHash、审批号、scope 和显式 confirm，receipt 幂等并带账本锁。
+- Java/Javac/Maven 预检与 doctor 工具路径/实际 Java 版本证据；Java 8 fixture 不再等到深层编译阶段才暴露环境错误。
+- MCP validate 支持 B1~B31、rules/detail/maxItems/maxBytes/staged/changed，默认摘要并明确 complete/partial 覆盖；contract/db/test 默认不重复返回大正文。
+
+### Changed
+
+- 原子文本/JSON 写入使用随机 O_EXCL 临时文件、权限 0600、fsync 和目录同步，降低并发临时文件冲突与掉电半写风险。
+- `npm test` 纳入 db-consistency 回归；版本/规则自检动态覆盖 catalog 中全部 B 规则（含 B31）。
+
 ## [0.19.0] - 2026-08-20（数据库源头一致性闭环）
 
 从事故反推的四方对账与豁免通道：需求文档镜像（docs/db-spec）↔ 契约 ↔ Flyway 迁移 ↔ 线上库快照。

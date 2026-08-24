@@ -91,9 +91,13 @@ function handleContract(args) {
   if (!value.loaded.ok) return blockedResult(`契约校验失败\n${validationText(value.loaded)}`, "invalid-contract", { errors: value.loaded.errors });
   if (args.mode === "show") {
     const format = args.format || "json";
-    const text = format === "markdown"
+    const detail = args.detail || "summary";
+    const rendered = format === "markdown"
       ? collaboration.renderMarkdown(value.manifest)
       : JSON.stringify(value.manifest, null, 2);
+    const text = detail === "full"
+      ? rendered
+      : `✅ 协作契约已渲染：${value.loaded.contract.contractId}；format=${format}。需要正文时传 detail=full。`;
     return toolResult(text, {
       ok: true,
       state: "rendered",
@@ -230,9 +234,7 @@ function handleDbPreview(args) {
     `迁移文件：${migrationFile}`,
     `数据库：${contract.database}`,
     "",
-    "```sql",
-    migrationSql,
-    "```",
+    ...(args.detail === "full" ? ["```sql", migrationSql, "```"] : ["SQL 正文已保留在 structuredContent.migrationSql；需要文本正文时传 detail=full。"]),
     "",
     `Expand-Contract 阶段：${expandContractPhases.map((p) => `${p.phase}(${p.operations.length})`).join(" → ") || "不适用"}`,
     indexes.length > 0 ? `自定义索引：${indexes.length} 个` : "无自定义索引（仅默认 COMPANY_ID+IS_DELETE 联合索引）",
@@ -479,7 +481,10 @@ function handleTest(args) {
   }
   const result = testCodegen.generateServiceTest(file, { projectRoot: root });
   if (!result.ok) return blockedResult(`契约校验失败\n${validationText(result)}`, "invalid-contract", { errors: result.errors });
-  return toolResult(`✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`, { ok: true, scenarioCount: result.scenarioCount, content: result.content });
+  const text = args.detail === "full"
+    ? `✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`
+    : `✅ 已生成 ${result.scenarioCount} 个测试场景；测试源码已保留在 structuredContent.content，需要正文时传 detail=full。`;
+  return toolResult(text, { ok: true, scenarioCount: result.scenarioCount, content: result.content });
 }
 
 module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot };

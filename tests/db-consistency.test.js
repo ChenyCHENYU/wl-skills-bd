@@ -99,11 +99,55 @@ function makeProject() {
   assert.ok(result.issues.some((i) => i.kind === "unclaimed-column" && i.column === "ghost_col"), "无源列应被检出");
   assert.ok(result.issues.some((i) => i.kind === "unclaimed-table" && i.table === "pl_fin_plan"), "无主表应被检出");
 
-  dbDrift.appendLedger(dir, { table: "pl_heat_process", column: "ghost_col", approvalRef: "CHG-1", executedBy: "dba" });
+  dbDrift.appendLedger(dir, {
+    table: "pl_heat_process",
+    column: "ghost_col",
+    scope: "column",
+    planHash: "a".repeat(64),
+    migrationHash: "b".repeat(64),
+    approvalRef: "CHG-1",
+    executedBy: "dba",
+  }, { confirm: true });
+  const invalid = dbDrift.appendLedger(dir, {
+    table: "pl_heat_process",
+    column: "bad_column",
+    approvalRef: "CHG-2",
+    planHash: "short",
+    migrationHash: "also-short",
+    scope: "column",
+  }, { confirm: true });
+  assert.strictEqual(invalid.ok, false, "缺少完整 hash 的回执不得入账");
+  assert.strictEqual(invalid.reason, "invalid-receipt");
+  const duplicate = dbDrift.appendLedger(dir, {
+    table: "pl_heat_process",
+    column: "ghost_col",
+    scope: "column",
+    planHash: "a".repeat(64),
+    migrationHash: "b".repeat(64),
+    approvalRef: "CHG-1",
+    executedBy: "dba",
+  }, { confirm: true });
+  assert.strictEqual(duplicate.ok, true);
+  assert.strictEqual(duplicate.idempotent, true, "相同 receipt 应幂等，不得重复追加");
   const after = dbDrift.detectDrift(dir, path.join(dir, "snapshot.json"));
   const approved = after.issues.find((i) => i.kind === "approved-drift");
   assert.ok(approved && approved.severity === "warn", "账本内列应转为 warn 标识");
   assert.strictEqual(after.issues.filter((i) => i.severity === "error").length, 1, "仅剩无主表 error");
+}
+
+// ── db drift：期望表完全缺失必须检出 ───────────────────────────
+{
+  const dir = makeProject();
+  fs.mkdirSync(path.join(dir, "docs", "contracts", "db", "pl_slab_main"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "docs", "contracts", "db", "pl_slab_main", "wl-contract.json"), JSON.stringify({
+    entity: { table: "pl_slab_main" },
+    fields: [{ column: "ID" }],
+  }));
+  fs.writeFileSync(path.join(dir, "snapshot.json"), JSON.stringify([
+    { table: "pl_heat_process", columns: ["ID", "HEAT_ID", "START_TIME", "END_TIME"] },
+  ]));
+  const result = dbDrift.detectDrift(dir, path.join(dir, "snapshot.json"));
+  assert.ok(result.issues.some((i) => i.kind === "missing-table" && i.table === "pl_slab_main"), "契约/迁移期望表缺失必须报错");
 }
 
 // ── rule-registry：catalog 自检 ────────────────────────────────

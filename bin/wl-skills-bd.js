@@ -3,6 +3,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const pkg = require("../package.json");
 const { runBeRules } = require("../lib/be-rules");
 const codegen = require("../lib/codegen");
@@ -30,6 +31,16 @@ function targetRoot(args) {
 
 function printJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function stagedFiles(root) {
+  const result = spawnSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
+    cwd: root,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.status !== 0) return [];
+  return (result.stdout || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
 }
 
 function printPlan(plan) {
@@ -126,6 +137,7 @@ function commandValidate(args) {
   const result = runBeRules(root, {
     scanRel: positional,
     quick: has(args, "--quick"),
+    stagedFiles: has(args, "--staged") ? stagedFiles(root) : undefined,
     rules: selectedRules ? selectedRules.split(",").map((value) => value.trim()).filter(Boolean) : undefined,
   });
   const format = has(args, "--json") ? "json" : option(args, "--format", "text");
@@ -391,42 +403,62 @@ function commandDb(args) {
     });
     if (has(allArgs, "--json")) printJson(result);
     else {
-      for (const item of result.issues) {
+      for (const error of result.errors || []) console.error(`❌ ${error}`);
+      for (const item of result.issues || []) {
         const mark = item.severity === "error" ? "❌" : "⚠️ ";
         console.log(`${mark} [${item.kind}] ${item.message}`);
       }
-      console.log(`\n汇总：表 ${result.summary.tables}，无源变更 ${result.summary.errors}，已审批 ${result.summary.warns}，账本 ${result.summary.ledgerEntries} 条`);
+      if (result.summary) console.log(`\n汇总：表 ${result.summary.tables}，期望表 ${result.summary.expectedTables}，error ${result.summary.errors}，warn ${result.summary.warns}，账本 ${result.summary.ledgerEntries} 条`);
     }
     return result.ok ? 0 : 1;
   }
 
   if (subcommand === "executed") {
     const drift = require("../lib/db-drift");
-    const required = ["--table", "--approval-ref"];
+    const required = ["--table", "--approval-ref", "--plan-hash", "--migration-hash"];
     for (const flag of required) {
       if (!option(allArgs, flag)) {
-        console.error(`db executed 需要 ${flag}（执行回执入账本，drift 检测据此放行并保留标识）`);
+        const detail = flag === "--plan-hash" || flag === "--migration-hash"
+          ? "（必须是 64 位 SHA-256，用于绑定预览计划和实际迁移）"
+          : "（执行回执入账本，drift 检测据此放行并保留标识）";
+        console.error(`db executed 需要 ${flag}${detail}`);
         return 1;
       }
+    }
+    if (!has(allArgs, "--confirm")) {
+      console.error("db executed 必须显式提供 --confirm；仅预览/未确认的回执不得写入账本");
+      return 1;
     }
     const entry = {
       table: option(allArgs, "--table"),
       column: option(allArgs, "--column") || null,
-      planHash: option(allArgs, "--plan-hash") || null,
+      scope: option(allArgs, "--scope") || (option(allArgs, "--column") ? "column" : "table"),
+      planHash: option(allArgs, "--plan-hash"),
+      migrationHash: option(allArgs, "--migration-hash"),
       approvalRef: option(allArgs, "--approval-ref"),
       executedBy: option(allArgs, "--by") || "dba",
+      environment: option(allArgs, "--environment") || undefined,
+      database: option(allArgs, "--database") || undefined,
+      migrationVersion: option(allArgs, "--migration-version") || undefined,
       note: option(allArgs, "--note") || "",
     };
-    const result = drift.appendLedger(root, entry);
-    if (has(allArgs, "--json")) printJson({ ok: true, ...result, entry });
-    else console.log(`✅ 已记入 DDL 执行账本（${result.total} 条）：${result.file}`);
-    return 0;
+    const result = drift.appendLedger(root, entry, { confirm: true });
+    if (has(allArgs, "--json")) printJson({ ...result, entry });
+    else if (!result.ok) {
+      console.error(`DDL 执行回执未写入：${result.reason || "invalid-receipt"}`);
+      for (const error of result.errors || []) console.error(`  - ${error}`);
+      return 2;
+    } else {
+      console.log(`✅ 已记入 DDL 执行账本${result.idempotent ? "（幂等，无重复记录）" : ""}（${result.total} 条）：${result.file}`);
+    }
+    return result.ok ? 0 : 2;
   }
 
   if (subcommand === "ledger") {
     const drift = require("../lib/db-drift");
     const ledger = drift.loadLedger(root);
     if (has(allArgs, "--json")) printJson(ledger);
+    else if (ledger.corrupt) console.error(`DDL 执行账本损坏或不可解析：${ledger.file}`);
     else if (ledger.executed.length === 0) console.log("DDL 执行账本为空");
     else for (const e of ledger.executed) {
       console.log(`${e.recordedAt} ${e.table}${e.column ? "." + e.column : ".*"} 审批:${e.approvalRef} 执行:${e.executedBy}${e.planHash ? " plan:" + e.planHash : ""}${e.note ? " — " + e.note : ""}`);
@@ -654,11 +686,11 @@ function help() {
   diff         查看包内容、manifest 与当前项目差异
   clean        只清理未被修改的受管文件
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B30 快速规则并输出 Controller 端点清单
+  validate     执行 B1~B31 规则并输出 Controller 端点清单（--quick/--staged 会标注 partial）
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
-  db           数据库预览：preview（只读 DDL + Expand-Contract）
+  db           数据库治理：preview / drift / executed / ledger（DDL 只生成不执行）
   permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
   catalog      项目目录：plan / apply / show / check（默认仅当前模块）
   context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
@@ -679,7 +711,8 @@ function help() {
   --force         发生安装冲突时备份后覆盖
   --require-complete  codegen apply 时拒绝写入含业务骨架的 draft 契约
   --strict        validate 的 warn 也返回失败
-  --quick         validate 跳过设计级慢规则
+  --quick         validate 跳过设计级慢规则（结果 coverage=partial）
+  --staged        validate 只扫描 git 暂存文件（跨文件规则明确标记 partial）
   --format <type> validate 报告格式：text/json/sarif/markdown
   --output <file> 将 validate/db/permissions 报告写入项目内相对路径
 
@@ -695,6 +728,10 @@ contract 示例：
 
 db 示例：
   wl-skills-bd db preview wl-contract.json
+  wl-skills-bd db drift --snapshot reports/db-snapshot.json
+  wl-skills-bd db executed --table pl_order --column status --scope column \
+    --plan-hash <sha256> --migration-hash <sha256> --approval-ref CHG-123 --confirm
+  wl-skills-bd db ledger --json
 
 permissions 示例：
   wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md --json

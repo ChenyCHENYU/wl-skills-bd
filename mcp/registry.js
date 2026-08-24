@@ -29,12 +29,18 @@ const TEMPLATE_MAP = Object.freeze({
 
 const validateTool = {
   name: "wls_be_validate",
-  description: "只读扫描后端工程 B1~B12；返回规则、位置、指纹、抑制数和分级统计。quick=true 时跳过设计级慢规则。",
+  description: "只读扫描后端工程 B1~B31；默认返回摘要/hash/计数，detail=compact/full 才返回有限问题明细。quick/staged/changed 会明确返回 partial 覆盖状态。",
   inputSchema: {
     type: "object",
     properties: {
       path: { type: "string", minLength: 1, description: "项目内相对扫描路径" },
       quick: { type: "boolean", description: "跳过 B9~B12 设计级检查" },
+      staged: { type: "boolean", description: "只扫描 git 暂存文件；跨文件规则会标记为 partial" },
+      changed: { type: "array", minItems: 1, items: { type: "string", minLength: 1 }, description: "显式指定变更文件相对路径；优先于 staged" },
+      rules: { type: "array", minItems: 1, items: { type: "string", pattern: "^B(?:[1-9]|[12][0-9]|3[01])$" }, description: "仅执行指定 B 规则子集" },
+      detail: { type: "string", enum: ["summary", "compact", "full"], description: "summary 仅计数；compact 带定位；full 追加完整消息" },
+      maxItems: { type: "integer", minimum: 1, maximum: 500, description: "返回的问题/端点上限，默认 20" },
+      maxBytes: { type: "integer", minimum: 4096, maximum: 200000, description: "text 输出字节上限，默认 20000" },
     },
     additionalProperties: false,
   },
@@ -78,6 +84,7 @@ const contractTool = {
       mode: { type: "string", enum: ["show", "diff"] },
       contract: { type: "string", minLength: 1 },
       format: { type: "string", enum: ["json", "markdown"] },
+      detail: { type: "string", enum: ["summary", "full"], description: "默认摘要；full 才在 text 通道返回完整 manifest" },
       frontend: { type: "string", minLength: 1 },
       openapi: { type: "string", minLength: 1 },
       permissions: { type: "string", minLength: 1 },
@@ -111,7 +118,7 @@ const standardsTool = {
   description: "查询 28 条后端规范。无参返回索引；id=01~28 返回指定全文。只读。",
   inputSchema: {
     type: "object",
-    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-7])$" } },
+    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-8])$" } },
     additionalProperties: false,
   },
   handle(args) {
@@ -145,6 +152,7 @@ const dbPreviewTool = {
     required: ["contract"],
     properties: {
       contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
+      detail: { type: "string", enum: ["summary", "full"], description: "默认只返回 DDL 元数据；full 才在 text 通道返回 SQL" },
     },
     additionalProperties: false,
   },
@@ -290,6 +298,7 @@ const testTool = {
     properties: {
       mode: { type: "string", enum: ["gen", "scenarios"] },
       contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
+      detail: { type: "string", enum: ["summary", "full"], description: "gen 默认只返回场景计数；full 才在 text 通道返回测试源码" },
     },
     additionalProperties: false,
   },

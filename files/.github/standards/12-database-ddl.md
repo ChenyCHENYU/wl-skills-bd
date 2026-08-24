@@ -134,12 +134,13 @@ db/migration/
 - SQL 方言 fixture：Oracle/MySQL 分别验证。
 - contract/schema diff：Entity、迁移和契约字段一致。
 
-## 8. 源头一致性与漂移对账（v0.19，B31）
+## 8. 源头一致性与漂移对账（v0.20，B31）
 
 - 需求文档表结构必须提取为机器可读镜像 `docs/db-spec/*.json`（tables[].name/cname/fields[]），随文档变更同步更新；缺失时 B31 仅提示不阻断。
 - 表/字段实现与文档不一致：未登记豁免 → B31 error；经审批改名须登记 `.wl-skills-bd/naming-waivers.json`（from/to/reason/approvedBy/date，可选 baselineFields），豁免项永久保留 warn 标识，不得静默放行。
 - 线上库结构变更只允许两条路径：Flyway 迁移（codegen 生成、DBA/CD 执行）或经审批的现场变更（事后必须 `wl-skills-bd db executed` 回执入 DDL 账本）。
-- `wl-skills-bd db drift --snapshot <file>` 定期对账：无源列/无主表 = error（疑似绕过审批直接改库）。
+- `wl-skills-bd db drift --snapshot <file>` 定期双向对账：期望表/列缺失、无源列/无主表 = error（疑似漏迁移或绕过审批直接改库）；契约与迁移根由 Source Index 显式登记，不扫描整个项目猜事实。
+- `db executed` 回执必须绑定 64 位 `planHash`、`migrationHash`、审批号、`scope` 和 `--confirm`；重复 receipt 幂等，账本解析失败时 drift fail-closed。
 - 禁止对已执行迁移文件做任何修改（Flyway 不可变）；禁止在受管库上手写 ALTER 而不落迁移或账本。
 
 ## 变更记录

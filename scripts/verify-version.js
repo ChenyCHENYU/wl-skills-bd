@@ -313,9 +313,17 @@ if (ruleCatalog) {
       }
     }
   }
-  for (let i = 1; i <= 26; i += 1) {
-    if (!ids.has(`B${i}`)) errors.push(`rules/catalog.json: 缺少 B${i}`);
+  const bIds = [...ids]
+    .filter((id) => /^B\d+$/.test(id))
+    .sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
+  const maxB = bIds.length ? Number(bIds[bIds.length - 1].slice(1)) : 0;
+  for (let i = 1; i <= maxB; i += 1) {
+    if (!ids.has(`B${i}`)) errors.push(`rules/catalog.json: B 规则序列缺少 B${i}`);
   }
+  const auditRules = ruleCatalog.taskRuleMapping && ruleCatalog.taskRuleMapping.audit && ruleCatalog.taskRuleMapping.audit.rules;
+  if (Array.isArray(auditRules)) {
+    for (const id of bIds) if (!auditRules.includes(id)) errors.push(`rules/catalog.json: audit 任务未覆盖 ${id}`);
+  } else errors.push("rules/catalog.json: 缺少 taskRuleMapping.audit.rules，无法证明审计覆盖完整 B 规则");
   for (let i = 1; i <= 8; i += 1) {
     if (!ids.has(`J${i}`)) errors.push(`rules/catalog.json: 缺少 J${i}`);
   }

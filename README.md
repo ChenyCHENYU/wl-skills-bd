@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.19.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.20.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-28-orange.svg)]()
@@ -200,7 +200,7 @@ wl-skills-bd contract diff wl-contract.json \
 
 核对范围包括 Profile/协议、资源、API_CONFIG、HTTP 方法/路径、查询/请求/响应字段、`code=2000`、分页、`revision`、权限码和双方 completion。与前端 `wl-skills-kit` 的独立边界和严格握手见 [前后端契约指南](files/.github/guides/frontend-backend-contract.md)。
 
-## 数据库源头一致性闭环（v0.19）
+## 数据库源头一致性闭环（v0.20）
 
 针对 2026-08-20 生产事故（表实现时 32 张擅自改名、判定字段漏实现、pl_slab_main 被现场直接加列、pl_fin_plan 无主出现在库中）建立的四方对账与豁免通道：
 
@@ -209,7 +209,7 @@ wl-skills-bd contract diff wl-contract.json \
 - **B31 源头一致性**：文档表/字段逐项对照契约；未登记豁免的改名/漏实现 → error 阻断；已审批豁免 → warn 保留可追溯标识（理由/审批人/日期）。无 `docs/db-spec/` 时 B31 仅提示不阻断。
 - **豁免登记**：`.wl-skills-bd/naming-waivers.json` 登记 `from→to` 改名映射与字段基线（baselineFields），豁免永不静默——validate/doctor 输出持续可见。
 - **`wl-skills-bd db drift --snapshot <file>`**：线上结构快照（DBA/只读账号导出的 `[{table,columns:[...]}]`）对账契约+迁移+DDL 账本；无源列/无主表 → error（绕过审批直接改库的机器检测），账本内变更 → warn 标识。
-- **`wl-skills-bd db executed --table X --column Y --approval-ref <单号>`**：DDL 执行回执入 `.wl-skills-bd/.state/ddl-ledger.json`；drift 据此放行并保留审计痕迹；`db ledger` 查看全部执行记录。
+- **`wl-skills-bd db executed --table X --column Y --scope column --plan-hash <sha256> --migration-hash <sha256> --approval-ref <单号> --confirm`**：DDL 执行回执入 `.wl-skills-bd/.state/ddl-ledger.json`；必须绑定预览计划、迁移内容和显式确认，重复回执幂等；drift 据此放行并保留审计痕迹；`db ledger` 查看全部执行记录。
 - **`wl-skills-bd catalog rules`**：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 的规则在扫描器有真实输出（杜绝幽灵规则）、J 系列如实标注"依赖项目 pom 接线"。
 
 安全边界不变：DDL 只生成不执行；本包不连接数据库（drift 用离线快照）；生产变更仍由 DBA/CD 审批执行，执行后用 `db executed` 回执闭环。
@@ -385,13 +385,13 @@ bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点�
 
 | 任务 | 模式 | 触发词 | 规则子集 |
 |---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B30 子集 + J |
+| new-service | full | 新开发/全套CRUD | B1-B31 子集 + J |
 | add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30 |
 | add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26 |
 | add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26 |
 | fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30 |
 | refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30 |
-| audit | readonly | 审计/体检 | B1-B30 |
+| audit | readonly | 审计/体检 | B1-B31（quick/staged 仅 partial，必须补 full） |
 | config-op | config | 配置/连不上 | config-doctor |
 
 **路由与安全写链**：

@@ -6,7 +6,7 @@
 
 | 编号 | 实现 | 默认门禁 | 说明 |
 |---|---|:---:|---|
-| B1~B30 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 Controller 端点清单及 SARIF/Markdown/JSON |
+| B1~B31 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 Controller 端点清单及 SARIF/Markdown/JSON；B31 复用 Source Index |
 | J1 | ArchUnit | 是 | 分层依赖 |
 | J2 | Checkstyle | 是 | 命名、Javadoc、import、规模 |
 | J3 | PMD 7 | 是 | 缺陷、复杂度、性能 |
@@ -53,7 +53,7 @@
 | standards/03/15/16/17/19 | P3C 存量规则 | J6 | 单独执行、非阻断 |
 | standards/07 | DTO/VO 业务字段边界 | Schema + 模板 + review | 业务语义仍需人工确认 |
 | standards/09/10 | 敏感日志、事务内远程调用 | review | 静态工具不能完整证明语义安全 |
-| standards/12 | DDL 可执行性与恢复策略 | contract + review | 生成但不执行，DBA/CD 卡口 |
+| standards/12 | DDL 可执行性与恢复策略 | contract + Source Index + db-drift | 生成但不执行；缺表/缺列/无源变更由离线对账阻断，DBA/CD 仍是执行卡口 |
 | standards/28 | SLO、恢复、威胁模型、授权、压测、运行手册和数据评审 | assurance contract + evidence refs + external review | 缺声明/文件阻断完成；证据真实性由安全/DBA/SRE/业务评审 |
 
 ## 自动修复边界

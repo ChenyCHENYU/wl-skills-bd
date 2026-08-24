@@ -11,7 +11,7 @@ L2  机器契约       contract schema + shared delivery profile
       │
 L3  确定性生成     16 模板、17+N 工程/协作产物
       │
-L4  静态保证       B1~B23 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
+L4  静态保证       B1~B31 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
       │
 L5  受控变更       install/catalog/codegen/safe-fix 的 planHash、确认、备份、复扫
       │
@@ -32,7 +32,8 @@ L6  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 
 | `lib/contract.js` | 契约语义校验与模板上下文 |
 | `lib/codegen.js` | 17+N 产物计划、上下文前置门、状态、冲突和应用 |
 | `lib/collaboration.js` | 前端 manifest/api.md、OpenAPI/权限差异 |
-| `lib/be-rules.js` / `reporters.js` | B1~B23 与多格式报告 |
+| `lib/be-rules.js` / `reporters.js` | B1~B31 与多格式报告；quick/staged 显式 coverage |
+| `lib/source-index.js` / `lib/db-drift.js` | DB 契约/迁移 Source Index 与快照双向漂移对账 |
 | `lib/safe-fix.js` | B3/B5 白名单计划、备份回滚和复扫 |
 | `lib/installer.js` / `doctor.js` | 资产生命周期与环境诊断 |
 | `mcp/` | 15 个工具的 schema、registry 和 stdio 协议适配 |
