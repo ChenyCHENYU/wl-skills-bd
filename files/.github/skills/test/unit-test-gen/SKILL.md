@@ -5,8 +5,9 @@ description: |
   v0.16 起提供 test gen/scenarios CLI + wls_be_test MCP，从契约自动生成关键场景测试骨架。
   测"行为契约"不测"代码镜像"，避免冗余。
   典型触发：「生成单测」「补覆盖率」「Controller 测试」「Mock 测试」「测试生成」「单测」
-status: ✅ 已落地
-stage: ⑦ 测试
+metadata:
+  status: "✅ 已落地"
+  stage: "⑦ 测试"
 ---
 
 # unit-test-gen

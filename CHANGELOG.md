@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-08-24（准确率、性能、Token 与节点架构完整优化）
+
+### Added
+
+- 新增 B 规则执行计划与共享 ScanContext：规则子集在文件发现和规则执行前生效，按需读取 Java/XML/配置文件，返回实际执行组、读取字节与进程内内容缓存命中证据。
+- Source Index 新增进程内与原子持久化两级缓存；以文件 dev/inode/size/mtime/ctime 指纹安全失效，缓存损坏、只读文件系统或禁用缓存时自动回退真实扫描。
+- 16 个 MCP 工具统一支持 `response.mode/maxItems/maxBytes/cursor`；大结果保存在 MCP 进程内并用有期限游标续取，返回真实字节数和 token 估算。
+- 新增 `discover → context → validate → plan → approval → apply → verify` DAG 节点契约；包含依赖、状态、pipelineHash、只读重试/超时、写节点确认门与执行事件。
+- 新增正反例准确率语料、240 文件性能夹具、MCP token 预算与缓存验证脚本；`npm run eval:quality` 对 precision/recall、P95、规则短路比例和输出体积执行 CI 回退门禁。
+
+### Changed
+
+- `wls_be_task` 同步返回标准 Pipeline 与 hash；只读审计移除 plan/apply 节点，写任务不经 approval/apply 双确认不能进入 verify。
+- `npm run verify` 纳入质量评测；MCP、规则执行、缓存和 Pipeline 新增独立回归测试。
+
 ## [0.20.2] - 2026-08-24（验证覆盖、环境预检与 MCP 精益化）
 
 ### Added

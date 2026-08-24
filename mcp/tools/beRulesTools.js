@@ -80,7 +80,7 @@ function handleValidate(args = {}) {
     stagedFiles: changed,
     rules: Array.isArray(args.rules) ? args.rules : undefined,
   });
-  const { endpoints, issues, suppressed, stats, coverage } = result;
+  const { endpoints, issues, suppressed, stats, coverage, execution } = result;
 
   // 按规则分组：摘要只保留计数，compact/full 才携带有限问题明细。
   const byRule = {};
@@ -131,6 +131,7 @@ function handleValidate(args = {}) {
     issueCount: issues.length,
     truncated: returnedIssues.length < issues.length,
     suppressed: suppressed.length,
+    execution,
   };
 
   if (issues.length === 0) {

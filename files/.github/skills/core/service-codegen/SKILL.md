@@ -6,8 +6,9 @@ description: |
   以及 v0.9 扩展：customOperations 业务命令/状态机/批量、relations 主从关联查询、export 导出。
   读 templates 填空，生成后跑 validate 查 B1/B2/B5。对标 wl-skills-kit/service-codegen 落地深度。
   典型触发：「生成 Service」「全套 CRUD」「实现业务方法」「写业务逻辑」「生成后端接口」「业务命令」「状态机」「submit/approve」
-status: ✅ 已落地
-stage: ④ 业务实现
+metadata:
+  status: "✅ 已落地"
+  stage: "④ 业务实现"
 ---
 
 # service-codegen

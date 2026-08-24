@@ -3,8 +3,9 @@ name: entity-codegen
 description: |
   基于通过 Schema 校验的 wl-contract.json 确定性生成 Entity、CreateDTO、UpdateDTO、PageDTO、VO、PageVO。
   典型触发：「生成实体」「生成 DTO/VO」「根据契约生成模型」「补模型层」
-status: ✅ 已落地
-stage: ③ 模型生成
+metadata:
+  status: "✅ 已落地"
+  stage: "③ 模型生成"
 ---
 
 # entity-codegen

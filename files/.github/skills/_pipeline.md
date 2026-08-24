@@ -29,6 +29,14 @@
 ⑥ safe fix ──► 仅白名单自动修复 + 复扫；DDL/业务语义问题转人工
 ```
 
+任务路由同时输出稳定的执行节点契约：
+
+```text
+discover → context → validate → plan → approval → apply → verify
+```
+
+只读审计使用 `discover → context → validate → verify`。节点包含依赖、输入/输出契约、状态、耗时、尝试次数和 outputHash；写节点必须人工确认，禁止自动重试与无法取消的超时。`pipelineHash` 漂移时不得继续执行。
+
 `business-doc-extract-be` 可在 ① 前生成 `docs/business/{module}.md`。design/kit 产物是可选输入，不是 bd 的硬依赖；`standard-env-config-be` 是独立横切流程，不改变上述资源契约。配置了项目 Catalog 后，codegen 会强制验证当前模块快照新鲜度并绑定上下文哈希。
 
 ## ⓪ 模块目录与精准上下文
@@ -98,7 +106,7 @@ wl-skills-bd validate . --strict
 wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```
 
-B1~B31 独立执行；数据库 B31 不接受代码行抑制绕过事实源门禁。其他忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。error 未清零不得进入下一阶段。
+B1~B31 独立执行；指定 `--rules` 时在文件发现前构建执行计划，只读取相关文件类型，不先全跑再过滤。数据库 B31 不接受代码行抑制绕过事实源门禁。其他忽略项必须使用带理由的 `.be-rules-ignore` 或单行抑制。error 未清零不得进入下一阶段。
 
 ## ⑤ Java/Maven 质量门
 
@@ -133,3 +141,4 @@ Skill 文档不能声称完成了执行器未实现的能力；命令输出和�
 - 2026-07-18 v1：改为机器契约单一输入，合并 16 产物生成、contract diff、B1~B12、Maven 门禁和安全修复闭环。
 - 2026-07-18 v2：统一独立 delivery profile、wl-api-contract、completion 与业务保护区。
 - 2026-07-18 v3：基础产物扩展为 17 个，并按命令增加 N 个 RequestDTO；DDL_PREVIEW 进入受管闭环。
+- 2026-08-24 v4：加入标准 Pipeline 节点契约、规则前置短路、执行证据与漂移阻断。

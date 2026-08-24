@@ -103,6 +103,17 @@ for (const sp of skillFiles) {
   if (lines > 500) {
     errors.push(`${rel}: ${lines} 行，超过 500；场景细节移入 references/`);
   }
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!frontmatter) {
+    errors.push(`${rel}: 缺少合法 YAML frontmatter`);
+  } else {
+    const allowed = new Set(["name", "description", "license", "allowed-tools", "metadata"]);
+    const topLevelKeys = [...frontmatter[1].matchAll(/^([a-zA-Z][\w-]*):/gm)].map((match) => match[1]);
+    for (const key of topLevelKeys) if (!allowed.has(key)) errors.push(`${rel}: 非标准 frontmatter 顶层字段 ${key}，请移入 metadata`);
+    const name = (frontmatter[1].match(/^name:\s*([a-z0-9-]+)\s*$/m) || [])[1];
+    if (!name) errors.push(`${rel}: frontmatter.name 缺失或不是 kebab-case`);
+    else if (name !== path.basename(path.dirname(sp))) errors.push(`${rel}: name=${name} 与目录名不一致`);
+  }
   const refs = new Set(content.match(/references\/[\w./-]+\.md/g) || []);
   for (const r of refs) {
     if (r.includes("../")) {

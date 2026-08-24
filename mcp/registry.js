@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
 const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
+const { withResponseControls } = require("./result-budget");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const STANDARDS_ROOT = path.join(PACKAGE_ROOT, "files", ".github", "standards");
@@ -305,7 +306,7 @@ const testTool = {
   handle: handleTest,
 };
 
-const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool];
+const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

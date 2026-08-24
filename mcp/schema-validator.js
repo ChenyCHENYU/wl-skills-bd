@@ -14,6 +14,14 @@ function validateValue(schema, value, location, errors) {
     errors.push(`${location} 被 schema 禁止`);
     return;
   }
+  if (Array.isArray(schema.anyOf)) {
+    const matched = schema.anyOf.some((candidate) => {
+      const branchErrors = [];
+      validateValue(candidate, value, location, branchErrors);
+      return branchErrors.length === 0;
+    });
+    if (!matched) errors.push(`${location} 不满足 anyOf 中任一输入模式`);
+  }
   if (schema.const !== undefined && value !== schema.const) errors.push(`${location} 必须等于 ${JSON.stringify(schema.const)}`);
   if (schema.enum && !schema.enum.includes(value)) errors.push(`${location} 只允许 ${schema.enum.join("/")}`);
   if (schema.type && !typeMatches(schema.type, value)) {

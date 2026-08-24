@@ -8,6 +8,8 @@
 
 自动修复仅限满足严格前置条件的 B3/B5；其他问题提供证据和人工方案。所有修复后必须复扫。
 
+精准规则必须在扫描前短路并保留 execution/coverage；quick/staged 是 partial。MCP 默认 summary 与有界 response，超预算用 cursor 续取。任务按标准 Pipeline 编排，写节点必须确认且不得自动重试。
+
 详细流程：
 
 - `.github/guides/codegen-workflow.md`

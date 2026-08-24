@@ -16,4 +16,4 @@
 
 ## 当前版本
 
-- v0.20.2：29 条 standards、12 个 Skill、16 个模板/17+N 个生成产物、7 个配置模板、B1~B31、J1~J8、16 个 MCP 工具；沿用远端数据库事实源强门禁，并新增 Source Index、双向缺表/缺列对账、强绑定幂等 DDL receipt、Java 8 环境预检，以及默认摘要/显式 coverage 的低 token MCP 输出。
+- v0.21.0：29 条 standards、12 个 Skill、16 个模板/17+N 个生成产物、7 个配置模板、B1~B31、J1~J8、16 个 MCP 工具；规则前置短路、共享 ScanContext、Source Index 两级缓存、全 MCP 输出预算/游标、标准 Pipeline 节点与准确率/性能/token CI 门禁完整落地。

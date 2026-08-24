@@ -4,9 +4,10 @@ description: |
   数据库 DDL 与数据迁移生成。CREATE TABLE / 分阶段 ALTER TABLE / 索引 / DDL 预览，以及复杂回填的人工设计门。
   生成后输出 reports/DDL_PREVIEW_{ts}.md 等待人工确认，AI 不直接执行。
   典型触发：「建表」「DDL」「ALTER TABLE」「加字段」「索引」「数据迁移」
-status: 🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）
-stage: ⑥ 数据库
-risk: 🔴 高风险（必经人工确认）
+metadata:
+  status: "🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）"
+  stage: "⑥ 数据库"
+  risk: "🔴 高风险（必经人工确认）"
 ---
 
 # db-migration

@@ -1,6 +1,6 @@
 # MCP 工具与写入安全
 
-`wl-skills-bd` MCP Server 通过 stdio 暴露 15 个本地工程工具，不连接数据库、网关或生产系统。
+`wl-skills-bd` MCP Server 通过 stdio 暴露 16 个本地工程工具，不连接数据库、网关或生产系统。
 
 ## 工具清单
 
@@ -11,7 +11,7 @@
 | `wls_be_codegen` | 受控写 | contract validate/plan/apply，17+N 个受管产物 |
 | `wls_be_contract` | 只读 | 协作契约 show；前端/OpenAPI/权限 diff |
 | `wls_be_safe_fix` | 受控写 | 仅 B3/B5 白名单修复与强制复扫 |
-| `wls_be_standards` | 只读 | 查询 27 条规范 |
+| `wls_be_standards` | 只读 | 查询 29 条规范 |
 | `wls_be_templates` | 只读 | 查询 16 个模板白名单 |
 | `wls_be_db_preview` | 只读 | CREATE/ALTER DDL 与 Expand-Contract 预览 |
 | `wls_be_export_permissions` | 受控写 | 导出 kit 权限清单片段 |
@@ -21,8 +21,28 @@
 | `wls_be_catalog` | 只读/受控写 | 当前模块目录 plan/apply/check/show；其他模块只复用快照 |
 | `wls_be_context` | 只读 | 当前模块与一跳上下游快照的预算化文件选择；不扫关联源码 |
 | `wls_be_commit` | 只读 | 单条提交、Git range 与本地 Hook 接入检查 |
+| `wls_be_test` | 只读 | 行为契约测试场景与可执行 ServiceTest 生成 |
 
 所有文件参数必须是 `WL_PROJECT_ROOT` 内的相对路径。绝对路径、`../` 越界和指向项目外的符号链接会被拒绝。入参由严格 JSON Schema 校验，未知字段、错误枚举、错误类型或非法 planHash 不进入 handler。
+
+## 统一结果预算
+
+16 个工具都支持同一 `response` 对象：
+
+```json
+{
+  "response": {
+    "mode": "summary",
+    "maxItems": 20,
+    "maxBytes": 12000
+  }
+}
+```
+
+- `summary` 用于判断状态与下一步，`compact/full` 只在需要定位或读取正文时启用；
+- 数组和字符串先按统一预算裁剪，响应声明 `originalBytes/returnedBytes/estimatedTokens/truncated`；
+- 超预算完整结果短期保留在 MCP 进程内，使用同一工具和 `{ "response": { "cursor": "<nextCursor>" } }` 续取，不重跑 handler；
+- cursor 有期限、绑定原工具且不写项目目录，过期或跨工具使用时 fail-closed。
 
 ## 启动
 
@@ -61,11 +81,13 @@
 - 支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25`；未知版本协商到 Server 首选版本；
 - `tools/list` 与 handler 来自同一 registry；
 - 请求按输入顺序串行调度，避免同一工作区写工具并发交错；
+- 全工具响应经过统一字节/数组预算；大结果游标只存于当前 MCP 进程并有数量、大小与时间上限；
 - 工具异常返回 MCP `isError`，非法 JSON-RPC 参数返回 `-32602`；
 - Server banner 只写 stderr，不污染 stdout JSON-RPC 流。
 
 ## 变更记录
 
+- 2026-08-24 v7：16 工具统一 response 预算、token 估算与短期大结果 cursor；task 返回标准 Pipeline。
 - 2026-07-19 v6：扩展为 15 个工具；加入模块增量 Catalog、一跳 Context Plan 和提交消息/range 校验。
 - 2026-07-18 v5：17+N 代码生成产物、16 模板；permissions/config 纳入统一 planHash/原子写/回滚与受保护环境护栏。
 - 2026-07-18 v4：扩展为 12 个工具；加入配置闭环、故障诊断和只读任务路由，所有代码写入继续复用统一安全链。

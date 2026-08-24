@@ -11,6 +11,8 @@
           ↓
 task-router（只读识别与计划）
           ↓
+discover → context → validate → plan → approval → apply → verify
+          ↓
 ┌──────────────────┬────────────────────┬──────────────────┐
 │ contract/codegen │ safe-fix           │ config           │
 │ planHash+confirm │ planHash+confirm   │ plan/confirm     │
@@ -27,8 +29,23 @@ task-router（只读识别与计划）
 - 新接口、字段、业务命令统一修改 `wl-contract.json`，分别使用 `customOperations/relations/export`、`fields/alter` 等机器契约表达。
 - 实际写入只允许走现有 codegen/safe-fix/config 计划链，禁止另建字符串拼接式 Java patch 引擎。
 - bd 可仅基于已评审需求独立建立契约；design 稳定 ID 与 kit 前端契约均为可选协同增强，不是硬依赖。
+- 每个任务必须返回确定性的 `pipelineHash` 和节点契约。只读任务省略 plan/approval/apply；有副作用节点禁止自动重试/不可取消超时，并强制确认。
 
-## 2. 任务类型与最小验证面
+## 2. 标准节点粒度
+
+| 节点 | 输入/输出 | 副作用与失败语义 |
+|---|---|---|
+| discover | 工程根 → project-slice | 只读；允许有界重试/超时 |
+| context | project-slice → context-plan | 只读；限制模块、一跳和预算 |
+| validate | context-plan → validation-result | 只读；声明 complete/partial coverage |
+| plan | validation-result → write-plan | 只读；输出当前 hash，不隐式 apply |
+| approval | write-plan → approval | 人工卡口；未确认则后续节点 skipped |
+| apply | approval → apply-result | 本地写；强制确认、禁止自动重试和无法取消的超时 |
+| verify | apply/validate → assurance-result | 只读；验证失败不得宣称完成 |
+
+节点失败、阻断、跳过、耗时、尝试次数和输出 hash 必须可观测。执行前重新计算 pipelineHash；漂移时整条流水线阻断。
+
+## 3. 任务类型与最小验证面
 
 | 任务 | 模式 | 主要入口 | 必跑规则/质量门 |
 |---|---|---|---|
@@ -43,9 +60,9 @@ task-router（只读识别与计划）
 
 规则子集用于单点任务的快速反馈，不替代发布前全量质量门。
 
-## 3. 安全增量闭环
+## 4. 安全增量闭环
 
-### 3.1 加接口/业务命令
+### 4.1 加接口/业务命令
 
 ```bash
 wl-skills-bd task "加个导出接口"
@@ -59,7 +76,7 @@ wl-skills-bd contract diff wl-contract.json --frontend docs/contracts/page.api.m
 
 非确定性业务逻辑进入 `<wl-custom>` 保护区。补齐实现和 ServiceTest 后，completion 必须为 `confirmed`；生产就绪场景使用 `--require-complete`。
 
-### 3.2 加字段落库
+### 4.2 加字段落库
 
 ```bash
 wl-skills-bd task --type add-field
@@ -73,7 +90,7 @@ wl-skills-bd validate src/main --rules B3,B4,B7,B18
 
 DDL 仅生成和预览，由 DBA/CD 审批执行；工具不得持有数据库写凭据或伪造自动回滚。
 
-## 4. 触发与歧义
+## 5. 触发与歧义
 
 ```bash
 wl-skills-bd task --list
@@ -86,7 +103,7 @@ wl-skills-bd task --type add-api --target-file src/main/java/.../FooController.j
 - 无匹配时返回失败并提示 `--list`，不得静默选择全量生成。
 - `target-file` 仅用于计划上下文，不授权读取或写入该路径。
 
-## 5. 正反例
+## 6. 正反例
 
 正确：task 路由 → 契约增量 → validate/plan → 人工确认 → apply → 精准复扫 → strict 协作核对。
 
@@ -100,4 +117,5 @@ wl-skills-bd task --type add-api --target-file src/main/java/.../FooController.j
 
 ## 变更记录
 
+- 2026-08-24 v0.21：加入标准 DAG、节点契约、状态/输出 hash、只读重试与写节点确认边界。
 - 2026-07-18 v0.13：落地 8 类任务路由与规则子集；写入统一收敛到既有事务安全链，移除重复 patch 内核。

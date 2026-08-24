@@ -25,6 +25,9 @@
 17. **任务路由（v0.13）**：`task` 只读；接口/字段/业务命令增量必须更新契约并走 codegen planHash/confirm/rollback，禁止字符串拼接式旁路 patch。
 18. **数据库变更（v0.14）**：ALTER 必须分 expand/contract；contract drop 需 approvalRef；Flyway 版本不可变，校验 SQL 只允许无副作用 SELECT，工具永不执行数据库写入。
 19. **模块上下文（v0.15）**：启用 Catalog 后，默认只扫描当前模块；关联模块只读一跳快照和关系/关键词命中的契约，不扫描其源码目录。当前目录过期、全局身份冲突或 codegen 上下文哈希漂移时必须阻断。
+20. **精益执行（v0.21）**：精准规则必须在扫描前短路，并报告 `execution/coverage`；quick/staged/changed 是 partial，不能替代最终 full。Source Index 缓存损坏或失效时必须真实重扫。
+21. **MCP Token（v0.21）**：16 个工具默认 summary 与有界 response 预算；需要大正文时使用 cursor 续取，不反复重跑全量 handler。cursor 不授予写权限。
+22. **节点契约（v0.21）**：任务按 discover/context/validate/plan/approval/apply/verify 编排；有副作用节点禁止自动重试和不可取消超时，必须显式确认并校验 pipelineHash。
 
 ## 快速命令
 

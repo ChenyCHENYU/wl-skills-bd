@@ -61,6 +61,8 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 `code-fix-be`/`fix` 只自动处理满足严格前置条件的 B3/B5。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过。其他规则转人工或结构重构。
 
+精准 `--rules` 会在文件发现前缩小执行面；必须保留 `execution/coverage` 证据。quick/staged/changed 是 partial，最终交付补 full。`task` 输出标准 Pipeline 与 pipelineHash；写任务必须经过 approval/apply 双确认。
+
 ## MCP（16 个工具）
 
 | 工具 | 作用 |
@@ -83,6 +85,8 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_test` | 行为契约测试 gen/scenarios（测行为不测镜像） |
 
 写工具默认只预览，并统一执行 planHash、写前重算、原子写、失败回滚和写后复验。Agent 不得自行把 `confirmApply` 设为 true 来绕过用户评审；pre/prod/production 还必须取得显式工程文件写授权。
+
+所有工具默认传 `response.mode=summary` 并设置合理 `maxItems/maxBytes`；超预算时用 `nextCursor` 续取，不为获取正文重复执行原工具。cursor 只代表读取短期结果，不代表确认写入。
 
 ## 方法论
 

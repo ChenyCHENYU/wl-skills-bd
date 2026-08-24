@@ -13,6 +13,7 @@
 
 const readline = require("readline");
 const { TOOLS, HANDLERS } = require("./registry");
+const { applyResultBudget, normalizeControls, readCursor } = require("./result-budget");
 const { validateSchema } = require("./schema-validator");
 const PKG = require("../package.json");
 
@@ -53,15 +54,20 @@ async function dispatchTool(id, toolName, toolArgs) {
   }
 
   try {
-    const handlerResult = await desc.handle(toolArgs);
+    const handlerResult = toolArgs.response && toolArgs.response.cursor
+      ? readCursor(toolName, toolArgs.response.cursor, normalizeControls(toolArgs.response).maxBytes)
+      : await desc.handle(toolArgs);
     const normalized =
       typeof handlerResult === "string" ? { text: handlerResult } : handlerResult;
+    const budgeted = toolArgs.response && toolArgs.response.cursor
+      ? normalized
+      : applyResultBudget(toolName, toolArgs.response, normalized);
     sendResult(id, {
-      content: [{ type: "text", text: normalized.text }],
-      ...(normalized.structuredContent
-        ? { structuredContent: normalized.structuredContent }
+      content: [{ type: "text", text: budgeted.text }],
+      ...(budgeted.structuredContent
+        ? { structuredContent: budgeted.structuredContent }
         : {}),
-      ...(normalized.isError ? { isError: true } : {}),
+      ...(budgeted.isError ? { isError: true } : {}),
     });
   } catch (e) {
     sendResult(id, {
