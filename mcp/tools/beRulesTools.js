@@ -3,12 +3,13 @@
 /**
  * beRulesTools — MCP 工具：包装 lib/be-rules.js
  *
- * 暴露 wls_be_validate（扫描工程输出 B1~B30 偏差与 Controller 端点清单）。
+ * 暴露 wls_be_validate（扫描工程输出当前 B 规则偏差与可选 Controller 端点清单）。
  * 对标 kit 的 mcp/tools/projectTools.js，但后端无需网关，只读扫描。
  */
 
 const fs = require("fs");
 const ruleCatalog = require("../../files/.wl-skills-bd/rules/catalog.json");
+const capabilities = require("../../files/.wl-skills-bd/capabilities.json");
 const { runBeRules } = require("../../lib/be-rules");
 const { normalizeRel, resolveWithin } = require("../../lib/manifest");
 const { projectRoot } = require("../project-root");
@@ -37,18 +38,44 @@ function handleValidate(args) {
 
   const relScan = args.path ? normalizeRel(args.path) : undefined;
 
-  const { endpoints, issues, suppressed, stats } = runBeRules(target, { scanRel: relScan, quick: args.quick === true });
+  const scanned = runBeRules(target, {
+    scanRel: relScan,
+    quick: args.quick === true,
+    rules: args.rules,
+  });
+  const issues = args.severity ? scanned.issues.filter((issue) => issue.severity === args.severity) : scanned.issues;
+  const maxIssues = args.maxIssues === undefined ? 50 : args.maxIssues;
+  const visibleIssues = issues.slice(0, maxIssues);
+  const stats = {
+    error: issues.filter((issue) => issue.severity === "error").length,
+    warn: issues.filter((issue) => issue.severity === "warn").length,
+    info: issues.filter((issue) => issue.severity === "info").length,
+    total: issues.length,
+    suppressed: scanned.suppressed.length,
+    byRule: issues.reduce((result, issue) => {
+      result[issue.rule] = (result[issue.rule] || 0) + 1;
+      return result;
+    }, {}),
+  };
+  const endpoints = scanned.endpoints;
+  const suppressed = scanned.suppressed;
 
   if (issues.length === 0) {
     return {
-      text: `✅ 未发现 B1~B30 违规；已盘点 ${endpoints.length} 个 Controller 端点。\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。`,
-      structuredContent: { ok: true, ...stats, endpoints, issues: [], suppressed: suppressed.length },
+      text: `✅ 未发现 ${capabilities.backendRules.displayRange} 违规；已盘点 ${endpoints.length} 个 Controller 端点。\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。`,
+      structuredContent: {
+        ok: true,
+        ...stats,
+        endpointCount: endpoints.length,
+        ...(args.includeEndpoints === true ? { endpoints } : {}),
+        issues: [],
+      },
     };
   }
 
   // 按规则分组（精简输出，避免 token 爆炸）
   const byRule = {};
-  for (const i of issues) {
+  for (const i of visibleIssues) {
     if (!byRule[i.rule]) byRule[i.rule] = [];
     byRule[i.rule].push(i);
   }
@@ -77,8 +104,11 @@ function handleValidate(args) {
       warn: stats.warn,
       total: stats.total,
       byRule: stats.byRule,
-      endpoints,
-      issues: issues.slice(0, 100),
+      endpointCount: endpoints.length,
+      ...(args.includeEndpoints === true ? { endpoints } : {}),
+      issues: visibleIssues,
+      returnedIssues: visibleIssues.length,
+      truncated: visibleIssues.length < issues.length,
       suppressed: suppressed.length,
     },
     isError: stats.error > 0,

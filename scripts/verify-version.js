@@ -17,6 +17,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const PKG = require(path.join(ROOT, "package.json"));
 const VERSION = PKG.version;
+const capabilities = require(path.join(ROOT, "files", ".wl-skills-bd", "capabilities.json"));
 
 const errors = [];
 const warnings = [];
@@ -313,8 +314,8 @@ if (ruleCatalog) {
       }
     }
   }
-  for (let i = 1; i <= 26; i += 1) {
-    if (!ids.has(`B${i}`)) errors.push(`rules/catalog.json: 缺少 B${i}`);
+  for (const id of capabilities.backendRules.ids) {
+    if (!ids.has(id)) errors.push(`rules/catalog.json: 缺少 ${id}`);
   }
   for (let i = 1; i <= 8; i += 1) {
     if (!ids.has(`J${i}`)) errors.push(`rules/catalog.json: 缺少 J${i}`);
@@ -329,6 +330,7 @@ const REQUIRED_EXIST = [
   "files/.github/skills/_registry.md",
   "files/.github/skills/_pipeline.md",
   "files/.wl-skills-bd/config.json",
+  "files/.wl-skills-bd/capabilities.json",
   "files/.wl-skills-bd/compatibility.json",
   "files/.wl-skills-bd/schemas/contract.schema.json",
   "files/.wl-skills-bd/schemas/collaboration-contract.schema.json",

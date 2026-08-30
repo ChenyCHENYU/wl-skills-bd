@@ -14,16 +14,49 @@ function validateValue(schema, value, location, errors) {
     errors.push(`${location} 被 schema 禁止`);
     return;
   }
+  for (const branch of schema.allOf || []) validateValue(branch, value, location, errors);
+  if (schema.anyOf) {
+    const matches = schema.anyOf.filter((branch) => {
+      const branchErrors = [];
+      validateValue(branch, value, location, branchErrors);
+      return branchErrors.length === 0;
+    }).length;
+    if (matches === 0) errors.push(`${location} 不满足任何 anyOf 分支`);
+  }
+  if (schema.oneOf) {
+    const matches = schema.oneOf.filter((branch) => {
+      const branchErrors = [];
+      validateValue(branch, value, location, branchErrors);
+      return branchErrors.length === 0;
+    }).length;
+    if (matches !== 1) errors.push(`${location} 必须且只能满足一个 oneOf 分支`);
+  }
+  if (schema.not) {
+    const branchErrors = [];
+    validateValue(schema.not, value, location, branchErrors);
+    if (branchErrors.length === 0) errors.push(`${location} 命中禁止的 not 分支`);
+  }
+  if (schema.if) {
+    const conditionErrors = [];
+    validateValue(schema.if, value, location, conditionErrors);
+    if (conditionErrors.length === 0 && schema.then) validateValue(schema.then, value, location, errors);
+    if (conditionErrors.length > 0 && schema.else) validateValue(schema.else, value, location, errors);
+  }
   if (schema.const !== undefined && value !== schema.const) errors.push(`${location} 必须等于 ${JSON.stringify(schema.const)}`);
   if (schema.enum && !schema.enum.includes(value)) errors.push(`${location} 只允许 ${schema.enum.join("/")}`);
   if (schema.type && !typeMatches(schema.type, value)) {
     errors.push(`${location} 应为 ${schema.type}`);
     return;
   }
-  if (schema.type === "object") validateObject(schema, value, location, errors);
+  if ((schema.type === "object" || schema.required || schema.properties)
+    && value !== null && typeof value === "object" && !Array.isArray(value)) validateObject(schema, value, location, errors);
   if (schema.type === "array") {
     if (schema.minItems !== undefined && value.length < schema.minItems) errors.push(`${location} 至少需要 ${schema.minItems} 项`);
     if (schema.maxItems !== undefined && value.length > schema.maxItems) errors.push(`${location} 最多允许 ${schema.maxItems} 项`);
+    if (schema.uniqueItems === true) {
+      const items = value.map((item) => JSON.stringify(item));
+      if (new Set(items).size !== items.length) errors.push(`${location} 不允许重复项`);
+    }
     value.forEach((item, index) => validateValue(schema.items, item, `${location}[${index}]`, errors));
   }
   if (schema.type === "string") {

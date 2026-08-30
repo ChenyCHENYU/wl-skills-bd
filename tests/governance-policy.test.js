@@ -41,6 +41,8 @@ console.log("=== 1. 默认值兜底（无 profile，等价历史行为）===");
   assert.ok(mysql.includes("is_delete TINYINT(1) NOT NULL DEFAULT 1"), "默认应为 1有效");
   assert.ok(mysql.includes("有效标记：1=有效，0=已删除"), "默认注释应为 1/0");
   assert.ok(mysql.includes("create_date_time VARCHAR(19)"), "默认时间应为 VARCHAR(19)");
+  assert.ok(mysql.includes("create_user_no VARCHAR(64) NOT NULL"), "创建人必须由平台写入且不可为空");
+  assert.ok(mysql.includes("create_date_time VARCHAR(19) NOT NULL"), "创建时间必须由平台写入且不可为空");
   ok("MySQL 默认 1有效/0删除 + VARCHAR(19) 兜底");
 
   const oracle = renderOracleMigration(baseContract);

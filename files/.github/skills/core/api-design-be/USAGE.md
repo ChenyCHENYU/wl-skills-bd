@@ -5,6 +5,8 @@
 ## 最短流程
 
 ```bash
+# 已有 docs/db-spec 时先抽取确定性契约种子；输出 unresolved 由人确认
+wl-skills-bd contract seed --table <TABLE> --database oracle --json
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
 wl-skills-bd contract show wl-contract.json --format markdown
@@ -24,6 +26,7 @@ wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm
 - page/detail/create/update/remove 五类权限码；
 - Oracle/MySQL、迁移版本、验证 SQL 与不少于 20 字的恢复策略；
 - 字段的 Java/DB 类型、创建必填、可写性、查询模式和列表/详情可见性。
+- 生产契约还必须确认 `databaseTarget`、业务 `errors` 目录及对外字段 `semanticId`，不能从表结构或字段名猜测。
 
 缺少上述信息时输出缺口，不猜值。详情响应和 UpdateDTO 必须共同携带 `revision`，请求 DTO 不接受 `companyId`。
 

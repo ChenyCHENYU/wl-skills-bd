@@ -12,7 +12,7 @@ document-meta:
 
 ```bash
 wl-skills-bd catalog check --module order
-wl-skills-bd context plan --module order --task "增加订单取消接口" --keywords "状态机,退款" --json
+wl-skills-bd context plan --module order --task "增加订单取消接口" --keywords "状态机,退款" --max-tokens 12000 --json
 ```
 
 如果目录过期，只刷新 `order`：
@@ -30,6 +30,7 @@ wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
 - 当前模块源码按任务关键词和契约身份排序；
 - 关联模块整份目录和文档不进入选择结果；
 - 只有契约关系或任务关键词命中的关联契约可以进入结果。
+- `selection.selectedTokens` 不得超过 `limits.maxTokens`；token 是确定性近似预算，最终模型计费仍以调用平台为准。
 
 ## 首次建立项目目录
 

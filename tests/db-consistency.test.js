@@ -30,9 +30,9 @@ function makeProject() {
         { name: "company_id", dbType: "varchar(64)", nullable: false, comment: "公司/租户ID" },
         { name: "is_delete", dbType: "tinyint(1)", nullable: false, defaultValue: 1, comment: "有效标记：1=有效，0=已删除" },
         { name: "revision", dbType: "int", nullable: false, defaultValue: 0, comment: "乐观锁版本号" },
-        { name: "create_user_no", dbType: "varchar(64)", nullable: true, comment: "创建人工号" },
+        { name: "create_user_no", dbType: "varchar(64)", nullable: false, comment: "创建人工号" },
         { name: "update_user_no", dbType: "varchar(64)", nullable: true, comment: "更新人工号" },
-        { name: "create_date_time", dbType: "varchar(19)", nullable: true, comment: "创建时间" },
+        { name: "create_date_time", dbType: "varchar(19)", nullable: false, comment: "创建时间" },
         { name: "update_date_time", dbType: "varchar(19)", nullable: true, comment: "更新时间" },
       ],
     }],
@@ -171,12 +171,31 @@ function contract(fields = [
   assert.ok(result.issues.some((issue) => issue.kind === "column-order"));
   assert.ok(result.issues.some((issue) => issue.kind === "column-type"));
   assert.ok(result.issues.some((issue) => issue.kind === "unclaimed-column" && issue.column === "ghost_col"));
-  dbDrift.appendLedger(root, {
-    table: "pl_charge", column: "ghost_col", approvalRef: "CHG-1", sourceRef: "INC-1", executedBy: "dba",
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-  });
+  const executedAt = new Date(Date.now() - 60 * 1000).toISOString();
+  const ledgerEntry = {
+    table: "pl_charge", column: "ghost_col", ddlPlanHash: "a".repeat(64), approvalRef: "CHG-1", sourceRef: "INC-1", executedBy: "dba",
+    executedAt, expiresAt: new Date(Date.parse(executedAt) + 60 * 60 * 1000).toISOString(),
+  };
+  const ledgerPlan = dbDrift.buildLedgerPlan(root, ledgerEntry);
+  assert.strictEqual(ledgerPlan.ok, true, JSON.stringify(ledgerPlan.errors));
+  assert.strictEqual(dbDrift.applyLedgerPlan(ledgerPlan, { confirm: true, planHash: "bad" }).reason, "plan-hash-mismatch");
+  assert.strictEqual(dbDrift.applyLedgerPlan(ledgerPlan, { confirm: true, planHash: ledgerPlan.planHash }).ok, true);
   const after = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
   assert.ok(after.issues.some((issue) => issue.kind === "approved-drift" && issue.severity === "warn"));
+
+  const wildcard = dbDrift.buildLedgerPlan(root, { ...ledgerEntry, column: "" });
+  assert.strictEqual(wildcard.reason, "ledger-entry-invalid");
+  const excessiveTtl = dbDrift.buildLedgerPlan(root, {
+    ...ledgerEntry,
+    expiresAt: new Date(Date.parse(executedAt) + 8 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  assert.strictEqual(excessiveTtl.reason, "ledger-entry-invalid");
+
+  fs.writeFileSync(path.join(root, dbDrift.LEDGER_FILE), "{broken", "utf8");
+  const damaged = dbDrift.loadLedger(root);
+  assert.strictEqual(damaged.ok, false);
+  assert.strictEqual(dbDrift.buildLedgerPlan(root, ledgerEntry).reason, "ledger-invalid-json");
+  assert.strictEqual(fs.readFileSync(path.join(root, dbDrift.LEDGER_FILE), "utf8"), "{broken", "损坏台账不得被覆盖");
 }
 
 {

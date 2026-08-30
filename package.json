@@ -49,8 +49,13 @@
     "lint:js": "node scripts/lint-js.js",
     "verify:quality-config": "node scripts/verify-java-quality.js",
     "verify:quality-maven": "node scripts/verify-java-quality.js --maven",
-    "test": "node tests/be-rules.test.js && node tests/be-mapper-resource.test.js && node tests/governance-policy.test.js && node tests/reporters.test.js && node tests/template-engine.test.js && node tests/contract.test.js && node tests/contract-boundary.test.js && node tests/template-contract.test.js && node tests/collaboration.test.js && node tests/installer.test.js && node tests/codegen.test.js && node tests/codegen-production-guard.test.js && node tests/database-safety.test.js && node tests/db-consistency.test.js && node tests/safe-fix.test.js && node tests/write-chain-safety.test.js && node tests/java-compile-fixture.test.js && node tests/project-catalog.test.js && node tests/commit-policy.test.js && node tests/cli.test.js && node tests/verify-version.test.js && node tests/mcp-registry.test.js && node tests/mcp-server.test.js && node tests/contract-extensions.test.js && node tests/config-layering.test.js && node tests/task-router.test.js && node tests/test-codegen.test.js",
-    "verify": "npm run version:verify && npm run lint:skills && npm run lint:js && npm run verify:quality-config && npm run test",
+    "capabilities:sync": "node scripts/sync-capabilities.js --write",
+    "capabilities:check": "node scripts/sync-capabilities.js",
+    "verify:doc-sync": "node scripts/verify-doc-sync.js",
+    "verify:contract-invariants": "node scripts/verify-contract-invariants.js",
+    "test": "node scripts/run-tests.js",
+    "test:coverage": "node scripts/run-tests.js --coverage",
+    "verify": "npm run version:verify && npm run capabilities:check && npm run verify:doc-sync && npm run verify:contract-invariants && npm run lint:skills && npm run lint:js && npm run verify:quality-config && npm run test && npm run test:coverage",
     "release:check": "npm run verify && npm run verify:quality-maven && npm pack --dry-run --ignore-scripts",
     "prepublishOnly": "npm run release:check"
   }

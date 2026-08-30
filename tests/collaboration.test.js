@@ -44,6 +44,8 @@ assert.strictEqual(
 assert.strictEqual(manifest.operations.page.externalPath, "/mdm/mdmFeatureCategory/queryPage");
 assert.strictEqual(manifest.operations.update.method, "PUT");
 assert.ok(manifest.models.detailResponse.some((field) => field.name === "revision"), "详情必须返回乐观锁 revision");
+assert.deepStrictEqual(manifest.models.detailResponse.find((field) => field.name === "id").constraints, { maxLength: 64 });
+assert.strictEqual(manifest.models.detailResponse.find((field) => field.name === "id")["x-id-format"], "opaque");
 assert.deepStrictEqual(buildManifest(loaded.contract, loaded.profile, loaded.deliveryProfile), manifest, "协作契约必须确定性生成");
 
 const markdown = renderMarkdown(manifest);
@@ -71,6 +73,10 @@ assert.ok(compareManifest(manifest, wrongProfile).errors.some((item) => item.cod
 const wrongResource = structuredClone(manifest);
 wrongResource.resource.module = "other";
 assert.ok(compareManifest(manifest, wrongResource).errors.some((item) => item.path === "resource.module"));
+
+const wrongErrors = structuredClone(manifest);
+wrongErrors.errors = [{ code: "UNKNOWN_ERROR", httpStatus: 500, message: "未知错误", owner: "frontend", retryable: false, operations: ["detail"] }];
+assert.ok(compareManifest(manifest, wrongErrors).errors.some((item) => item.code === "C116"));
 
 const frontendDraft = structuredClone(manifest);
 frontendDraft.completion.contractStatus = "draft";

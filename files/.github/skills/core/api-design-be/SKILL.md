@@ -29,6 +29,8 @@ stage: ② 设计阶段
 
 ## 产物
 
+已有 `docs/db-spec` 时，先执行 `contract seed --table <TABLE> --database <oracle|mysql> --json`。它只推导数据库证据可证明的名称、类型和存储边界；`unresolved` 中的写策略、查询方式、分级、语义 ID、API、权限和迁移风险必须人工确认。
+
 先产出符合 `.wl-skills-bd/schemas/contract.schema.json` 的 `wl-contract.json`。`api.requestPath` 是 Controller 路径，`api.externalBasePath` 是前端经过网关调用的完整资源根路径，两者都必须明确。
 
 执行：
@@ -69,6 +71,8 @@ wl-skills-bd codegen plan wl-contract.json --json
 - 若前端 `api.md` 缺权限码 / 字段类型，报告差异而不擅自补全
 - 当前 Profile 固定 queryPage/getById/{id}/save/updateById/deleteById/{id}；需要另一套路由时新增兼容性 Profile，不做资源级临时覆盖
 - 更新必须形成 `详情 revision → UpdateDTO id+revision` 的乐观锁闭环
+- ID 长度由 Profile 的 `idPolicy` 同时驱动 DDL、Controller/DTO 校验与协作契约；不得在模板中另写魔法长度
+- 生产契约必须声明目标数据库风险、业务错误码目录和对外字段稳定语义 ID
 
 ## 完成摘要
 

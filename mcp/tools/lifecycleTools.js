@@ -82,6 +82,12 @@ function handleCodegen(args) {
 
 function handleContract(args) {
   const root = projectRoot();
+  if (args.mode === "seed") {
+    const seed = require("../../lib/contract-seed").buildContractSeed(root, args);
+    if (!seed.ok) return blockedResult((seed.errors || []).map((item) => `${item.path || item.code}: ${item.message}`).join("\n"), seed.reason, seed);
+    return toolResult(`契约种子：${seed.source.table}；确定性字段 ${seed.suggestions.fields.length} 个；待确认 ${seed.unresolved.length} 项`, seed);
+  }
+  if (!args.contract) return blockedResult("contract show/diff 必须提供 contract", "invalid-input");
   let value;
   try {
     value = contractAndManifest(root, args.contract);
@@ -397,17 +403,27 @@ function handleCatalog(args) {
     if (args.module) {
       const value = catalog.readModuleCatalog(root, args.module);
       if (!value) return blockedResult(`模块目录快照不存在：${args.module}`, "catalog-missing");
-      return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", catalog: value });
+      const summary = catalog.summarizeCatalog(value);
+      if (args.detail !== "full") return toolResult(`Catalog 摘要：${value.module.id}，资源 ${summary.resources}，证据文件 ${summary.evidenceFiles}`, { ok: true, state: "read", detail: "summary", catalog: summary });
+      return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", detail: "full", catalog: value });
     }
     const file = path.join(root, catalog.CATALOG_ROOT, "project-catalog.json");
     if (!fs.existsSync(file)) return blockedResult("项目目录快照不存在", "catalog-missing");
     const value = JSON.parse(fs.readFileSync(file, "utf8"));
-    return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", catalog: value });
+    const summary = {
+      schemaVersion: value.schemaVersion,
+      project: value.project,
+      catalogHash: value.catalogHash,
+      modules: Array.isArray(value.modules) ? value.modules.length : Object.keys(value.modules || {}).length,
+    };
+    if (args.detail !== "full") return toolResult(`项目 Catalog 摘要：模块 ${summary.modules}`, { ok: true, state: "read", detail: "summary", catalog: summary });
+    return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", detail: "full", catalog: value });
   }
   if (args.mode === "check") {
     if (!args.module) return blockedResult("catalog check 必须指定当前 module", "module-required");
     const result = catalog.checkModuleFreshness(root, args.module);
-    return toolResult(result.ok ? `✓ ${args.module} 目录快照新鲜；只扫描当前模块` : `✗ ${args.module} 目录缺失或过期`, result, !result.ok);
+    const output = catalog.publicFreshnessResult(result, { detail: args.detail });
+    return toolResult(result.ok ? `✓ ${args.module} 目录快照新鲜；只扫描当前模块` : `✗ ${args.module} 目录缺失或过期`, output, !result.ok);
   }
   const plan = catalog.buildCatalogPlan(root, { module: args.module, full: args.full === true });
   if (!plan.ok) return blockedResult((plan.errors || []).map((item) => `${item.path}: ${item.message}`).join("\n"), "catalog-plan-invalid", plan);
@@ -432,11 +448,12 @@ function handleContext(args) {
     keywords: args.keywords,
     maxFiles: args.maxFiles,
     maxBytes: args.maxBytes,
+    maxTokens: args.maxTokens,
     maxHops: args.maxHops,
   });
   if (!result.ok) return blockedResult((result.errors || []).map((item) => `${item.path || item.code}: ${item.message}`).join("\n"), result.reason, result);
   return toolResult(
-    `上下文包：${result.module}；扫描模块 ${result.scanPolicy.scannedModules.join(", ")}；加载一跳快照 ${result.scanPolicy.loadedSnapshotModules.join(", ") || "无"}；选择 ${result.selection.selectedFiles} 个文件`,
+    `上下文包：${result.module}；扫描模块 ${result.scanPolicy.scannedModules.join(", ")}；加载一跳快照 ${result.scanPolicy.loadedSnapshotModules.join(", ") || "无"}；选择 ${result.selection.selectedFiles} 个文件 / 约 ${result.selection.selectedTokens} tokens`,
     result,
   );
 }
@@ -474,12 +491,16 @@ function handleTest(args) {
     if (!loaded.ok) return blockedResult(`契约校验失败\n${validationText(loaded)}`, "invalid-contract", { errors: loaded.errors });
     const ops = loaded.contract.customOperations || [];
     const all = [];
-    for (const op of ops) all.push({ operation: op.name, kind: op.kind, scenarios: testCodegen.buildTestScenarios(op, loaded.contract).map((s) => ({ id: s.id, display: s.displayName, kind: s.kind })) });
+    for (const op of ops) all.push({ operation: op.name, kind: op.kind, scenarios: testCodegen.buildTestScenarios(op, loaded.contract, loaded.profile).map((s) => ({ id: s.id, display: s.displayName, kind: s.kind })) });
     return toolResult(`业务行为契约测试场景：${all.reduce((a, x) => a + x.scenarios.length, 0)} 个`, { ok: true, operations: all });
   }
   const result = testCodegen.generateServiceTest(file, { projectRoot: root });
   if (!result.ok) return blockedResult(`契约校验失败\n${validationText(result)}`, "invalid-contract", { errors: result.errors });
-  return toolResult(`✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`, { ok: true, scenarioCount: result.scenarioCount, content: result.content });
+  const includeSource = args.includeSource === true;
+  return toolResult(
+    includeSource ? `✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}` : `✅ 已生成 ${result.scenarioCount} 个测试场景；传 includeSource=true 获取源码`,
+    { ok: true, scenarioCount: result.scenarioCount, ...(includeSource ? { content: result.content } : {}) },
+  );
 }
 
 module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot };

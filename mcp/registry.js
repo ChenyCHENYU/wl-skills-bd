@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
 const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
+const capabilities = require("../files/.wl-skills-bd/capabilities.json");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const STANDARDS_ROOT = path.join(PACKAGE_ROOT, "files", ".github", "standards");
@@ -29,12 +30,16 @@ const TEMPLATE_MAP = Object.freeze({
 
 const validateTool = {
   name: "wls_be_validate",
-  description: "只读扫描后端工程 B1~B12；返回规则、位置、指纹、抑制数和分级统计。quick=true 时跳过设计级慢规则。",
+  description: `只读扫描后端工程 ${capabilities.backendRules.displayRange}；支持规则、严重度和结果上限过滤。quick=true 时跳过设计级慢规则。`,
   inputSchema: {
     type: "object",
     properties: {
       path: { type: "string", minLength: 1, description: "项目内相对扫描路径" },
       quick: { type: "boolean", description: "跳过 B9~B12 设计级检查" },
+      rules: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: capabilities.backendRules.ids } },
+      severity: { type: "string", enum: ["error", "warn", "info"] },
+      maxIssues: { type: "integer", minimum: 0, maximum: 500 },
+      includeEndpoints: { type: "boolean", description: "显式返回完整 Controller 端点；默认仅返回数量" },
     },
     additionalProperties: false,
   },
@@ -70,13 +75,20 @@ const codegenTool = {
 
 const contractTool = {
   name: "wls_be_contract",
-  description: "渲染后端协作契约，或核对前端 wl-api-contract、运行时 OpenAPI 3、权限清单与 kit 风格 api.md；只读。",
+  description: "从 docs/db-spec 抽取保守契约种子，或渲染/核对前端 wl-api-contract、运行时 OpenAPI 3、权限清单与 kit 风格 api.md；只读。",
   inputSchema: {
     type: "object",
-    required: ["mode", "contract"],
+    required: ["mode"],
     properties: {
-      mode: { type: "string", enum: ["show", "diff"] },
+      mode: { type: "string", enum: ["seed", "show", "diff"] },
       contract: { type: "string", minLength: 1 },
+      table: { type: "string", minLength: 1 },
+      database: { type: "string", enum: ["oracle", "mysql"] },
+      profile: { type: "string", minLength: 1 },
+      rootPackage: { type: "string", minLength: 1 },
+      module: { type: "string", minLength: 1 },
+      entity: { type: "string", minLength: 1 },
+      contractId: { type: "string", minLength: 1 },
       format: { type: "string", enum: ["json", "markdown"] },
       frontend: { type: "string", minLength: 1 },
       openapi: { type: "string", minLength: 1 },
@@ -84,6 +96,10 @@ const contractTool = {
       kitApiMd: { type: "string", minLength: 1, description: "kit 风格 api.md（含 dict-contract 块），核对 API_CONFIG 与 externalBasePath" },
       strict: { type: "boolean" },
     },
+    allOf: [
+      { if: { properties: { mode: { const: "seed" } } }, then: { required: ["table", "database"] } },
+      { if: { properties: { mode: { enum: ["show", "diff"] } } }, then: { required: ["contract"] } },
+    ],
     additionalProperties: false,
   },
   handle: handleContract,
@@ -108,10 +124,10 @@ const fixTool = {
 
 const standardsTool = {
   name: "wls_be_standards",
-  description: "查询 28 条后端规范。无参返回索引；id=01~28 返回指定全文。只读。",
+  description: `查询 ${capabilities.standards.count} 条后端规范。无参返回索引；id=${capabilities.standards.ids[0]}~${capabilities.standards.latest} 返回指定全文。只读。`,
   inputSchema: {
     type: "object",
-    properties: { id: { type: "string", pattern: "^(0[1-9]|1[0-9]|2[0-7])$" } },
+    properties: { id: { type: "string", enum: capabilities.standards.ids } },
     additionalProperties: false,
   },
   handle(args) {
@@ -237,6 +253,7 @@ const catalogTool = {
       mode: { type: "string", enum: ["plan", "apply", "show", "check"] },
       module: { type: "string", pattern: "^[a-z][a-zA-Z0-9]*$" },
       full: { type: "boolean" },
+      detail: { type: "string", enum: ["summary", "full"], description: "show/check 默认 summary；full 显式返回完整快照" },
       confirmApply: { type: "boolean" },
       planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
       allowProductionWrites: { type: "boolean" },
@@ -248,7 +265,7 @@ const catalogTool = {
 
 const contextTool = {
   name: "wls_be_context",
-  description: "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件选择、预算和 contextHash。只读。",
+  description: "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件/字节/token 预算和 contextHash。只读。",
   inputSchema: {
     type: "object",
     required: ["module"],
@@ -258,6 +275,7 @@ const contextTool = {
       keywords: { type: "array", items: { type: "string" }, uniqueItems: true },
       maxFiles: { type: "integer", minimum: 3, maximum: 200 },
       maxBytes: { type: "integer", minimum: 16384, maximum: 10485760 },
+      maxTokens: { type: "integer", minimum: 512, maximum: 200000 },
       maxHops: { type: "integer", minimum: 0, maximum: 1 },
     },
     additionalProperties: false,
@@ -290,6 +308,7 @@ const testTool = {
     properties: {
       mode: { type: "string", enum: ["gen", "scenarios"] },
       contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
+      includeSource: { type: "boolean", description: "gen 时显式返回生成源码；默认仅返回摘要" },
     },
     additionalProperties: false,
   },

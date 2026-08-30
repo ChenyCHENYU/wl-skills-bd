@@ -43,6 +43,27 @@ try {
       dataReviewRef: "docs/evidence/data-review.md",
     },
   };
+  assuranceContract.databaseTarget = {
+    schema: "MDM",
+    location: "pt-primary",
+    estimatedRows: 100000,
+    estimatedBytes: 52428800,
+    downtimeBudgetSeconds: 0,
+    onlineDdl: true,
+    backupRef: "CHG-20260718-MDM-FEATURE",
+    recoveryOwner: "mdm-owner",
+  };
+  assuranceContract.errors = [{
+    code: "FEATURE_CATEGORY_NOT_FOUND",
+    httpStatus: 404,
+    message: "特征量分类不存在",
+    owner: "mdm-owner",
+    retryable: false,
+    operations: ["detail", "update", "remove"],
+  }];
+  assuranceContract.fields.forEach((field) => {
+    field.semanticId = `MDM_FEATURE_CATEGORY_${field.column}`;
+  });
   const assuranceContractFile = path.join(assuranceRoot, "feature-category.contract.json");
   fs.writeFileSync(assuranceContractFile, `${JSON.stringify(assuranceContract, null, 2)}\n`, "utf8");
   const missingEvidencePlan = buildPlan(assuranceContractFile, { projectRoot: assuranceRoot });

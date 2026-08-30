@@ -7,7 +7,9 @@
   "required": ["schemaVersion", "profileId"],
   "anyOf": [
     { "required": ["softDelete"] },
-    { "required": ["auditTime"] }
+    { "required": ["auditTime"] },
+    { "required": ["idPolicy"] },
+    { "required": ["auditColumns"] }
   ],
   "properties": {
     "schemaVersion": { "const": 1 },
@@ -30,6 +32,28 @@
       "properties": {
         "mysqlType": { "type": "string", "pattern": "^(VARCHAR\\(19\\)|DATETIME(\\([0-6]\\))?)$" },
         "oracleType": { "type": "string", "pattern": "^(VARCHAR2\\(19 CHAR\\)|TIMESTAMP(\\([0-9]\\))?)$" }
+      }
+    },
+    "idPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "javaType": { "const": "String" },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+        "oracleType": { "type": "string", "pattern": "^VARCHAR2\\([1-9][0-9]{0,3} CHAR\\)$" },
+        "mysqlType": { "type": "string", "pattern": "^VARCHAR\\([1-9][0-9]{0,3}\\)$" },
+        "format": { "enum": ["opaque", "uuid", "numeric-string"] }
+      }
+    },
+    "auditColumns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "actorMaxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+        "createUserNullable": { "type": "boolean" },
+        "updateUserNullable": { "type": "boolean" },
+        "createTimeNullable": { "type": "boolean" },
+        "updateTimeNullable": { "type": "boolean" }
       }
     }
   }

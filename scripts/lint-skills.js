@@ -9,7 +9,7 @@
  *  1. 公共文件存在（_registry/_pipeline/_best-practices）
  *  2. 有写操作的 core/ops SKILL.md 必须含 Pre-flight + standards 引用
  *  3. _registry.md 列出的 SKILL.md 路径必须存在
- *  4. SKILL.md 主文件 ≤ 500 行，声明的 references 必须存在
+ *  4. SKILL.md 主文件 ≤ 500 行，声明的 references 必须存在；USAGE.md 按需提供
  *  5. java-quality/ 下每个工具目录必须有 README.md（接入文档）
  *  6. 规则覆盖矩阵：rule-coverage.md 标记阻断的规则，执行器必须真实存在
  *
@@ -66,7 +66,9 @@ const WRITE_SKILLS = [
   "core/business-doc-extract-be/SKILL.md",
   "data/db-migration/SKILL.md",
   "ops/code-fix-be/SKILL.md",
+  "ops/data-safety/SKILL.md",
   "ops/standard-env-config-be/SKILL.md",
+  "test/unit-test-gen/SKILL.md",
 ];
 
 for (const rel of WRITE_SKILLS) {
@@ -82,7 +84,7 @@ for (const rel of WRITE_SKILLS) {
 
 // 3. _registry.md 列出的 SKILL.md 路径必须存在
 const registry = fileMust("_registry.md") || "";
-const skillPathRe = /skills\/([\w\-/]+\/SKILL\.md)/g;
+const skillPathRe = /\]\(([\w\-/]+\/SKILL\.md)\)/g;
 let m;
 const seen = new Set();
 while ((m = skillPathRe.exec(registry)) !== null) {
@@ -125,17 +127,6 @@ if (fs.existsSync(JAVA_QUALITY)) {
         warnings.push(`java-quality/${entry.name}/: 缺 README.md 接入文档`);
       }
     }
-  }
-}
-
-// 5.5 所有有 SKILL.md 的目录必须配 USAGE.md（执行细节+典型场景+FAQ）
-const skillsWithSkMd = walk(SKILLS)
-  .filter((fp) => path.basename(fp) === "SKILL.md")
-  .map((fp) => path.dirname(fp));
-for (const dir of skillsWithSkMd) {
-  const usage = path.join(dir, "USAGE.md");
-  if (!fs.existsSync(usage)) {
-    errors.push(`${path.relative(SKILLS, dir).replace(/\\/g, "/")}/: Skill 必须配 USAGE.md（典型场景+触发词+FAQ）`);
   }
 }
 

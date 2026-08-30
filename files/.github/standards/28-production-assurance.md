@@ -26,6 +26,9 @@ document-meta:
 - `consistency`：幂等策略、事件投递语义、跨服务事务策略；
 - `resilience`：超时、有限重试、熔断、限流；
 - `evidence`：威胁模型、授权评审、压测、运行手册、恢复演练和数据评审文件。
+- `dbCluster` 与 `databaseTarget`：目标 schema/库位、数据规模、停机预算、在线 DDL 能力、备份依据和恢复责任人；
+- `errors`：稳定错误码、HTTP 状态、消息、责任人、可重试性及适用操作；
+- 对外详情或列表字段的 `semanticId`：跨版本稳定的数据口径标识。
 
 缺任一声明或证据文件时，协作契约保持 `draft`，`codegen apply --require-complete` 必须阻断。工具只验证证据文件存在且非空，不伪称已经替代安全、DBA、SRE 或业务评审。
 

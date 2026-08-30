@@ -29,7 +29,7 @@ L3 CLI 适配              L3 MCP 适配
 L4 工程产物  Java/XML/DDL/tests/contracts/catalog/docs + standards/skills/quality config
                     │
                     ▼
-L5 验证  B1~B30 + J1~J8 + strict contract diff + assurance evidence + package self-check
+L5 验证  B1~B31 + J1~J8 + strict contract diff + assurance evidence + package self-check
                     │
                     ▼
 L6 人工卡口  DDL/数据、权限发布、环境部署、破坏性 API、业务重构
@@ -43,16 +43,18 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 |---|---|---|
 | `files/.wl-skills-bd/` | contract/collaboration/rules Schema，Profile，兼容矩阵，规则目录 | 业务工程源码 |
 | `lib/installer.js` | manifest、增量更新、漂移、清理、备份 | 猜测文件归属 |
-| `lib/contract.js` | JSON Schema 和跨字段语义校验 | 自然语言需求解析 |
+| `lib/contract.js` / `lib/profile-policy.js` | JSON Schema、跨字段语义校验及 ID/审计列单一策略 | 自然语言需求解析 |
+| `lib/contract-seed.js` | 从 DB Spec 抽取可证明的契约种子并显式列出未决项 | 猜测 API、权限、写策略或业务语义 |
 | `lib/codegen.js` | 17+N 产物、planHash、业务保护区、Flyway 不可变、冲突、事务回滚与完成度证据 | 执行 DDL |
 | `lib/collaboration.js` | manifest 渲染，前端/OpenAPI/权限差异 | 修改前端或权限平台 |
-| `lib/be-rules.js` | B1~B30 只读扫描、真实 Controller 端点清单与证据 | 自动修复 |
+| `lib/be-rules.js` | B1~B31 只读扫描、真实 Controller 端点清单与证据 | 自动修复 |
 | `lib/safe-fix.js` | B3/B5 条件安全修复、备份、恢复、复扫 | 业务语义重构 |
 | `lib/doctor.js` | 工具链/Profile/门禁/租户证据 | 安装 Maven 或修改 POM |
 | `lib/config-*.js` / `lib/env-matrix.js` | 配置骨架、矩阵、迁移计划、体检、脱敏修复与 TCP 探测 | 写 Nacos/数据库/K8s 或自动部署 |
-| `lib/write-guard.js` / `lib/permission-export.js` | 统一 pre/prod 护栏、权限导出计划/回滚 | 发布权限到平台 |
+| `lib/write-guard.js` / `lib/file-transaction.js` | 多环境 fail-closed 护栏及通用 planHash/确认/原子写/回滚事务 | 绕过人工授权或写外部平台 |
+| `lib/permission-export.js` | 权限导出计划/回滚 | 发布权限到平台 |
 | `lib/task-router.js` | 只读识别任务并选择 Skill、Standards、规则子集与统一安全写链 | 直接修改源码或绕过 codegen/safe-fix/config |
-| `lib/project-catalog.js` / `lib/context-planner.js` | 当前模块增量目录、全局身份去重、一跳快照和预算化上下文 | 隐式全仓扫描或读取关联模块源码目录 |
+| `lib/project-catalog.js` / `lib/context-planner.js` | 当前模块增量目录、全局身份去重、一跳快照和文件/字节/token 预算化上下文 | 隐式全仓扫描或读取关联模块源码目录 |
 | `lib/commit-policy.js` | type/scope/subject 与 Git range 校验、Hook 接入诊断 | 分支策略、自动提交或仓库保护配置 |
 | `files/.github/java-quality/` | J1~J8 Maven 质量能力 | 替代业务测试/人工评审 |
 | `mcp/` | 严格入参 Schema、根目录边界和 stdio 协议 | 第二套执行器 |

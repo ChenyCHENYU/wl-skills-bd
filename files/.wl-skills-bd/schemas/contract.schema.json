@@ -9,9 +9,9 @@
   "properties": {
     "schemaVersion": { "const": 1 },
     "contractId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,79}$" },
-    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$" },
-    "rootPackage": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)+$" },
-    "module": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+    "profile": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-z0-9-]+$" },
+    "rootPackage": { "type": "string", "maxLength": 200, "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)+$" },
+    "module": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-zA-Z0-9]*$" },
     "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 wl-skills-design 的 design-model.json entity.id，用于跨包稳定 ID 追溯" },
     "environment": { "enum": ["dev", "sit", "uat", "pre", "prod"], "description": "可选，声明契约适用的环境；不声明则环境无关。声明 prod 时 codegen apply 默认阻断（详见 standards/24 §6）" },
     "dbCluster": { "enum": ["cx", "non_cx", "pt"], "description": "可选，数据库集群归属：cx=产销库 / non_cx=非产销库 / pt=平台库；doctor 校验与 datasource profile 一致（standards/24 §3.3）" },
@@ -111,8 +111,8 @@
       "additionalProperties": false,
       "required": ["name", "table", "description"],
       "properties": {
-        "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
-        "table": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+        "name": { "type": "string", "maxLength": 128, "pattern": "^[A-Z][A-Za-z0-9]*$" },
+        "table": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
         "description": { "type": "string", "minLength": 1, "maxLength": 100 }
       }
     },
@@ -121,9 +121,9 @@
       "additionalProperties": false,
       "required": ["requestPath", "externalBasePath", "permissionPrefix", "permissions"],
       "properties": {
-        "requestPath": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
-        "externalBasePath": { "type": "string", "pattern": "^/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$" },
-        "permissionPrefix": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]*$" },
+        "requestPath": { "type": "string", "maxLength": 128, "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "externalBasePath": { "type": "string", "maxLength": 500, "pattern": "^/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$" },
+        "permissionPrefix": { "type": "string", "maxLength": 128, "pattern": "^[a-z][a-z0-9_:-]*$" },
         "permissions": {
           "type": "object",
           "additionalProperties": false,
@@ -140,6 +140,21 @@
       }
     },
     "database": { "enum": ["oracle", "mysql"] },
+    "databaseTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "location"],
+      "properties": {
+        "schema": { "type": "string", "maxLength": 128, "pattern": "^[A-Za-z][A-Za-z0-9_$#]*$" },
+        "location": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "estimatedRows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "estimatedBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "downtimeBudgetSeconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "onlineDdl": { "type": "boolean" },
+        "backupRef": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "recoveryOwner": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
     "migration": {
       "type": "object",
       "additionalProperties": false,
@@ -147,7 +162,7 @@
       "properties": {
         "version": { "type": "string", "pattern": "^[0-9]{8}_[0-9]{6}$" },
         "rollbackStrategy": { "type": "string", "minLength": 20 },
-        "verificationSql": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+        "verificationSql": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "type": "string", "minLength": 1, "maxLength": 4000 } }
       }
     },
     "output": {
@@ -166,6 +181,7 @@
     "fields": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 500,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -184,7 +200,7 @@
           "queryMode": { "enum": ["none", "eq", "like"], "default": "none" },
           "detail": { "type": "boolean", "default": true },
           "list": { "type": "boolean", "default": true },
-          "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000 },
+          "maxLength": { "type": "integer", "minimum": 1, "maximum": 4000, "deprecated": true, "description": "兼容旧契约；新契约只使用 constraints.maxLength" },
           "constraints": { "$ref": "#/$defs/constraints", "description": "新增/修改请求约束；未声明时只使用可确定的数据库存储边界" },
           "constraintSource": { "type": "string", "minLength": 1, "maxLength": 300 },
           "queryConstraints": { "$ref": "#/$defs/constraints", "description": "查询请求专用约束；禁止从数据库列长度或精度机械继承" },
@@ -207,32 +223,55 @@
     },
     "indexes": {
       "type": "array",
+      "maxItems": 100,
       "description": "可选，自定义索引。COMPANY_ID+IS_DELETE 联合索引默认生成，无需重复声明。",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["name", "columns"],
         "properties": {
-          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 30 },
-          "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
+          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 64 },
+          "columns": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
           "unique": { "type": "boolean", "default": false }
         }
       }
     },
     "customOperations": {
       "type": "array",
+      "maxItems": 100,
       "description": "可选，业务命令/状态机。请求字段必须被 patch.fromRequest 显式消费，写入使用租户+有效标记+版本原子 SQL。",
       "items": { "$ref": "#/$defs/customOperation" }
     },
     "relations": {
       "type": "array",
+      "maxItems": 100,
       "description": "可选，主从关联。当前只支持一对多；从表用独立 contract 描述。",
       "items": { "$ref": "#/$defs/relation" }
     },
     "validationRules": {
       "type": "array",
+      "maxItems": 100,
       "description": "可选，显式跨字段请求校验；不得按字段名称猜测",
       "items": { "$ref": "#/$defs/validationRule" }
+    },
+    "errors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "httpStatus", "message", "owner", "retryable", "operations"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+          "httpStatus": { "type": "integer", "minimum": 400, "maximum": 599 },
+          "message": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "owner": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "retryable": { "type": "boolean" },
+          "operations": { "type": "array", "minItems": 1, "maxItems": 100, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } }
+        }
+      }
     },
     "alter": {
       "type": "object",
@@ -250,9 +289,24 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["assurance"],
+        "properties": { "assurance": { "required": ["level"], "properties": { "level": { "const": "production" } } } }
+      },
+      "then": {
+        "required": ["dbCluster", "databaseTarget", "errors"],
+        "properties": {
+          "databaseTarget": { "required": ["schema", "location", "estimatedRows", "estimatedBytes", "downtimeBudgetSeconds", "onlineDdl", "backupRef", "recoveryOwner"] },
+          "fields": { "items": { "required": ["semanticId"] } }
+        }
+      }
+    }
+  ],
   "$defs": {
     "stableId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$" },
-    "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "relativePath": { "type": "string", "maxLength": 500, "pattern": "^(?![A-Za-z]:|/|.*(?:^|/)\\.\\.(?:/|$)).+$" },
     "constraints": {
       "type": "object",
       "minProperties": 1,
@@ -393,13 +447,14 @@
     },
     "indexes": {
       "type": "array",
+      "maxItems": 100,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["name", "columns"],
         "properties": {
           "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "minLength": 1, "maxLength": 64 },
-          "columns": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
+          "columns": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" } },
           "unique": { "type": "boolean", "default": false }
         }
       }

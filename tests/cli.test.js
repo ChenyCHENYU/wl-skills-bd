@@ -67,6 +67,13 @@ try {
     },
   }, null, 2)}\n`, "utf8");
 
+  const contractSeed = run(["contract", "seed", "--table", "MDM_FEATURE_CATEGORY", "--database", "oracle", "--target", root, "--json"]);
+  assert.strictEqual(contractSeed.status, 0, contractSeed.stderr);
+  const seed = JSON.parse(contractSeed.stdout);
+  assert.strictEqual(seed.kind, "wl-backend-contract-seed");
+  assert.strictEqual(seed.suggestions.fields.length, 3, "契约种子必须排除平台治理字段");
+  assert.ok(seed.unresolved.length > 0, "无法由 DB Spec 证明的业务策略必须显式待确认");
+
   const implicitCatalog = run(["catalog", "plan", "--target", root, "--json"]);
   assert.strictEqual(implicitCatalog.status, 1, "目录不得隐式全量扫描");
   const catalogPreview = run(["catalog", "plan", "--module", "feature", "--target", root, "--json"]);
@@ -75,9 +82,13 @@ try {
   assert.deepStrictEqual(catalogPlan.scannedModules, ["feature"]);
   const catalogApply = run(["catalog", "apply", "--module", "feature", "--target", root, "--plan-hash", catalogPlan.planHash, "--confirm", "--json"]);
   assert.strictEqual(catalogApply.status, 0, catalogApply.stderr);
-  const context = run(["context", "plan", "--module", "feature", "--task", "增加特征接口", "--target", root, "--json"]);
+  const catalogCheck = run(["catalog", "check", "--module", "feature", "--target", root, "--json"]);
+  assert.strictEqual(catalogCheck.status, 0, catalogCheck.stderr);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(JSON.parse(catalogCheck.stdout), "catalog"), false, "Catalog 检查默认不得返回完整快照");
+  const context = run(["context", "plan", "--module", "feature", "--task", "增加特征接口", "--max-tokens", "12000", "--target", root, "--json"]);
   assert.strictEqual(context.status, 0, context.stderr);
   assert.deepStrictEqual(JSON.parse(context.stdout).scanPolicy.scannedModules, ["feature"]);
+  assert.ok(JSON.parse(context.stdout).selection.selectedTokens <= 12000);
   const commit = run(["commit", "validate", "--message", "feat(feature): 特征分类-增加幂等校验", "--target", root, "--json"]);
   assert.strictEqual(commit.status, 0, commit.stderr);
 
@@ -134,6 +145,25 @@ try {
   const scopedValidate = run(["validate", ".", "--target", root, "--rules", "B26", "--json"]);
   assert.strictEqual(scopedValidate.status, 0, scopedValidate.stderr);
   assert.ok(!JSON.parse(scopedValidate.stdout).issues.some((item) => item.rule === "B25"), "--rules 必须真实过滤规则");
+
+  const testOutput = "generated/FeatureCategoryServiceTest.java";
+  const testPreview = run(["test", "gen", contract, "--target", root, "--output", testOutput, "--json"]);
+  assert.strictEqual(testPreview.status, 0, testPreview.stderr);
+  const testPlan = JSON.parse(testPreview.stdout);
+  assert.strictEqual(fs.existsSync(path.join(root, testOutput)), false, "test gen 预览必须零写入");
+  const testApply = run(["test", "gen", contract, "--target", root, "--output", testOutput, "--plan-hash", testPlan.planHash, "--confirm", "--json"]);
+  assert.strictEqual(testApply.status, 0, testApply.stderr);
+  assert.strictEqual(fs.existsSync(path.join(root, testOutput)), true);
+
+  const executedAt = new Date(Date.now() - 60 * 1000).toISOString();
+  const ledgerArgs = ["db", "executed", "--table", "MDM_FEATURE_CATEGORY", "--column", "CATEGORY_NAME", "--ddl-plan-hash", "b".repeat(64), "--approval-ref", "CHG-CLI-1", "--source-ref", "INC-CLI-1", "--executed-at", executedAt, "--target", root, "--json"];
+  const ledgerPreview = run(ledgerArgs);
+  assert.strictEqual(ledgerPreview.status, 0, ledgerPreview.stderr);
+  const ledgerPlan = JSON.parse(ledgerPreview.stdout);
+  assert.strictEqual(fs.existsSync(path.join(root, ".wl-skills-bd", ".state", "ddl-ledger.json")), false, "DDL 台账预览必须零写入");
+  const ledgerApply = run([...ledgerArgs, "--plan-hash", ledgerPlan.planHash, "--confirm"]);
+  assert.strictEqual(ledgerApply.status, 0, ledgerApply.stderr);
+  assert.strictEqual(JSON.parse(ledgerApply.stdout).ok, true);
 
   const doctor = run(["doctor", "--target", root, "--json"]);
   assert.strictEqual(doctor.status, 1, "无 pom 的目录 doctor 必须失败");

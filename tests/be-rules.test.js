@@ -166,7 +166,7 @@ withFixture({}, (root) => {
   assert.strictEqual(result.stats.total, result.stats.error + result.stats.warn + result.stats.info);
 });
 
-console.log("✅ be-rules：B1~B12、独立豁免、租户证据、误报保护和路径边界通过");
+console.log("✅ be-rules：B1~B31、独立豁免、租户证据、误报保护和路径边界通过");
 
 // ─── B13~B19 数据安全规则（v0.10）───
 

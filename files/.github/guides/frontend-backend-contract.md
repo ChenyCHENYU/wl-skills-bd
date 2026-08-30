@@ -42,7 +42,8 @@ codegen 与 `contract show` 输出 `kind=wl-api-contract`、`protocolVersion=1.0
 - `resource`：资源、模块、权限前缀及可选稳定 ID；
 - `transport`：响应、分页与外部根路径；
 - `operations`：方法、路径、权限、请求/响应模型；
-- `models`：前后端字段类型与必填性；
+- `models`：前后端字段类型、必填性、Profile ID 长度与格式；
+- `errors`：业务错误码、HTTP 状态、可重试性、责任人和适用操作；
 - `frontend.apiConfig`：前端实际请求地址；
 - `completion`：confirmed/draft、未决问题、偏差和业务骨架清单。
 
@@ -92,6 +93,7 @@ wl-skills-bd contract diff wl-contract.json \
 - Profile/协议、资源核心标识不一致；
 - method/path/API_CONFIG/权限不一致；
 - 请求、响应、分页或 revision 模型不一致；
+- ID 边界或业务错误码目录不一致；
 - 前端或后端 completion 不是 confirmed；
 - 仍有 openQuestions；
 - 降级到旧版文本检查或 OpenAPI/权限证据不足产生阻断 warning。

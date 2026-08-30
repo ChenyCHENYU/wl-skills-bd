@@ -17,7 +17,7 @@
 | 模块上下文 / 查关联服务 / 生成前去重 / 避免全仓扫描             | [`core/project-context-governance`](core/project-context-governance/SKILL.md) | ⓪ | ✅ 落地 | catalog/context |
 | 抽取业务文档 / 阅读旧代码生成业务说明                  | [`core/business-doc-extract-be`](core/business-doc-extract-be/SKILL.md)  | ②预  | 🟡 骨架  | —          |
 | 建表 / DDL / ALTER TABLE / 字段新增 / 索引            | [`data/db-migration`](data/db-migration/SKILL.md)                        | ⑥   | 🟡 部分  | db_preview |
-| 生成单元测试 / Mock 测试 / Controller 测试            | [`test/unit-test-gen`](test/unit-test-gen/SKILL.md)                      | ⑦   | 🟡 骨架  | —          |
+| 生成单元测试 / Mock 测试 / Controller 测试            | [`test/unit-test-gen`](test/unit-test-gen/SKILL.md)                      | ⑦   | ✅ 已落地 | test       |
 | 修复规范违规 / 按审计报告改代码                        | [`ops/code-fix-be`](ops/code-fix-be/SKILL.md)                            | ⑨   | ✅ 落地  | validate   |
 | Redis / 缓存 / 分布式锁 / 批量删除 / 物理删 / 熔断 / 限流 / Feign 超时 / 生产只读 / 二次确认 | [`ops/data-safety`](ops/data-safety/SKILL.md) | ops 横切 | ✅ 落地 | validate   |
 | 后端环境标准化 / 切华新 / 本地启动配不起来 / K8s 部署清单对齐 | [`ops/standard-env-config-be`](ops/standard-env-config-be/SKILL.md) | ops  | ✅ 落地 | config/troubleshoot |
@@ -124,5 +124,5 @@ business-doc-extract-be → api-design-be → entity-codegen → service-codegen
 
 ## 变更管理
 
-- 新增 Skill：编辑本文件 + 创建 `skills/{category}/{name}/SKILL.md + USAGE.md`
+- 新增 Skill：编辑本文件并创建 `skills/{category}/{name}/SKILL.md`；只有存在按需加载的详细资料时才增加 `references/` 或 `USAGE.md`
 - 不存在的 Skill 应明确说明未提供执行器，并给出当前可用的手工流程；不得声称已自动登记 roadmap。

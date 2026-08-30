@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- 新增能力目录/文档同步与契约不变量验证脚本，统一校验 Standards、B 规则、Skills、Profile、运行时、API 与 DDL 事实。
+- 新增通用文件事务链、多环境 fail-closed 写护栏、DDL 短期执行台账和 DB Spec 契约种子；所有新增写入口复用预览、planHash、确认、漂移检查、原子写与回滚。
+- Context Plan 增加中文任务语义拆分和估算 token 预算；Contract MCP 增加只读 `seed` 模式。
+
+### Changed
+
+- ID/审计列改由 Profile 单一策略驱动；生产契约新增目标数据库风险、错误码目录和对外字段语义 ID 门禁。
+- 协作契约比对新增错误码和 ID 边界，Controller 生成测试改为校验真实 Profile 路由与权限元数据。
+- 包测试改为并行执行，并增加覆盖率阈值门禁。
+
 ## [0.20.1] - 2026-08-22（数据库治理发布补丁）
 
 ### Changed

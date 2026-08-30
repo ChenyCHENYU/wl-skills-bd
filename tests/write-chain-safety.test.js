@@ -7,6 +7,8 @@ const path = require("path");
 const configFix = require("../lib/config-fix");
 const configInit = require("../lib/config-init");
 const permissionExport = require("../lib/permission-export");
+const fileTransaction = require("../lib/file-transaction");
+const { resolveWithin } = require("../lib/manifest");
 
 const ROOT = path.resolve(__dirname, "..");
 const contractFile = path.join(ROOT, "files", ".github", "templates", "examples", "feature-category.contract.json");
@@ -59,6 +61,36 @@ try {
   assert.strictEqual(fs.existsSync(path.join(configRoot, "src", "main", "resources", "bootstrap.yml")), false, "计划漂移后必须零写入");
 } finally {
   fs.rmSync(configRoot, { recursive: true, force: true });
+}
+
+const pathRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-path-chain-"));
+const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-path-outside-"));
+try {
+  const link = path.join(pathRoot, "linked");
+  fs.symlinkSync(outsideRoot, link, process.platform === "win32" ? "junction" : "dir");
+  assert.throws(() => resolveWithin(pathRoot, "linked/escape.txt"), /符号链接越界/);
+
+  const plan = fileTransaction.buildFilePlan(pathRoot, "reports/result.txt", "safe\n", { kind: "test-report" });
+  assert.strictEqual(plan.ok, true);
+  assert.strictEqual(fileTransaction.applyFilePlan(plan, { planHash: plan.planHash }).reason, "confirm-required");
+  assert.strictEqual(fs.existsSync(path.join(pathRoot, "reports", "result.txt")), false);
+  assert.strictEqual(fileTransaction.applyFilePlan(plan, { confirm: true, planHash: "bad" }).reason, "plan-hash-mismatch");
+  assert.strictEqual(fileTransaction.applyFilePlan(plan, { confirm: true, planHash: plan.planHash }).ok, true);
+
+  const invalidConfigRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-invalid-env-"));
+  try {
+    fs.mkdirSync(path.join(invalidConfigRoot, ".wl-skills-bd"), { recursive: true });
+    fs.writeFileSync(path.join(invalidConfigRoot, ".wl-skills-bd", "config.json"), "{broken", "utf8");
+    const invalidPlan = fileTransaction.buildFilePlan(invalidConfigRoot, "result.txt", "blocked\n");
+    const blocked = fileTransaction.applyFilePlan(invalidPlan, { confirm: true, planHash: invalidPlan.planHash });
+    assert.strictEqual(blocked.reason, "environment-undetermined");
+    assert.strictEqual(fs.existsSync(path.join(invalidConfigRoot, "result.txt")), false);
+  } finally {
+    fs.rmSync(invalidConfigRoot, { recursive: true, force: true });
+  }
+} finally {
+  fs.rmSync(pathRoot, { recursive: true, force: true });
+  fs.rmSync(outsideRoot, { recursive: true, force: true });
 }
 
 console.log("✅ write chain：permission/config 的 preview、planHash、漂移阻断、pre/prod 护栏和零写入通过");

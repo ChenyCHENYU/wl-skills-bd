@@ -227,6 +227,20 @@ function commandContract(args) {
   const [subcommand = "help", contractArg, ...rest] = args;
   const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
   const root = targetRoot(allArgs);
+  if (subcommand === "seed") {
+    const result = require("../lib/contract-seed").buildContractSeed(root, {
+      table: option(allArgs, "--table"),
+      database: option(allArgs, "--database"),
+      profile: option(allArgs, "--profile"),
+      rootPackage: option(allArgs, "--root-package"),
+      module: option(allArgs, "--module"),
+      entity: option(allArgs, "--entity"),
+      contractId: option(allArgs, "--contract-id"),
+    });
+    if (has(allArgs, "--json") || result.ok) printJson(result);
+    else for (const error of result.errors || []) console.error(`${error.path || error.code}: ${error.message}`);
+    return result.ok ? 0 : 1;
+  }
   if (!contractArg || contractArg.startsWith("-")) {
     console.error("contract 需要后端契约文件路径");
     return 1;
@@ -390,9 +404,15 @@ function commandDb(args) {
       return 1;
     }
     const drift = require("../lib/db-drift");
-    const snapshotFile = path.resolve(root, snapshot);
+    let snapshotFile;
+    try {
+      snapshotFile = resolveWithin(root, snapshot);
+    } catch (error) {
+      console.error(`db drift 快照路径无效：${error.message}`);
+      return 1;
+    }
     const result = drift.detectDrift(root, snapshotFile, {
-      tablePrefix: option(allArgs, "--prefix", "pl_"),
+      tablePrefix: option(allArgs, "--prefix", ""),
     });
     if (has(allArgs, "--json")) printJson(result);
     else {
@@ -407,36 +427,64 @@ function commandDb(args) {
 
   if (subcommand === "executed") {
     const drift = require("../lib/db-drift");
-    const required = ["--table", "--approval-ref", "--source-ref"];
+    const required = ["--table", "--column", "--ddl-plan-hash", "--approval-ref", "--source-ref", "--executed-at"];
     for (const flag of required) {
       if (!option(allArgs, flag)) {
         console.error(`db executed 需要 ${flag}（现场变更仅获短期宽限，必须及时回写文档/契约/Flyway）`);
         return 1;
       }
     }
+    const executedAt = option(allArgs, "--executed-at");
+    const executedTime = Date.parse(executedAt);
     const entry = {
       table: option(allArgs, "--table"),
-      column: option(allArgs, "--column") || null,
-      planHash: option(allArgs, "--plan-hash") || null,
+      column: option(allArgs, "--column"),
+      ddlPlanHash: option(allArgs, "--ddl-plan-hash"),
       approvalRef: option(allArgs, "--approval-ref"),
       sourceRef: option(allArgs, "--source-ref"),
       executedBy: option(allArgs, "--by") || "dba",
       note: option(allArgs, "--note") || "",
-      expiresAt: option(allArgs, "--expires-at") || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      executedAt,
+      expiresAt: option(allArgs, "--expires-at") || (Number.isFinite(executedTime) ? new Date(executedTime + 24 * 60 * 60 * 1000).toISOString() : ""),
     };
-    const result = drift.appendLedger(root, entry);
-    if (has(allArgs, "--json")) printJson({ ok: true, ...result, entry });
-    else console.log(`✅ 已记入 DDL 执行账本（${result.total} 条）：${result.file}`);
-    return 0;
+    const plan = drift.buildLedgerPlan(root, entry);
+    if (!plan.ok) {
+      if (has(allArgs, "--json")) printJson(plan);
+      else for (const error of plan.errors || []) console.error(error);
+      return 1;
+    }
+    if (!has(allArgs, "--confirm")) {
+      const preview = drift.publicLedgerPlan(plan);
+      if (has(allArgs, "--json")) printJson(preview);
+      else {
+        console.log(`DDL 台账写入预览：${entry.table}.${entry.column}，到期 ${entry.expiresAt}`);
+        console.log(`planHash: ${plan.planHash}`);
+      }
+      return 0;
+    }
+    const result = drift.applyLedgerPlan(plan, {
+      confirm: true,
+      planHash: option(allArgs, "--plan-hash"),
+      allowProductionWrites: has(allArgs, "--allow-production-writes"),
+    });
+    if (has(allArgs, "--json")) printJson(result);
+    else if (!result.ok) console.error(`DDL 台账零写入：${result.reason}`);
+    else console.log(`✅ 已记入 DDL 执行账本：${result.rel}`);
+    return result.ok ? 0 : 2;
   }
 
   if (subcommand === "ledger") {
     const drift = require("../lib/db-drift");
     const ledger = drift.loadLedger(root);
+    if (!ledger.ok) {
+      if (has(allArgs, "--json")) printJson(ledger);
+      else console.error(`DDL 执行账本损坏：${ledger.reason}`);
+      return 1;
+    }
     if (has(allArgs, "--json")) printJson(ledger);
     else if (ledger.executed.length === 0) console.log("DDL 执行账本为空");
     else for (const e of ledger.executed) {
-      console.log(`${e.recordedAt} ${e.table}${e.column ? "." + e.column : ".*"} 审批:${e.approvalRef} 执行:${e.executedBy}${e.planHash ? " plan:" + e.planHash : ""}${e.note ? " — " + e.note : ""}`);
+      console.log(`${e.executedAt || e.recordedAt || "<unknown-time>"} ${e.table}.${e.column || "<legacy-wildcard>"} 审批:${e.approvalRef} 执行:${e.executedBy}${e.ddlPlanHash || e.planHash ? " plan:" + (e.ddlPlanHash || e.planHash) : ""}${e.note ? " — " + e.note : ""}`);
     }
     return 0;
   }
@@ -571,7 +619,7 @@ function commandCatalog(args) {
       return 1;
     }
     const result = catalog.checkModuleFreshness(root, moduleId);
-    if (has(rest, "--json")) printJson(result);
+    if (has(rest, "--json")) printJson(catalog.publicFreshnessResult(result, { detail: has(rest, "--full") ? "full" : "summary" }));
     else console.log(result.ok ? `✓ ${moduleId} 目录快照新鲜；仅扫描了当前模块` : `✗ ${moduleId} 目录缺失或已过期`);
     return result.ok ? 0 : 1;
   }
@@ -620,6 +668,7 @@ function commandContext(args) {
     keywords: option(rest, "--keywords", ""),
     maxFiles: option(rest, "--max-files"),
     maxBytes: option(rest, "--max-bytes"),
+    maxTokens: option(rest, "--max-tokens"),
     maxHops: option(rest, "--max-hops"),
   });
   if (has(rest, "--json")) printJson(result);
@@ -629,7 +678,7 @@ function commandContext(args) {
   } else {
     console.log(`上下文包：${result.module}；扫描模块 ${result.scanPolicy.scannedModules.join(", ")}`);
     console.log(`加载一跳快照：${result.scanPolicy.loadedSnapshotModules.join(", ") || "无"}；关联源码目录扫描：否`);
-    console.log(`选择 ${result.selection.selectedFiles} 个文件 / ${result.selection.selectedBytes} bytes；contextHash: ${result.contextHash}`);
+    console.log(`选择 ${result.selection.selectedFiles} 个文件 / ${result.selection.selectedBytes} bytes / 约 ${result.selection.selectedTokens} tokens；contextHash: ${result.contextHash}`);
     for (const file of result.selection.files) console.log(`  ${file.role.padEnd(20)} ${file.rel} (${file.reason})`);
   }
   return result.ok ? 0 : 1;
@@ -712,12 +761,16 @@ codegen 示例：
   wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm [--require-complete]
 
 contract 示例：
+  wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
   wl-skills-bd contract show wl-contract.json --format markdown
   wl-skills-bd contract diff wl-contract.json --frontend docs/contracts/page.api.md --openapi openapi.json --permissions permissions.json
   wl-skills-bd contract diff wl-contract.json --kitApiMd src/views/mdm/feature/api.md
 
 db 示例：
   wl-skills-bd db preview wl-contract.json
+  wl-skills-bd db drift --snapshot db-snapshot.json [--prefix <table-prefix>]
+  wl-skills-bd db executed --table <table> --column <column> --ddl-plan-hash <hash> --approval-ref <ref> --source-ref <ref> --executed-at <ISO> --json
+  wl-skills-bd db executed --table <table> --column <column> --ddl-plan-hash <hash> --approval-ref <ref> --source-ref <ref> --executed-at <ISO> --plan-hash <ledger-hash> --confirm
 
 permissions 示例：
   wl-skills-bd permissions export wl-contract.json --output reports/SYS_PERMISSION_INFO.md --json
@@ -793,11 +846,34 @@ function commandTest(args) {
     }
     if (has(allArgs, "--output")) {
       const out = option(allArgs, "--output");
-      const dest = resolveWithin(root, out);
-      require("fs").mkdirSync(require("path").dirname(dest), { recursive: true });
-      require("fs").writeFileSync(dest, result.content, "utf8");
-      if (has(allArgs, "--json")) printJson(result);
+      const transaction = require("../lib/file-transaction");
+      const plan = transaction.buildFilePlan(root, out, result.content, {
+        kind: "generated-service-test",
+        metadata: { scenarioCount: result.scenarioCount },
+      });
+      if (!plan.ok) {
+        if (has(allArgs, "--json")) printJson(plan);
+        else for (const error of plan.errors || []) console.error(error.message || error);
+        return 1;
+      }
+      if (!has(allArgs, "--confirm")) {
+        const preview = transaction.publicFilePlan(plan);
+        if (has(allArgs, "--json")) printJson(preview);
+        else {
+          console.log(`测试文件写入预览：${out}，场景 ${result.scenarioCount}`);
+          console.log(`planHash: ${plan.planHash}`);
+        }
+        return 0;
+      }
+      const applied = transaction.applyFilePlan(plan, {
+        confirm: true,
+        planHash: option(allArgs, "--plan-hash"),
+        allowProductionWrites: has(allArgs, "--allow-production-writes"),
+      });
+      if (has(allArgs, "--json")) printJson(applied);
+      else if (!applied.ok) console.error(`测试文件零写入：${applied.reason}`);
       else console.log(`✅ 已生成 ${result.scenarioCount} 个测试场景到 ${out}`);
+      return applied.ok ? 0 : 2;
     } else if (has(allArgs, "--json")) {
       printJson(result);
     } else {
@@ -819,7 +895,7 @@ function commandTest(args) {
     if (ops.length === 0) { console.log("契约无 customOperations，只有标准 CRUD smoke 测试"); return 0; }
     console.log(`业务行为契约测试场景（${ops.length} 个操作）：`);
     for (const op of ops) {
-      const scenarios = testCodegen.buildTestScenarios(op, loaded.contract);
+      const scenarios = testCodegen.buildTestScenarios(op, loaded.contract, loaded.profile);
       console.log(`  ${op.name}（${op.kind}）：${scenarios.length} 个场景`);
       for (const sc of scenarios) console.log(`    - ${sc.id}：${sc.displayName}`);
     }

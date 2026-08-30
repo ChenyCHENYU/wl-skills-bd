@@ -102,10 +102,23 @@ try {
   assert.deepStrictEqual(context.scanPolicy.scannedModules, ["order"]);
   assert.deepStrictEqual(context.scanPolicy.loadedSnapshotModules, ["billing", "customer"]);
   assert.strictEqual(context.scanPolicy.linkedSourceDirectoriesScanned, false);
+  assert.ok(context.keywords.includes("订单"), "中文任务描述必须拆解为可命中的语义词");
+  assert.ok(context.selection.selectedTokens <= context.limits.maxTokens, "上下文必须遵守 token 预算");
+  assert.ok(context.selection.files.every((file) => Number.isInteger(file.estimatedTokens) && file.estimatedTokens > 0));
   assert.ok(context.selection.files.some((file) => file.role === "target-catalog"));
   assert.ok(context.selection.files.some((file) => file.role === "upstream-contract" && file.module === "customer"));
   assert.ok(context.selection.files.every((file) => file.module === "order" || !/-(?:snapshot|doc)$/.test(file.role)), "不得把关联模块整份目录或文档加入上下文");
   assert.ok(context.selection.files.every((file) => !/^src\/(billing|customer)\//.test(file.rel)), "不得读取关联模块源码");
+  const authorityTokens = context.selection.files.find((file) => file.role === "target-catalog").estimatedTokens;
+  const tokenBounded = buildContextPlan(projectRoot, {
+    module: "order", task: "增加订单创建接口", maxTokens: Math.max(512, authorityTokens),
+  });
+  assert.strictEqual(tokenBounded.ok, true);
+  assert.ok(tokenBounded.selection.selectedTokens <= Math.max(512, authorityTokens));
+  if (authorityTokens > 512) {
+    const tooSmall = buildContextPlan(projectRoot, { module: "order", task: "增加订单创建接口", maxTokens: 512 });
+    assert.strictEqual(tooSmall.reason, "context-budget-too-small", "权威目录无法装入时必须 fail-closed");
+  }
 
   const moduleDoc = fs.readFileSync(path.join(projectRoot, "docs", "backend", "modules", "order.md"), "utf8");
   const indexDoc = fs.readFileSync(path.join(projectRoot, "docs", "backend", "INDEX.md"), "utf8");
@@ -125,6 +138,12 @@ try {
   const staleContext = buildContextPlan(projectRoot, { module: "order" });
   assert.strictEqual(staleContext.ok, false);
   assert.strictEqual(staleContext.reason, "catalog-stale");
+  const staleFreshness = catalog.checkModuleFreshness(projectRoot, "order");
+  const compactFreshness = catalog.publicFreshnessResult(staleFreshness);
+  assert.strictEqual(compactFreshness.reason, "catalog-stale");
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(compactFreshness, "catalog"), false, "默认不得返回完整 Catalog");
+  assert.ok(compactFreshness.catalogSummary.evidenceFiles > 0);
+  assert.ok(catalog.publicFreshnessResult(staleFreshness, { detail: "full" }).catalog);
   const blockedCodegen = codegen.buildPlan(orderContract, { projectRoot });
   assert.strictEqual(blockedCodegen.ok, false);
   assert.strictEqual(blockedCodegen.catalogPreflight.enabled, true);

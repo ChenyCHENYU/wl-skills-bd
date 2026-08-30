@@ -22,12 +22,14 @@
     },
     "selection": {
       "type": "object",
-      "required": ["files", "selectedFiles", "selectedBytes", "omittedFiles"],
+      "required": ["files", "selectedFiles", "selectedBytes", "selectedTokens", "omittedFiles", "omittedTokens"],
       "properties": {
         "files": { "type": "array" },
         "selectedFiles": { "type": "integer", "minimum": 0 },
         "selectedBytes": { "type": "integer", "minimum": 0 },
-        "omittedFiles": { "type": "integer", "minimum": 0 }
+        "selectedTokens": { "type": "integer", "minimum": 0 },
+        "omittedFiles": { "type": "integer", "minimum": 0 },
+        "omittedTokens": { "type": "integer", "minimum": 0 }
       }
     },
     "contextHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }

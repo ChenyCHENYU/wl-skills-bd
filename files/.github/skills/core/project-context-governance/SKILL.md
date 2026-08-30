@@ -30,7 +30,7 @@ wl-skills-bd catalog apply --module <module> --plan-hash <hash> --confirm
 wl-skills-bd catalog check --module <module>
 
 # 为本次任务选取有界上下文
-wl-skills-bd context plan --module <module> --task "<任务>" --keywords "<关键词>" --json
+wl-skills-bd context plan --module <module> --task "<任务>" --keywords "<关键词>" --max-tokens 12000 --json
 ```
 
 只有 CI/初始化/全局治理任务可以显式执行 `catalog plan --full`。不得把 `--full` 当成本地默认，也不得手改自动生成的 Catalog 文档。
@@ -53,6 +53,6 @@ wl-skills-bd context plan --module <module> --task "<任务>" --keywords "<关�
   - 复用的一跳快照 / 缺失快照
   - 服务 / 接口 / 数据库对象 / 关系数量
   - 重复身份诊断
-  - selectedFiles / selectedBytes / contextHash
+  - selectedFiles / selectedBytes / selectedTokens / contextHash
   - 下一步：契约设计或 codegen plan
 ```

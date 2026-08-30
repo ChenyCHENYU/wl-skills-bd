@@ -6,10 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,9 +41,25 @@ class {{Entity}}ControllerTest {
     }
 
     @Test
-    void getByIdShouldUsePlatformEnvelope() throws Exception {
+    void shouldUsePlatformEnvelopeWhenDetailSucceeds() throws Exception {
         when(service.getById("1000000000000000001")).thenReturn(null);
-        mockMvc.perform(get("/{{requestPath}}/getById/{id}", "1000000000000000001"))
+        mockMvc.perform(get("/{{requestPath}}/{{detailOperationPath}}", "1000000000000000001"))
                 .andExpect(jsonPath("$.code").value(SUCCESS_CODE));
+    }
+
+    @Test
+    void shouldDeclarePermissionAndRouteForDetail() throws Exception {
+        Method method = {{Entity}}Controller.class.getDeclaredMethod("getById", String.class);
+        PreAuthorize permission = method.getAnnotation(PreAuthorize.class);
+        assertEquals("@pms.hasPermission('{{detailPermission}}')", permission.value());
+        Annotation route = null;
+        for (Annotation annotation : method.getDeclaredAnnotations()) {
+            if ("{{detailHttpAnnotation}}".equals(annotation.annotationType().getSimpleName())) {
+                route = annotation;
+            }
+        }
+        assertEquals("{{detailHttpAnnotation}}", route.annotationType().getSimpleName());
+        String[] paths = (String[]) route.annotationType().getMethod("value").invoke(route);
+        assertEquals("{{detailOperationPath}}", paths[0]);
     }
 }

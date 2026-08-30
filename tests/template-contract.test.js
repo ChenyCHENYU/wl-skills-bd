@@ -73,6 +73,10 @@ assert.doesNotMatch(service, /setIsDelete\(1\)/, "Service 软删除初始值禁�
 
 const serviceTest = read("ServiceTest.java.tmpl");
 assert.match(serviceTest, /<wl-custom name="tests">/);
+const controllerTest = read("ControllerTest.java.tmpl");
+assert.match(controllerTest, /\{\{detailOperationPath\}\}/, "Controller 测试路由必须来自 profile 契约");
+assert.match(controllerTest, /getAnnotation\(PreAuthorize\.class\)/, "Controller 测试必须校验权限元数据");
+assert.doesNotMatch(controllerTest, /getByIdShouldUsePlatformEnvelope/, "测试名应表达行为而非复述实现方法");
 
 const mapperXml = read("Mapper.xml.tmpl");
 assert.match(mapperXml, /\{\{companyIdColumn\}\}\s*=\s*#\{companyId\}/);

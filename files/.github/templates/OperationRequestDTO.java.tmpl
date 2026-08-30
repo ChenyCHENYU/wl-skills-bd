@@ -34,6 +34,7 @@ public class {{requestDtoName}} {
 {{#hasBodyId}}
 
     @NotBlank(message = "主键不能为空")
+    @Size(max = {{idMaxLength}}, message = "主键长度不能超过{{idMaxLength}}")
     @Schema(description = "主键ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private String id;
 {{/hasBodyId}}

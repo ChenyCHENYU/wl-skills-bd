@@ -99,12 +99,13 @@ wl-skills-bd catalog check --module order
 wl-skills-bd context plan --module order \
   --task "增加订单创建接口" \
   --keywords "幂等,客户" \
+  --max-tokens 12000 \
   --json
 ```
 
 模块模式只遍历 `order` 配置的契约/源码根。上游 `customer`、下游 `billing` 等模块只读取已生成快照，且仅把关系命中的契约列为候选，不扫描它们的源码目录。快照缺失时明确告警，不会偷偷回退全仓扫描。`catalog plan --full` 仅供 CI、首次初始化或显式全局治理。
 
-机器快照写入 `.wl-skills-bd/catalog/`；人读文档写入 `docs/backend/`。每份生成文档都带用途、受众、范围、来源、目录哈希和 `editable: false` 注释头。当前模块文档是开发事实入口，项目索引只汇总快照。Catalog 会阻断重复契约、服务类、API 路由、权限码、表写归属和 Flyway 版本；配置存在时，codegen 还会校验当前模块新鲜度并将上下文哈希绑定到 `planHash`。
+机器快照写入 `.wl-skills-bd/catalog/`；人读文档写入 `docs/backend/`。每份生成文档都带用途、受众、范围、来源、目录哈希和 `editable: false` 注释头。当前模块文档是开发事实入口，项目索引只汇总快照。Catalog 会阻断重复契约、服务类、API 路由、权限码、表写归属和 Flyway 版本；配置存在时，codegen 还会校验当前模块新鲜度并将上下文哈希绑定到 `planHash`。Context Plan 同时受文件数、字节数和估算 token 三重预算约束；中文任务会拆成可命中的语义片段，避免整句不命中后扩大扫描范围。
 
 日常只需遵循五步：
 
@@ -121,6 +122,9 @@ wl-skills-bd context plan --module order \
 从安装后的示例开始：
 
 ```bash
+# 已有 DB Spec 时，先生成只含可证明事实的契约种子
+wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
+
 cp .github/templates/examples/feature-category.contract.json wl-contract.json
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
@@ -143,7 +147,7 @@ DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。�
 
 标准 CRUD 是完整实现。export、关联查询或缺少确定性 patch 的业务命令会明确标记为 draft，并放入 `<wl-custom>` 保护区；人工补齐实现和测试后，后续 codegen 会保留该区域。需要拒绝所有业务骨架时，在 apply 增加 `--require-complete`。
 
-生产契约还可声明 `assurance.level=production`。此时必须给出业务关键级别、SLO、RTO/RPO、认证与方法安全、审计、数据治理、幂等/事件/跨服务事务策略、超时/重试/熔断/限流，以及威胁模型、授权评审、压测、运行手册、恢复演练和数据评审六类非空证据文件。包只验证声明和证据链，不冒充安全、DBA、SRE 或业务审批；完整要求见 [生产保障规范](files/.github/standards/28-production-assurance.md)。
+生产契约还可声明 `assurance.level=production`。此时必须给出业务关键级别、SLO、RTO/RPO、认证与方法安全、审计、数据治理、幂等/事件/跨服务事务策略、超时/重试/熔断/限流，以及威胁模型、授权评审、压测、运行手册、恢复演练和数据评审六类非空证据文件。还必须声明 `dbCluster`、`databaseTarget`（库位、规模、停机预算、在线 DDL、备份与恢复责任人）、业务 `errors` 目录，以及所有对外响应字段的稳定 `semanticId`。包只验证声明和证据链，不冒充安全、DBA、SRE 或业务审批；完整要求见 [生产保障规范](files/.github/standards/28-production-assurance.md)。
 
 最小生产保障声明示例（证据路径相对业务项目根目录，文件必须存在且非空）：
 
@@ -211,7 +215,7 @@ wl-skills-bd contract diff wl-contract.json \
 - **扩展有依据**：基线不足先在原表末尾追加；新表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、需求/上游来源、审批人和审批号。旧 naming waiver 不再允许长期掩盖表改名。
 - **生成链同门**：B31、`codegen validate/plan/apply`、`db preview` 使用同一校验，文档/治理 fingerprint 进入 planHash；MySQL 生成器只接受并生成 `lower_snake_case`，Oracle 保持 `UPPER_SNAKE_CASE`。
 - **`wl-skills-bd db drift --snapshot <file>`**：推荐快照携带列序、类型、可空性、默认值和注释，精确对账文档与契约；无源表/字段或属性漂移均 error。
-- **现场变更只给短期宽限**：`db executed` 必须带 `--source-ref` 和审批号，默认 24 小时到期；到期前必须回写文档、契约和 Flyway，账本不再充当永久第二事实源。
+- **现场变更只给短期宽限**：`db executed` 必须精确到表和列，并携带已审批 DDL planHash、来源、审批号、执行时间；默认 24 小时、最长 7 天到期。台账写入同样经过预览、planHash、确认、环境护栏和原子写入，损坏台账绝不覆盖。
 - **严结构、简流程**：dev/sit 的结构门禁不降级，但一次 planHash 审批后连续执行 precheck → migrate → validate → postcheck → 冒烟；pre/prod 才要求变更单、DBA/CD、备份恢复和窗口。
 - **可重建**：CI 用空 schema 跑 Flyway 全量 migrate/validate，再与全属性快照对账；真正恢复依赖数据备份/日志 + Git 中不可变迁移，DBeaver 临时导出不作为事实源。
 - **`wl-skills-bd catalog rules`**：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 的规则在扫描器有真实输出（杜绝幽灵规则）、J 系列如实标注"依赖项目 pom 接线"。
@@ -263,7 +267,7 @@ mvn verify -Pwl-quality
 | `wls_be_validate` | 否 | B1~B31 扫描；结果含 Controller `endpoints[]` 清单 |
 | `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
-| `wls_be_contract` | 否 | 协作契约 show/diff（前端/OpenAPI/权限/kit api.md） |
+| `wls_be_contract` | 否 | 从 DB Spec 生成保守契约种子，或协作契约 show/diff（前端/OpenAPI/权限/kit api.md） |
 | `wls_be_safe_fix` | 条件 | B3/B5 安全修复闭环 |
 | `wls_be_standards` | 否 | 读取 29 条规范 |
 | `wls_be_templates` | 否 | 读取 16 个模板 |
@@ -273,7 +277,7 @@ mvn verify -Pwl-quality
 | `wls_be_troubleshoot` | 否 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
 | `wls_be_task` | 否 | 只读任务路由：自然语言/显式类型 → Skill、规则子集与统一安全写链 |
 | `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show；默认禁止隐式全量扫描 |
-| `wls_be_context` | 否 | 当前模块 + 一跳快照的有界上下文选择，不扫描关联源码 |
+| `wls_be_context` | 否 | 当前模块 + 一跳快照的文件/字节/token 有界上下文选择，不扫描关联源码 |
 | `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
 | `wls_be_test` | 否 | 行为契约测试生成（gen/scenarios），测行为不测镜像 |
 
@@ -426,8 +430,9 @@ wl-skills-bd test scenarios wl-contract.json
 # → submit（stateTransition）：2 个场景（正常路径 + 前置拒绝）
 # → batchCancel（batch）：2 个场景（整批成功 + 前置失败整批拒绝）
 
-# 生成完整 ServiceTest（含 smoke + 业务行为契约）
-wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java
+# 生成完整 ServiceTest（含 smoke + 业务行为契约）：先预览，再确认同一计划
+wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java --json
+wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java --plan-hash <hash> --confirm
 ```
 
 **生成原则**：

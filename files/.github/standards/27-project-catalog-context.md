@@ -42,19 +42,20 @@ wl-skills-bd catalog plan --full
 ## 4. 一跳上下文
 
 ```bash
-wl-skills-bd context plan --module order --task "增加订单创建接口" --keywords "幂等,客户" --json
+wl-skills-bd context plan --module order --task "增加订单创建接口" --keywords "幂等,客户" --max-tokens 12000 --json
 ```
 
 上下文选择规则：
 
 1. 当前模块目录 JSON 与模块文档是事实入口。
-2. 当前模块源码按任务关键词、契约和资源身份排序，在文件数/字节预算内选择。
+2. 当前模块源码按任务关键词、契约和资源身份排序；中文任务按 2~4 字语义片段拆解，在文件数、字节数和估算 token 预算内选择。
 3. 最多加载显式登记的一跳上游/下游快照。
 4. 关联模块不遍历源码目录；只有关系命中的契约文件可进入候选。
-5. 输出必须声明 `scannedModules`、`loadedSnapshotModules`、`linkedSourceDirectoriesScanned=false` 和 `contextHash`。
+5. 输出必须声明 `scannedModules`、`loadedSnapshotModules`、`linkedSourceDirectoriesScanned=false`、`selectedTokens` 和 `contextHash`。
 6. 当前模块目录过期时阻断生成，先刷新当前模块；关联快照缺失只告警，不扩大扫描范围。
 
-默认预算为 40 个文件、512 KiB、1 跳，可在安全上限内收紧。禁止为了“保险”把 `maxHops` 扩大到 2 以上。
+默认预算为 40 个文件、512 KiB、约 16000 tokens、1 跳，可在安全上限内收紧。token 为本地确定性近似值，用于提前裁剪，不冒充模型供应商最终计费。禁止为了“保险”把 `maxHops` 扩大到 2 以上。
+若预算小到无法容纳当前模块机器目录，必须以 `context-budget-too-small` 阻断；不得在缺少权威入口时继续向 AI 提供“成功”的上下文计划。
 
 ## 5. 去重与污染阻断
 

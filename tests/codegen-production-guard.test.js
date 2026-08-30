@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { applyPlan, buildPlan, detectEnvironment, isProductionGuardBlocked } = require("../lib/codegen");
+const { guardResult } = require("../lib/write-guard");
 
 const ROOT = path.resolve(__dirname, "..");
 const contractFile = path.join(ROOT, "files", ".github", "templates", "examples", "feature-category.contract.json");
@@ -26,6 +27,9 @@ withEnv("WL_PROJECT_ENV", "prod", () => {
 withEnv("SPRING_PROFILES_ACTIVE", "prod", () => {
   assert.strictEqual(detectEnvironment(os.tmpdir(), null), "prod", "SPRING_PROFILES_ACTIVE=prod");
 });
+withEnv("SPRING_PROFILES_ACTIVE", "prod,cloud", () => {
+  assert.strictEqual(detectEnvironment(os.tmpdir(), null), "prod", "多 Profile 中包含 prod 必须识别为受保护环境");
+});
 
 // ─── isProductionGuardBlocked ───
 assert.strictEqual(isProductionGuardBlocked("prod"), true, "prod 默认阻断");
@@ -35,7 +39,7 @@ assert.strictEqual(isProductionGuardBlocked("dev"), false, "dev 不阻断");
 assert.strictEqual(isProductionGuardBlocked(null), false, "无环境不阻断");
 assert.strictEqual(isProductionGuardBlocked("prod", true), false, "MCP 显式授权后不阻断");
 withEnv("WL_ALLOW_PRODUCTION_WRITES", "true", () => {
-  assert.strictEqual(isProductionGuardBlocked("prod"), false, "显式授权后不阻断");
+  assert.strictEqual(isProductionGuardBlocked("prod"), true, "全局环境变量不得绕过单次命令授权");
 });
 
 // ─── applyPlan 在 prod 环境阻断 ───
@@ -63,10 +67,8 @@ tempRoot = freshRoot();
 try {
   const plan = buildPlan(contractFile, { projectRoot: tempRoot });
   withEnv("WL_PROJECT_ENV", "prod", () => {
-    withEnv("WL_ALLOW_PRODUCTION_WRITES", "true", () => {
-      const allowed = applyPlan(plan, { confirm: true, planHash: plan.planHash });
-      assert.strictEqual(allowed.ok, true, "显式授权后允许写");
-    });
+    const allowed = applyPlan(plan, { confirm: true, planHash: plan.planHash, allowProductionWrites: true });
+    assert.strictEqual(allowed.ok, true, "同一命令显式授权后允许写");
   });
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -78,6 +80,16 @@ try {
   withEnv("WL_PROJECT_ENV", "dev", () => {
     const devApplied = applyPlan(plan, { confirm: true, planHash: plan.planHash });
     assert.strictEqual(devApplied.ok, true, "dev 环境正常写入");
+  });
+} finally {
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+}
+
+tempRoot = freshRoot();
+try {
+  withEnv("WL_PROJECT_ENV", "prod", () => {
+    const blocked = guardResult(tempRoot, {}, { environment: "dev" });
+    assert.strictEqual(blocked.reason, "environment-conflict");
   });
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });

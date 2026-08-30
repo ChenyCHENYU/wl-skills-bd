@@ -34,8 +34,8 @@ const { validateSchema } = require("../mcp/schema-validator");
 
   const standard = await HANDLERS.wls_be_standards.handle({ id: "04" });
   assert.match(standard.text, /^# 04/m);
-  const latestStandard = await HANDLERS.wls_be_standards.handle({ id: "28" });
-  assert.match(latestStandard.text, /^# 28/m);
+  const latestStandard = await HANDLERS.wls_be_standards.handle({ id: "29" });
+  assert.match(latestStandard.text, /^# 29/m);
   const template = await HANDLERS.wls_be_templates.handle({ name: "Controller" });
   assert.match(template.text, /class \{\{Entity\}\}Controller/);
 
@@ -47,6 +47,13 @@ const { validateSchema } = require("../mcp/schema-validator");
   assert.strictEqual(contractShow.structuredContent.manifest.protocolVersion, "1.0");
   assert.strictEqual(contractShow.structuredContent.manifest.completion.contractStatus, "confirmed");
   assert.strictEqual(contractShow.structuredContent.manifest.transport.successCode, 2000);
+  const contractSchema = TOOLS.find((tool) => tool.name === "wls_be_contract").inputSchema;
+  assert.strictEqual(validateSchema(contractSchema, { mode: "seed", table: "MDM_FEATURE_CATEGORY", database: "oracle" }).valid, true);
+  assert.strictEqual(validateSchema(contractSchema, { mode: "show", contract }).valid, true);
+  assert.strictEqual(validateSchema(contractSchema, { mode: "seed", table: "MDM_FEATURE_CATEGORY" }).valid, false);
+  assert.strictEqual(validateSchema(contractSchema, { mode: "show" }).valid, false);
+  const missingContract = await HANDLERS.wls_be_contract.handle({ mode: "show" });
+  assert.strictEqual(missingContract.structuredContent.state, "invalid-input");
   const fixPreview = await HANDLERS.wls_be_safe_fix.handle({ rules: ["B3"] });
   assert.strictEqual(fixPreview.structuredContent.mode, "preview");
   const doctor = await HANDLERS.wls_be_doctor.handle({});
@@ -72,6 +79,12 @@ const { validateSchema } = require("../mcp/schema-validator");
     allowProductionWrites: true,
   }).valid, true);
   assert.strictEqual(validateSchema(codegenSchema, { mode: "plan", contract, unexpected: true }).valid, false);
+  const standardsSchema = TOOLS.find((tool) => tool.name === "wls_be_standards").inputSchema;
+  assert.strictEqual(validateSchema(standardsSchema, { id: "29" }).valid, true, "最新标准必须通过真实 MCP schema");
+  assert.strictEqual(validateSchema(standardsSchema, { id: "30" }).valid, false);
+  const validateToolSchema = TOOLS.find((tool) => tool.name === "wls_be_validate").inputSchema;
+  assert.strictEqual(validateSchema(validateToolSchema, { rules: ["B31"], severity: "error", maxIssues: 5, includeEndpoints: false }).valid, true);
+  assert.strictEqual(validateSchema(validateToolSchema, { rules: ["B32"] }).valid, false);
   const taskSchema = TOOLS.find((tool) => tool.name === "wls_be_task").inputSchema;
   assert.strictEqual(validateSchema(taskSchema, { type: "add-field", targetFile: "src/Foo.java" }).valid, true);
   assert.strictEqual(validateSchema(taskSchema, { type: "add-field", apply: true }).valid, false, "task 不得暴露旁路写入口");
@@ -81,6 +94,10 @@ const { validateSchema } = require("../mcp/schema-validator");
 
   const generatedTest = await HANDLERS.wls_be_test.handle({ mode: "scenarios", contract });
   assert.strictEqual(generatedTest.structuredContent.ok, true);
+  const generatedSourceSummary = await HANDLERS.wls_be_test.handle({ mode: "gen", contract });
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(generatedSourceSummary.structuredContent, "content"), false);
+  const generatedSourceFull = await HANDLERS.wls_be_test.handle({ mode: "gen", contract, includeSource: true });
+  assert.match(generatedSourceFull.structuredContent.content, /class .*ServiceTest/);
 
   console.log("✅ MCP registry：16 工具、严格 schema、路径边界及核心 handler 通过");
 })().catch((error) => {

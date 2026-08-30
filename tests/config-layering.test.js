@@ -484,7 +484,8 @@ withRoot((root) => {
   // migrate internal → huaxin
   const migratePlan = envMatrix.buildMigrationPlan(root, { to: "huaxin" });
   assert.strictEqual(migratePlan.ok, true);
-  envMatrix.applyMigrationPlan(migratePlan, { projectRoot: root, confirm: true, planHash: migratePlan.planHash });
+  const migrateResult = envMatrix.applyMigrationPlan(migratePlan, { projectRoot: root, confirm: true, planHash: migratePlan.planHash });
+  assert.strictEqual(migrateResult.ok, true, JSON.stringify(migrateResult));
 
   // doctor 应识别 huaxin
   const doctorResult = runConfigDoctor(root);
