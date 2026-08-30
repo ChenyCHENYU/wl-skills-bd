@@ -10,6 +10,7 @@
 const { execFileSync } = require("child_process");
 const path = require("path");
 const assert = require("assert");
+const capabilities = require("../lib/capabilities");
 
 const ROOT = path.resolve(__dirname, "..");
 const SCRIPT = path.join(ROOT, "scripts", "verify-version.js");
@@ -28,6 +29,13 @@ function run() {
   assert.match(out, /standards=\d+/, "应输出 standards 计数");
   assert.match(out, /skills=\d+/, "应输出 skills 计数");
   console.log("  ✔ verify-version 通过，版本/计数一致");
+})();
+
+(function testNestedSkillMetadata() {
+  const file = path.join(ROOT, "files", ".github", "skills", "core", "api-design-be", "SKILL.md");
+  const frontmatter = capabilities.readFrontmatter(file);
+  assert.strictEqual(frontmatter.status, "✅ 已落地", "能力目录必须读取 metadata.status，而非误判为 unknown");
+  assert.ok(frontmatter.stage, "能力目录必须读取 metadata.stage");
 })();
 
 console.log("\n✅ verify-version 测试通过");

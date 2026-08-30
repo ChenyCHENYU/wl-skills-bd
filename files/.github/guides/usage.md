@@ -75,6 +75,8 @@ wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
 
 其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
 
+单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed 都是 partial，最终交付仍需 full。
+
 ## 与前端协作
 
 | 协作点 | 后端产物 | 校验 |
@@ -86,7 +88,9 @@ wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
 
 ## MCP
 
-`init` 会安装编辑器配置。15 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 只做任务路由，实际写入仍走 codegen/safe-fix/config/catalog。
+`init` 会安装编辑器配置。16 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 返回标准 Pipeline，但实际写入仍走 codegen/safe-fix/config/catalog。
+
+MCP 默认使用 `response.mode=summary` 和有界 `maxItems/maxBytes`；超预算结果从 `nextCursor` 续取，禁止为了获取正文反复执行同一全量工具。
 
 ## 提交
 

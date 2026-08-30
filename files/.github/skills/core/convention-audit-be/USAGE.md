@@ -10,6 +10,8 @@ wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
 
 默认 error 返回非零；`--strict` 让 warning 也失败；`--quick` 跳过 B9~B12，只用于反馈迭代，不能替代最终全扫。
 
+`--rules` 不是输出过滤：执行器会在文件发现前构建最小规则计划，只读取相关类型并返回 `execution.executedGroups/scan`。`quick`、`staged` 和显式变更文件都会返回 partial coverage；交付前必须补 full。
+
 ## 完整审计
 
 1. `doctor` 检查 Java/Maven/Profile/质量配置和租户证据；
@@ -31,3 +33,4 @@ B3/B5 可先执行 `wl-skills-bd fix plan`；只有符合安全前置条件的�
 - 抑制项单独计数，不能从总量中静默消失；
 - 不把 warning 包装成 error，也不把 J6/J7 写成默认阻断；
 - 审计阶段只读，不因“发现问题”自动获得修复授权。
+- MCP 首次使用 summary 和合理字节预算；大结果用 cursor 续取，禁止为取正文反复执行同一全量扫描。

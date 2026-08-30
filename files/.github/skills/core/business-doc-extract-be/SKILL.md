@@ -4,8 +4,9 @@ description: |
   从既有后端代码（Controller / Service / Mapper XML / 表注释 / 字典）反向抽取业务文档，
   输出 docs/business/{module}.md，包含业务背景、字段语义、状态机、关键业务规则。
   典型触发：「接手陌生模块」「整理业务文档」「这模块业务是啥」「业务说明」
-status: 🟡 骨架
-stage: ②预 业务理解
+metadata:
+  status: "🟡 骨架"
+  stage: "②预 业务理解"
 ---
 
 # business-doc-extract-be

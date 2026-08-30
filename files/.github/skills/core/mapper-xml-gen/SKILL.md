@@ -5,8 +5,9 @@ description: |
   禁止 SELECT 星号、禁止美元符注入、Oracle 分页用 ROWNUM、模糊查询按方言。
   读 templates 填空，生成后跑 validate 查 B3/B4。对标 wl-skills-kit/mapper-xml-gen 落地深度。
   典型触发：「生成 Mapper」「Mapper XML」「写 SQL」「自定义查询」「分页 SQL」
-status: ✅ 已落地
-stage: ⑤ 数据访问
+metadata:
+  status: "✅ 已落地"
+  stage: "⑤ 数据访问"
 ---
 
 # mapper-xml-gen

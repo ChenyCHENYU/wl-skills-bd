@@ -3,9 +3,10 @@ name: standard-env-config-be
 description: |
   通过 config init/migrate/doctor/fix 与 troubleshoot 管理 jh4j-cloud/Nacos/K8s 多环境配置。
   典型触发：「后端环境标准化」「本地启动配置」「客户环境迁移」「K8s 清单对齐」「Nacos 占位符检查」
-status: ✅ 落地
-stage: ops（横切）
-risk: 🟡 中风险
+metadata:
+  status: "✅ 落地"
+  stage: "ops（横切）"
+  risk: "🟡 中风险"
 ---
 
 # standard-env-config-be

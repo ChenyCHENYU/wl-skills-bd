@@ -5,6 +5,7 @@ const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
 const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
 const capabilities = require("../files/.wl-skills-bd/capabilities.json");
+const { withResponseControls } = require("./result-budget");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const STANDARDS_ROOT = path.join(PACKAGE_ROOT, "files", ".github", "standards");
@@ -30,7 +31,7 @@ const TEMPLATE_MAP = Object.freeze({
 
 const validateTool = {
   name: "wls_be_validate",
-  description: `只读扫描后端工程 ${capabilities.backendRules.displayRange}；支持规则、严重度和结果上限过滤。quick=true 时跳过设计级慢规则。`,
+  description: `只读扫描后端工程 ${capabilities.backendRules.displayRange}；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。`,
   inputSchema: {
     type: "object",
     properties: {
@@ -38,8 +39,13 @@ const validateTool = {
       quick: { type: "boolean", description: "跳过 B9~B12 设计级检查" },
       rules: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: capabilities.backendRules.ids } },
       severity: { type: "string", enum: ["error", "warn", "info"] },
-      maxIssues: { type: "integer", minimum: 0, maximum: 500 },
+      maxIssues: { type: "integer", minimum: 0, maximum: 500, description: "兼容参数；优先使用 maxItems" },
       includeEndpoints: { type: "boolean", description: "显式返回完整 Controller 端点；默认仅返回数量" },
+      staged: { type: "boolean", description: "只扫描 git 暂存文件；跨文件规则会标记为 partial" },
+      changed: { type: "array", minItems: 1, items: { type: "string", minLength: 1 }, description: "显式指定变更文件相对路径；优先于 staged" },
+      detail: { type: "string", enum: ["summary", "compact", "full"], description: "summary 仅计数；compact 带定位；full 追加完整消息" },
+      maxItems: { type: "integer", minimum: 1, maximum: 500, description: "返回的问题/端点上限，默认 20" },
+      maxBytes: { type: "integer", minimum: 4096, maximum: 200000, description: "text 输出字节上限，默认 20000" },
     },
     additionalProperties: false,
   },
@@ -90,6 +96,7 @@ const contractTool = {
       entity: { type: "string", minLength: 1 },
       contractId: { type: "string", minLength: 1 },
       format: { type: "string", enum: ["json", "markdown"] },
+      detail: { type: "string", enum: ["summary", "full"], description: "默认摘要；full 才在 text 通道返回完整 manifest" },
       frontend: { type: "string", minLength: 1 },
       openapi: { type: "string", minLength: 1 },
       permissions: { type: "string", minLength: 1 },
@@ -161,6 +168,7 @@ const dbPreviewTool = {
     required: ["contract"],
     properties: {
       contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
+      detail: { type: "string", enum: ["summary", "full"], description: "默认只返回 DDL 元数据；full 才在 text 通道返回 SQL" },
     },
     additionalProperties: false,
   },
@@ -309,13 +317,14 @@ const testTool = {
       mode: { type: "string", enum: ["gen", "scenarios"] },
       contract: { type: "string", minLength: 1, description: "项目内后端契约 JSON 相对路径" },
       includeSource: { type: "boolean", description: "gen 时显式返回生成源码；默认仅返回摘要" },
+      detail: { type: "string", enum: ["summary", "full"], description: "gen 默认只返回场景计数；full 才在 text 通道返回测试源码" },
     },
     additionalProperties: false,
   },
   handle: handleTest,
 };
 
-const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool];
+const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

@@ -198,7 +198,14 @@ class CoverageTest {
     "utf8",
   );
   let command = process.env.WL_MAVEN_COMMAND || "mvn";
-  let commandArgs = ["-B", "-ntp", "verify", "-Pwl-quality"];
+  // Maven settings.xml 可能通过 user property 偷注入 Java 21；显式绑定本包的
+  // Java 8 质量夹具，避免“系统设置污染”把真实兼容性问题伪装成 fixture 失败。
+  const java8CompilerArgs = [
+    "-Dmaven.compiler.source=1.8",
+    "-Dmaven.compiler.target=1.8",
+    "-Dmaven.compiler.compilerVersion=1.8",
+  ];
+  let commandArgs = ["-B", "-ntp", ...java8CompilerArgs, "verify", "-Pwl-quality"];
   if (process.platform === "win32") {
     if (!process.env.WL_MAVEN_COMMAND) {
       const located = spawnSync("where.exe", ["mvn.cmd"], { encoding: "utf8", windowsHide: true });
@@ -219,6 +226,7 @@ class CoverageTest {
       "org.codehaus.plexus.classworlds.launcher.Launcher",
       "-B",
       "-ntp",
+      ...java8CompilerArgs,
       "verify",
       "-Pwl-quality",
     ];

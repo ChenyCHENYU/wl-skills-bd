@@ -6,7 +6,7 @@
 
 | 编号 | 实现 | 默认门禁 | 说明 |
 |---|---|:---:|---|
-| B1~B31 | `lib/be-rules.js` | 按 severity | 即时、证据化、可输出 Controller 端点清单及 SARIF/Markdown/JSON |
+| B1~B31 | `lib/be-rule-plan.js` + `scan-context.js` + `be-rules.js` | 按 severity | 规则前置短路、最小文件读取、执行/缓存证据、Controller 端点及 SARIF/Markdown/JSON；B31 复用两级缓存 Source Index |
 | J1 | ArchUnit | 是 | 分层依赖 |
 | J2 | Checkstyle | 是 | 命名、Javadoc、import、规模 |
 | J3 | PMD 7 | 是 | 缺陷、复杂度、性能 |
@@ -53,7 +53,7 @@
 | standards/03/15/16/17/19 | P3C 存量规则 | J6 | 单独执行、非阻断 |
 | standards/07 | DTO/VO 业务字段边界 | Schema + 模板 + review | 业务语义仍需人工确认 |
 | standards/09/10 | 敏感日志、事务内远程调用 | review | 静态工具不能完整证明语义安全 |
-| standards/12 | DDL 可执行性与恢复策略 | contract + review | 生成但不执行，DBA/CD 卡口 |
+| standards/12 | DDL 可执行性与恢复策略 | contract + Source Index + db-drift | 生成但不执行；缺表/缺列/无源变更由离线对账阻断，DBA/CD 仍是执行卡口 |
 | standards/28 | SLO、恢复、威胁模型、授权、压测、运行手册和数据评审 | assurance contract + evidence refs + external review | 缺声明/文件阻断完成；证据真实性由安全/DBA/SRE/业务评审 |
 
 ## 自动修复边界
@@ -66,6 +66,7 @@
 2. J6/J7 必须保留 `gate=false`，不得在文档中描述成默认硬门；
 3. 规则严重度、修复级别和标题以 catalog 为准；
 4. 每次发版执行 `npm run verify` 与 Java 8 的 `npm run verify:quality-maven`。
+5. `npm run eval:quality` 必须阻断 precision/recall、P95、规则短路比例或 MCP token/字节预算回退。
 
 ## 变更记录
 
@@ -73,4 +74,5 @@
 - 2026-07-18 v0.12.0：同步 B1~B23、完成度门和跨包契约校验。
 - 2026-07-18 v0.13.0：任务路由复用 B1~B23 子集；路由只读，写入统一进入既有安全链。
 - 2026-07-19 v0.17.0：同步 B24/B25、production assurance 证据门和实际生成源码质量门。
+- 2026-08-24 v0.21.0：加入规则前置执行计划、共享 ScanContext、两级缓存与准确率/性能/token 回退门禁。
 - 2026-07-17 v0.6.0：补 B12 与设计级规则。

@@ -156,7 +156,7 @@ try {
   assert.strictEqual(fs.existsSync(path.join(root, testOutput)), true);
 
   const executedAt = new Date(Date.now() - 60 * 1000).toISOString();
-  const ledgerArgs = ["db", "executed", "--table", "MDM_FEATURE_CATEGORY", "--column", "CATEGORY_NAME", "--ddl-plan-hash", "b".repeat(64), "--approval-ref", "CHG-CLI-1", "--source-ref", "INC-CLI-1", "--executed-at", executedAt, "--target", root, "--json"];
+  const ledgerArgs = ["db", "executed", "--table", "MDM_FEATURE_CATEGORY", "--column", "CATEGORY_NAME", "--ddl-plan-hash", "b".repeat(64), "--migration-hash", "c".repeat(64), "--approval-ref", "CHG-CLI-1", "--source-ref", "INC-CLI-1", "--executed-at", executedAt, "--target", root, "--json"];
   const ledgerPreview = run(ledgerArgs);
   assert.strictEqual(ledgerPreview.status, 0, ledgerPreview.stderr);
   const ledgerPlan = JSON.parse(ledgerPreview.stdout);

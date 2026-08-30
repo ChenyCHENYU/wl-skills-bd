@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "accuracy": {
+    "minimumPrecision": 1,
+    "minimumRecall": 1
+  },
+  "performance": {
+    "scopedP95Ms": 1500,
+    "fullP95Ms": 5000,
+    "maximumScopedGroupRatio": 0.2
+  },
+  "mcp": {
+    "maxBytes": 6000,
+    "maximumEstimatedTokens": 1500
+  }
+}

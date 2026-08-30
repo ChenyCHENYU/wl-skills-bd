@@ -173,13 +173,16 @@ function contract(fields = [
   assert.ok(result.issues.some((issue) => issue.kind === "unclaimed-column" && issue.column === "ghost_col"));
   const executedAt = new Date(Date.now() - 60 * 1000).toISOString();
   const ledgerEntry = {
-    table: "pl_charge", column: "ghost_col", ddlPlanHash: "a".repeat(64), approvalRef: "CHG-1", sourceRef: "INC-1", executedBy: "dba",
+    table: "pl_charge", column: "ghost_col", ddlPlanHash: "a".repeat(64), migrationHash: "b".repeat(64), approvalRef: "CHG-1", sourceRef: "INC-1", executedBy: "dba",
     executedAt, expiresAt: new Date(Date.parse(executedAt) + 60 * 60 * 1000).toISOString(),
   };
   const ledgerPlan = dbDrift.buildLedgerPlan(root, ledgerEntry);
   assert.strictEqual(ledgerPlan.ok, true, JSON.stringify(ledgerPlan.errors));
   assert.strictEqual(dbDrift.applyLedgerPlan(ledgerPlan, { confirm: true, planHash: "bad" }).reason, "plan-hash-mismatch");
   assert.strictEqual(dbDrift.applyLedgerPlan(ledgerPlan, { confirm: true, planHash: ledgerPlan.planHash }).ok, true);
+  const duplicatePlan = dbDrift.buildLedgerPlan(root, ledgerEntry);
+  const duplicate = dbDrift.applyLedgerPlan(duplicatePlan, { confirm: true, planHash: duplicatePlan.planHash });
+  assert.strictEqual(duplicate.idempotent, true, "相同 receipt 不得重复写入账本");
   const after = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
   assert.ok(after.issues.some((issue) => issue.kind === "approved-drift" && issue.severity === "warn"));
 
@@ -196,6 +199,14 @@ function contract(fields = [
   assert.strictEqual(damaged.ok, false);
   assert.strictEqual(dbDrift.buildLedgerPlan(root, ledgerEntry).reason, "ledger-invalid-json");
   assert.strictEqual(fs.readFileSync(path.join(root, dbDrift.LEDGER_FILE), "utf8"), "{broken", "损坏台账不得被覆盖");
+}
+
+// 期望表完全缺失必须检出，不能只报告线上已有表的列漂移。
+{
+  const root = makeProject();
+  writeJson(path.join(root, "snapshot.json"), []);
+  const result = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
+  assert.ok(result.issues.some((issue) => issue.kind === "missing-table" && issue.table === "pl_charge"));
 }
 
 {

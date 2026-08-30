@@ -2,8 +2,9 @@
 name: project-context-governance
 description: |
   大型后端工程模块目录与精准上下文治理。用于开发某一模块前建立或刷新该模块的服务、接口、数据库和关系快照，只加载一跳上下游快照，检查重复身份与过期上下文，并为代码生成提供有界 Context Plan。典型触发：模块上下文、查关联服务、生成前去重、刷新项目目录、避免全仓扫描、多人协作防污染。
-status: ✅ 已落地
-stage: ⓪ 生成前治理
+metadata:
+  status: "✅ 已落地"
+  stage: "⓪ 生成前治理"
 ---
 
 # project-context-governance

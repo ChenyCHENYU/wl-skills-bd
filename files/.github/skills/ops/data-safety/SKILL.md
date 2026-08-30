@@ -4,9 +4,10 @@ description: |
   数据安全与稳定性护栏。把 Redis/敏感写/限流熔断的事故源（OOM/超卖/雪崩/误删全表/级联故障）降到机器兜底层。
   覆盖 standards/20（Redis）、21（敏感写）、22（限流熔断）和 be-rules B13~B19。
   典型触发：「Redis 规范」「缓存」「分布式锁」「批量删除」「物理删」「生产只读」「二次确认」「熔断」「限流」「Feign 超时」
-status: ✅ 已落地
-stage: ops 横切
-risk: 🟡 中风险（写代码需人工确认语义）
+metadata:
+  status: "✅ 已落地"
+  stage: "ops 横切"
+  risk: "🟡 中风险（写代码需人工确认语义）"
 ---
 
 # data-safety

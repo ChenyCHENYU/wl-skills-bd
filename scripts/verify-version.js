@@ -314,9 +314,14 @@ if (ruleCatalog) {
       }
     }
   }
-  for (const id of capabilities.backendRules.ids) {
-    if (!ids.has(id)) errors.push(`rules/catalog.json: 缺少 ${id}`);
-  }
+  const bIds = capabilities.backendRules.ids;
+  for (const id of bIds) if (!ids.has(id)) errors.push(`rules/catalog.json: 缺少 ${id}`);
+  const unexpectedBIds = [...ids].filter((id) => /^B\d+$/.test(id) && !bIds.includes(id));
+  for (const id of unexpectedBIds) errors.push(`rules/catalog.json: ${id} 未登记到能力目录`);
+  const auditRules = ruleCatalog.taskRuleMapping && ruleCatalog.taskRuleMapping.audit && ruleCatalog.taskRuleMapping.audit.rules;
+  if (Array.isArray(auditRules)) {
+    for (const id of bIds) if (!auditRules.includes(id)) errors.push(`rules/catalog.json: audit 任务未覆盖 ${id}`);
+  } else errors.push("rules/catalog.json: 缺少 taskRuleMapping.audit.rules，无法证明审计覆盖完整 B 规则");
   for (let i = 1; i <= 8; i += 1) {
     if (!ids.has(`J${i}`)) errors.push(`rules/catalog.json: 缺少 J${i}`);
   }

@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.20.1",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、代码生成、质量门与数据治理闭环（v0.20.1：数据库文档基线复用 + 全属性顺序门禁 + 环境分级执行）",
+  "version": "0.21.0",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端工程规范、生产安全契约、代码生成、质量门、MCP 与数据治理闭环（v0.21.0：真实规则短路、增量缓存、统一输出预算、DAG 与质量评测）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
@@ -45,6 +45,9 @@
   },
   "scripts": {
     "version:verify": "node scripts/verify-version.js",
+    "pretest": "node scripts/preflight-env.js --required-java 8",
+    "preverify": "node scripts/preflight-env.js --required-java 8",
+    "preverify:quality-maven": "node scripts/preflight-env.js --required-java 8 --check-maven",
     "lint:skills": "node scripts/lint-skills.js",
     "lint:js": "node scripts/lint-js.js",
     "verify:quality-config": "node scripts/verify-java-quality.js",
@@ -53,9 +56,10 @@
     "capabilities:check": "node scripts/sync-capabilities.js",
     "verify:doc-sync": "node scripts/verify-doc-sync.js",
     "verify:contract-invariants": "node scripts/verify-contract-invariants.js",
+    "eval:quality": "node scripts/evaluate-quality.js",
     "test": "node scripts/run-tests.js",
     "test:coverage": "node scripts/run-tests.js --coverage",
-    "verify": "npm run version:verify && npm run capabilities:check && npm run verify:doc-sync && npm run verify:contract-invariants && npm run lint:skills && npm run lint:js && npm run verify:quality-config && npm run test && npm run test:coverage",
+    "verify": "npm run version:verify && npm run capabilities:check && npm run verify:doc-sync && npm run verify:contract-invariants && npm run lint:skills && npm run lint:js && npm run verify:quality-config && npm run eval:quality && npm run test && npm run test:coverage",
     "release:check": "npm run verify && npm run verify:quality-maven && npm pack --dry-run --ignore-scripts",
     "prepublishOnly": "npm run release:check"
   }

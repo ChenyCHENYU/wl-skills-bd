@@ -97,9 +97,13 @@ function handleContract(args) {
   if (!value.loaded.ok) return blockedResult(`契约校验失败\n${validationText(value.loaded)}`, "invalid-contract", { errors: value.loaded.errors });
   if (args.mode === "show") {
     const format = args.format || "json";
-    const text = format === "markdown"
+    const detail = args.detail || "summary";
+    const rendered = format === "markdown"
       ? collaboration.renderMarkdown(value.manifest)
       : JSON.stringify(value.manifest, null, 2);
+    const text = detail === "full"
+      ? rendered
+      : `✅ 协作契约已渲染：${value.loaded.contract.contractId}；format=${format}。需要正文时传 detail=full。`;
     return toolResult(text, {
       ok: true,
       state: "rendered",
@@ -236,9 +240,7 @@ function handleDbPreview(args) {
     `迁移文件：${migrationFile}`,
     `数据库：${contract.database}`,
     "",
-    "```sql",
-    migrationSql,
-    "```",
+    ...(args.detail === "full" ? ["```sql", migrationSql, "```"] : ["SQL 正文已保留在 structuredContent.migrationSql；需要文本正文时传 detail=full。"]),
     "",
     `Expand-Contract 阶段：${expandContractPhases.map((p) => `${p.phase}(${p.operations.length})`).join(" → ") || "不适用"}`,
     indexes.length > 0 ? `自定义索引：${indexes.length} 个` : "无自定义索引（仅默认 COMPANY_ID+IS_DELETE 联合索引）",
@@ -385,13 +387,14 @@ function handleTask(args) {
       rules: detected.task.rules,
       skills: detected.task.skills,
       candidates: detected.candidates,
+      pipeline: taskRouter.buildTaskPipeline(detected.task.id),
     });
   }
   // 模式 2：指定 type 输出统一安全写链。
   if (args.type) {
     const task = taskRouter.getTask(args.type);
     if (!task) return blockedResult(`未知任务类型：${args.type}`, "invalid-input");
-    return toolResult(taskRouter.formatTaskPlan(task, { targetFile: args.targetFile }), { ok: true, taskId: args.type, taskName: task.name, mode: task.mode, rules: task.rules, skills: task.skills });
+    return toolResult(taskRouter.formatTaskPlan(task, { targetFile: args.targetFile }), { ok: true, taskId: args.type, taskName: task.name, mode: task.mode, rules: task.rules, skills: task.skills, pipeline: taskRouter.buildTaskPipeline(args.type) });
   }
   return blockedResult("task 需要 input（自然语言）或 type（指定）参数，或 list=true", "invalid-input");
 }
@@ -496,11 +499,11 @@ function handleTest(args) {
   }
   const result = testCodegen.generateServiceTest(file, { projectRoot: root });
   if (!result.ok) return blockedResult(`契约校验失败\n${validationText(result)}`, "invalid-contract", { errors: result.errors });
-  const includeSource = args.includeSource === true;
-  return toolResult(
-    includeSource ? `✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}` : `✅ 已生成 ${result.scenarioCount} 个测试场景；传 includeSource=true 获取源码`,
-    { ok: true, scenarioCount: result.scenarioCount, ...(includeSource ? { content: result.content } : {}) },
-  );
+  const includeSource = args.includeSource === true || args.detail === "full";
+  const text = includeSource
+    ? `✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`
+    : `✅ 已生成 ${result.scenarioCount} 个测试场景；需要源码时传 detail=full 或 includeSource=true。`;
+  return toolResult(text, { ok: true, scenarioCount: result.scenarioCount, ...(includeSource ? { content: result.content } : {}) });
 }
 
 module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot };

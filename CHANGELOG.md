@@ -18,6 +18,33 @@
 - 协作契约比对新增错误码和 ID 边界，Controller 生成测试改为校验真实 Profile 路由与权限元数据。
 - 包测试改为并行执行，并增加覆盖率阈值门禁。
 
+## [0.21.0] - 2026-08-24（准确率、性能、Token 与节点架构完整优化）
+
+### Added
+
+- 新增 B 规则执行计划与共享 ScanContext：规则子集在文件发现和规则执行前生效，按需读取 Java/XML/配置文件，返回实际执行组、读取字节与进程内内容缓存命中证据。
+- Source Index 新增进程内与原子持久化两级缓存；以文件 dev/inode/size/mtime/ctime 指纹安全失效，缓存损坏、只读文件系统或禁用缓存时自动回退真实扫描。
+- 16 个 MCP 工具统一支持 `response.mode/maxItems/maxBytes/cursor`；大结果保存在 MCP 进程内并用有期限游标续取，返回真实字节数和 token 估算。
+- 新增 `discover → context → validate → plan → approval → apply → verify` DAG 节点契约；包含依赖、状态、pipelineHash、只读重试/超时、写节点确认门与执行事件。
+- 新增正反例准确率语料、240 文件性能夹具、MCP token 预算与缓存验证脚本；`npm run eval:quality` 对 precision/recall、P95、规则短路比例和输出体积执行 CI 回退门禁。
+
+### Changed
+
+- `wls_be_task` 同步返回标准 Pipeline 与 hash；只读审计移除 plan/apply 节点，写任务不经 approval/apply 双确认不能进入 verify。
+- `npm run verify` 纳入质量评测；MCP、规则执行、缓存和 Pipeline 新增独立回归测试。
+
+## [0.20.2] - 2026-08-24（验证覆盖、环境预检与 MCP 精益化）
+
+### Added
+
+- Java/Javac/Maven 预检与 doctor 工具路径/实际 Java 版本证据；质量夹具显式锁定 Java 8 compiler 参数，避免本机 Maven settings 注入高版本导致误判。
+- validate/MCP 返回 complete/partial coverage 与 skippedRules；MCP 支持 rules/detail/maxItems/maxBytes/staged/changed，默认摘要以降低上下文 token。
+
+### Changed
+
+- 原子文本/JSON 写入使用随机 O_EXCL 临时文件、0600、fsync 和目录同步；db-drift/DDL 账本沿用远端全属性事实源并增加 fail-closed/缺表对账、幂等回执和并发锁。
+- npm test 纳入 db-consistency 回归；版本自检动态覆盖 catalog 中全部 B 规则。
+
 ## [0.20.1] - 2026-08-22（数据库治理发布补丁）
 
 ### Changed

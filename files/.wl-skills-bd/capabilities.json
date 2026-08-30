@@ -4,18 +4,72 @@
   "standards": {
     "count": 29,
     "ids": [
-      "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
-      "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
-      "21", "22", "23", "24", "25", "26", "27", "28", "29"
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29"
     ],
     "latest": "29"
   },
   "backendRules": {
     "count": 31,
     "ids": [
-      "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10",
-      "B11", "B12", "B13", "B14", "B15", "B16", "B17", "B18", "B19", "B20",
-      "B21", "B22", "B23", "B24", "B25", "B26", "B27", "B28", "B29", "B30", "B31"
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5",
+      "B6",
+      "B7",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B15",
+      "B16",
+      "B17",
+      "B18",
+      "B19",
+      "B20",
+      "B21",
+      "B22",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B27",
+      "B28",
+      "B29",
+      "B30",
+      "B31"
     ],
     "latest": "B31",
     "displayRange": "B1~B31"
@@ -23,18 +77,90 @@
   "skills": {
     "count": 12,
     "items": [
-      { "name": "api-design-be", "path": "files/.github/skills/core/api-design-be", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "② 设计阶段" },
-      { "name": "business-doc-extract-be", "path": "files/.github/skills/core/business-doc-extract-be", "status": "skeleton", "statusLabel": "🟡 骨架", "stage": "②预 业务理解" },
-      { "name": "code-fix-be", "path": "files/.github/skills/ops/code-fix-be", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "⑨ 修复" },
-      { "name": "convention-audit-be", "path": "files/.github/skills/core/convention-audit-be", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "⑧ 审计" },
-      { "name": "data-safety", "path": "files/.github/skills/ops/data-safety", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "ops 横切" },
-      { "name": "db-migration", "path": "files/.github/skills/data/db-migration", "status": "partial", "statusLabel": "🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）", "stage": "⑥ 数据库" },
-      { "name": "entity-codegen", "path": "files/.github/skills/core/entity-codegen", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "③ 模型生成" },
-      { "name": "mapper-xml-gen", "path": "files/.github/skills/core/mapper-xml-gen", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "⑤ 数据访问" },
-      { "name": "project-context-governance", "path": "files/.github/skills/core/project-context-governance", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "⓪ 生成前治理" },
-      { "name": "service-codegen", "path": "files/.github/skills/core/service-codegen", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "④ 业务实现" },
-      { "name": "standard-env-config-be", "path": "files/.github/skills/ops/standard-env-config-be", "status": "implemented", "statusLabel": "✅ 落地", "stage": "ops（横切）" },
-      { "name": "unit-test-gen", "path": "files/.github/skills/test/unit-test-gen", "status": "implemented", "statusLabel": "✅ 已落地", "stage": "⑦ 测试" }
+      {
+        "name": "api-design-be",
+        "path": "files/.github/skills/core/api-design-be",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "② 设计阶段"
+      },
+      {
+        "name": "business-doc-extract-be",
+        "path": "files/.github/skills/core/business-doc-extract-be",
+        "status": "skeleton",
+        "statusLabel": "🟡 骨架",
+        "stage": "②预 业务理解"
+      },
+      {
+        "name": "code-fix-be",
+        "path": "files/.github/skills/ops/code-fix-be",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⑨ 修复"
+      },
+      {
+        "name": "convention-audit-be",
+        "path": "files/.github/skills/core/convention-audit-be",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⑧ 审计"
+      },
+      {
+        "name": "data-safety",
+        "path": "files/.github/skills/ops/data-safety",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "ops 横切"
+      },
+      {
+        "name": "db-migration",
+        "path": "files/.github/skills/data/db-migration",
+        "status": "partial",
+        "statusLabel": "🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）",
+        "stage": "⑥ 数据库"
+      },
+      {
+        "name": "entity-codegen",
+        "path": "files/.github/skills/core/entity-codegen",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "③ 模型生成"
+      },
+      {
+        "name": "mapper-xml-gen",
+        "path": "files/.github/skills/core/mapper-xml-gen",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⑤ 数据访问"
+      },
+      {
+        "name": "project-context-governance",
+        "path": "files/.github/skills/core/project-context-governance",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⓪ 生成前治理"
+      },
+      {
+        "name": "service-codegen",
+        "path": "files/.github/skills/core/service-codegen",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "④ 业务实现"
+      },
+      {
+        "name": "standard-env-config-be",
+        "path": "files/.github/skills/ops/standard-env-config-be",
+        "status": "implemented",
+        "statusLabel": "✅ 落地",
+        "stage": "ops（横切）"
+      },
+      {
+        "name": "unit-test-gen",
+        "path": "files/.github/skills/test/unit-test-gen",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⑦ 测试"
+      }
     ],
     "summary": {
       "implemented": 10,

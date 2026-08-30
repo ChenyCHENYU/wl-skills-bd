@@ -1,0 +1,98 @@
+[
+  {
+    "id": "B1-missing-preauthorize",
+    "rules": ["B1"],
+    "files": { "src/DemoController.java": "class DemoController {\n  @GetMapping(\"/demo\")\n  public Object list() { return null; }\n}\n" },
+    "expectedRules": ["B1"]
+  },
+  {
+    "id": "B1-authorized",
+    "rules": ["B1"],
+    "files": { "src/DemoController.java": "class DemoController {\n  @PreAuthorize(\"hasAuthority('demo:list')\")\n  @GetMapping(\"/demo\")\n  public Object list() { return null; }\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B3-select-star",
+    "rules": ["B3"],
+    "files": { "src/main/resources/mapper/DemoMapper.xml": "<mapper namespace=\"DemoMapper\"><select id=\"list\">SELECT * FROM DEMO</select></mapper>\n" },
+    "expectedRules": ["B3"]
+  },
+  {
+    "id": "B3-explicit-columns",
+    "rules": ["B3"],
+    "files": { "src/main/resources/mapper/DemoMapper.xml": "<mapper namespace=\"DemoMapper\"><select id=\"list\">SELECT ID, NAME FROM DEMO</select></mapper>\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B5-write-without-transaction",
+    "rules": ["B5"],
+    "files": { "src/DemoService.java": "class DemoService {\n  public void saveDemo() {}\n}\n" },
+    "expectedRules": ["B5"]
+  },
+  {
+    "id": "B5-write-with-transaction",
+    "rules": ["B5"],
+    "files": { "src/DemoService.java": "class DemoService {\n  @Transactional(rollbackFor = Exception.class)\n  public void saveDemo() {}\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B13-redis-without-ttl",
+    "rules": ["B13"],
+    "files": { "src/CacheService.java": "class CacheService {\n  RedisTemplate redis;\n  void put(String key, String value) { redis.opsForValue().set(key, value); }\n}\n" },
+    "expectedRules": ["B13"]
+  },
+  {
+    "id": "B13-redis-with-ttl",
+    "rules": ["B13"],
+    "files": { "src/CacheService.java": "class CacheService {\n  RedisTemplate redis;\n  void put(String key, String value) { redis.opsForValue().set(key, value, 10, TimeUnit.MINUTES); }\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B17-physical-delete",
+    "rules": ["B17"],
+    "files": { "src/DemoService.java": "class DemoService {\n  BaseMapper mapper;\n  void remove(Long id) { mapper.deleteById(id); }\n}\n" },
+    "expectedRules": ["B17"]
+  },
+  {
+    "id": "B17-logical-delete",
+    "rules": ["B17"],
+    "files": { "src/DemoService.java": "class DemoService {\n  DemoMapper mapper;\n  void remove(Long id) { mapper.updateLogicalDelete(id); }\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B18-update-without-where",
+    "rules": ["B18"],
+    "files": { "src/main/resources/mapper/DemoMapper.xml": "<mapper namespace=\"DemoMapper\"><update id=\"bad\">UPDATE DEMO SET NAME=#{name}</update></mapper>\n" },
+    "expectedRules": ["B18"]
+  },
+  {
+    "id": "B18-tenant-safe-update",
+    "rules": ["B18"],
+    "files": { "src/main/resources/mapper/DemoMapper.xml": "<mapper namespace=\"DemoMapper\"><update id=\"safe\">UPDATE DEMO SET NAME=#{name} WHERE ID=#{id} AND COMPANY_ID=#{companyId}</update></mapper>\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B21-http-without-timeout",
+    "rules": ["B21"],
+    "files": { "src/RemoteService.java": "class RemoteService {\n  void call() { HttpUtil.createGet(\"https://example.invalid\").execute(); }\n}\n" },
+    "expectedRules": ["B21"]
+  },
+  {
+    "id": "B21-http-with-timeout",
+    "rules": ["B21"],
+    "files": { "src/RemoteService.java": "class RemoteService {\n  void call() { HttpUtil.createGet(\"https://example.invalid\").timeout(3000).execute(); }\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B25-sensitive-tostring",
+    "rules": ["B25"],
+    "files": { "src/User.java": "@ToString\nclass User {\n  private String password;\n}\n" },
+    "expectedRules": ["B25"]
+  },
+  {
+    "id": "B25-sensitive-excluded",
+    "rules": ["B25"],
+    "files": { "src/User.java": "@ToString\nclass User {\n  @ToString.Exclude\n  private String password;\n}\n" },
+    "expectedRules": []
+  }
+]

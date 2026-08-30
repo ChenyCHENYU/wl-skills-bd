@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.20.1-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.21.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-29-orange.svg)]()
@@ -20,21 +20,29 @@
 | 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
 | 独立协同（v0.12） | 内置统一 delivery profile；没有 design/kit 也能从评审需求独立生成；有 kit 时用 `wl-api-contract` 严格握手 |
 | 配置分层（v0.12） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix + troubleshoot 故障诊断 |
-| 任务驱动（v0.13） | 8 种任务类型精准触发（加接口/落库/改bug/审计...）；单点增量编辑 + 规则子集兜底，规范不形同虚设 |
+| 任务驱动（v0.13/v0.21） | 8 种任务类型精准触发；标准 DAG 输出 discover/context/validate/plan/approval/apply/verify、pipelineHash、节点状态与确认门 |
 | 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
 | 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
-| 模块目录与精准上下文（v0.15） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、服务/API/库表全局去重、codegen 上下文哈希门禁 |
+| 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
-| 快速审计 | B1~B31（含 Redis/敏感写/方法安全/敏感日志/Mapper 绑定与资源位置/父 BOM 依赖/框架扩展点 Bean/Profile 分页/Controller 重复路由/限流熔断/定时任务/Swagger/巨型 Service）；text/JSON/Markdown/SARIF |
+| 快速审计 | B1~B31；指定规则会在发现/读取/检查前真实短路，返回执行组、扫描字节、缓存与 complete/partial coverage；text/JSON/Markdown/SARIF |
 | Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
-| AI 接入 | 16 个 MCP 工具，CLI/MCP 复用同一 `lib/` 实现和同一 JSON Schema |
+| AI 接入 | 16 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.21.0 完整精益闭环
+
+- **准确率**：规则注册表先构建执行计划，未知规则 fail-closed；quick/staged 明确列出未评估规则，不能用局部扫描冒充全量通过。
+- **性能**：共享 ScanContext 一次发现、一次读取并复用内容；`--rules` 只加载对应文件类型。Source Index 用两级缓存加速重复 MCP 调用，任何指纹变化立即重建。
+- **Token**：所有 MCP 工具共享输出中间件，默认 20 项/20KB；超预算结果返回短期 cursor、真实字节和估算 token，不要求重跑原工具。
+- **节点粒度**：任务路由输出 4 个只读节点或 7 个写任务节点；只读节点才允许有界重试/超时，有副作用节点禁止自动重试并强制确认。
+- **量化门禁**：准确率语料、P95 性能、执行组缩减比例、缓存命中与 MCP 输出体积进入 `npm run eval:quality` 和 CI。
 
 ### v0.18.0 项目口径与边界契约闭环
 
@@ -215,7 +223,7 @@ wl-skills-bd contract diff wl-contract.json \
 - **扩展有依据**：基线不足先在原表末尾追加；新表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、需求/上游来源、审批人和审批号。旧 naming waiver 不再允许长期掩盖表改名。
 - **生成链同门**：B31、`codegen validate/plan/apply`、`db preview` 使用同一校验，文档/治理 fingerprint 进入 planHash；MySQL 生成器只接受并生成 `lower_snake_case`，Oracle 保持 `UPPER_SNAKE_CASE`。
 - **`wl-skills-bd db drift --snapshot <file>`**：推荐快照携带列序、类型、可空性、默认值和注释，精确对账文档与契约；无源表/字段或属性漂移均 error。
-- **现场变更只给短期宽限**：`db executed` 必须精确到表和列，并携带已审批 DDL planHash、来源、审批号、执行时间；默认 24 小时、最长 7 天到期。台账写入同样经过预览、planHash、确认、环境护栏和原子写入，损坏台账绝不覆盖。
+- **现场变更只给短期宽限**：`db executed` 必须精确到表和列，并携带已审批 DDL hash、迁移内容 hash、来源、审批号和执行时间；默认 24 小时、最长 7 天到期。台账写入同样经过预览、独立 planHash、确认、环境护栏和原子写入，损坏台账绝不覆盖。
 - **严结构、简流程**：dev/sit 的结构门禁不降级，但一次 planHash 审批后连续执行 precheck → migrate → validate → postcheck → 冒烟；pre/prod 才要求变更单、DBA/CD、备份恢复和窗口。
 - **可重建**：CI 用空 schema 跑 Flyway 全量 migrate/validate，再与全属性快照对账；真正恢复依赖数据备份/日志 + Git 中不可变迁移，DBeaver 临时导出不作为事实源。
 - **`wl-skills-bd catalog rules`**：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 的规则在扫描器有真实输出（杜绝幽灵规则）、J 系列如实标注"依赖项目 pom 接线"。
@@ -283,15 +291,25 @@ mvn verify -Pwl-quality
 
 写工具默认停在 plan/preview；apply 必须显式确认。Cursor、VS Code、Kiro、Copilot、Claude Code 和通用 Agents 的配置随 `init` 安装。详见 [MCP 工作流](files/.github/guides/mcp-workflow.md)。
 
+所有工具都可增加统一响应控制：
+
+```json
+{
+  "response": { "mode": "summary", "maxItems": 20, "maxBytes": 12000 }
+}
+```
+
+超预算时从 `structuredContent.response.nextCursor` 取得游标，再以同一工具调用 `{ "response": { "cursor": "..." } }` 续取；游标仅在当前 MCP 进程短期有效，不落项目仓库。
+
 ## 包架构
 
 ```text
 files/.wl-skills-bd/   机器事实：Schema、Profile、兼容矩阵、规则目录
 files/.github/        人读规范、Skills、模板、质量门、指南
-lib/                  安装/契约/生成/审计/修复的确定性核心
+lib/                  确定性核心、规则执行计划、共享扫描上下文、Source Index 缓存与 Pipeline
 bin/                  CLI 适配
-mcp/                  16 个工具的协议与 Schema 适配
-scripts/ + tests/     包自身治理、真实 Java 8 夹具和回归测试
+mcp/                  16 个工具的协议/Schema 适配、统一结果预算与游标存储
+scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 夹具和回归测试
 ```
 
 详细设计见 [架构说明](kit-internal/architecture.md) 和 [规则覆盖矩阵](kit-internal/rule-coverage.md)。
@@ -447,6 +465,7 @@ wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest
 
 ```bash
 npm run verify                 # 版本/计数/Schema/规则/测试套件（含协作契约、扩展编译、事务回滚与生产护栏）
+npm run eval:quality           # precision/recall、P95、规则短路、缓存与 MCP token 回退门禁
 npm run verify:quality-maven   # Java 8 真实 Maven 生命周期 + 实际生成源码 Checkstyle/Spotless/PMD 门
 npm run release:check          # 全量验证 + npm 发布内容 dry-run
 ```

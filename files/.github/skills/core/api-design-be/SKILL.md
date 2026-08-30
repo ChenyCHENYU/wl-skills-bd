@@ -5,8 +5,9 @@ description: |
   按团队基线形成可校验的 wl-contract.json，再由 codegen 同步生成源码、wl-api-contract JSON 和 api.md，
   并核对 HTTP 方法、路径、DTO/VO、OpenAPI 与权限清单。
   典型触发：「设计接口」「评审 api.md」「接口契约审查」「接口对齐」
-status: ✅ 已落地
-stage: ② 设计阶段
+metadata:
+  status: "✅ 已落地"
+  stage: "② 设计阶段"
 ---
 
 # api-design-be
