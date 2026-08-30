@@ -32,6 +32,13 @@ function run(command, args) {
   };
 }
 
+function runMavenVersion(command) {
+  if (process.platform === "win32" && /\.cmd$/i.test(command)) {
+    return run(process.env.ComSpec || "cmd.exe", ["/d", "/c", command, "-version"]);
+  }
+  return run(command, ["-version"]);
+}
+
 function majorFromJava(output) {
   const text = String(output || "");
   const match = text.match(/version\s+"(?:1\.)?(\d+)/i)
@@ -43,7 +50,7 @@ function majorFromJava(output) {
 
 function parseMavenJava(output) {
   const version = output.match(/Java version:\s*([\w.+-]+)/i);
-  const home = output.match(/Java home:\s*(.+)/i) || output.match(/runtime:\s*([^\s,]+)/i);
+  const home = output.match(/Java home:\s*([^\r\n]+)/i) || output.match(/runtime:\s*([^,\r\n]+)/i);
   return {
     version: version ? version[1] : null,
     major: version ? majorFromJava(version[1]) : null,
@@ -86,13 +93,14 @@ function main() {
   ];
 
   if (checkMaven) {
-    const mvnCommand = process.platform === "win32" ? "mvn.cmd" : "mvn";
-    const maven = run(mvnCommand, ["-version"]);
+    const defaultMaven = process.platform === "win32" ? "mvn.cmd" : "mvn";
+    const mvnCommand = process.env.WL_MAVEN_COMMAND || locate(defaultMaven);
+    const maven = runMavenVersion(mvnCommand);
     const mavenJava = parseMavenJava(maven.output);
     checks.push({
       id: "maven-java",
       ok: maven.ok && mavenJava.major === requiredJava,
-      executable: locate(mvnCommand),
+      executable: mvnCommand,
       major: mavenJava.major,
       javaHome: mavenJava.home,
       detail: maven.firstLine,
@@ -121,4 +129,4 @@ function main() {
 
 main();
 
-module.exports = { majorFromJava, parseMavenJava };
+module.exports = { majorFromJava, parseMavenJava, runMavenVersion };

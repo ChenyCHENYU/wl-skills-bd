@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.21.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.22.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-29-orange.svg)]()
@@ -35,6 +35,14 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
 | AI 接入 | 16 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.22.0 契约、安全写链与数据库证据闭环
+
+- **单一事实源**：Standards、B 规则、Skill、Profile、运行时、API 与 DDL 能力由机器目录和不变量脚本交叉校验，避免文档、Schema、MCP 和执行器漂移。
+- **契约精度**：ID、审计列、字段约束、稳定语义 ID、错误码和目标数据库风险由 Profile/Contract 驱动；`contract seed` 只提取 DB Spec 可证明事实，未知业务决策显式留空。
+- **安全写链**：新增写入口统一经过预览、planHash、确认、写前漂移、符号链接边界、原子落盘、内容校验与失败回滚；多环境冲突和受保护环境默认 fail-closed。
+- **DDL 回执**：现场变更必须精确到列，同时绑定已审批 DDL hash、迁移内容 hash、来源、审批号与执行时间；宽限期最长 7 天，账本损坏不放行且重复回执保持幂等。
+- **上下文预算**：Context Plan 同时限制文件数、字节数和估算 token；MCP 默认摘要并支持游标续取，确定性扫描、缓存和质量评测继续复用 v0.21.0 能力。
 
 ### v0.21.0 完整精益闭环
 
