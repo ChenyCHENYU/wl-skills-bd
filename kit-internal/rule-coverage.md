@@ -66,7 +66,7 @@
 2. J6/J7 必须保留 `gate=false`，不得在文档中描述成默认硬门；
 3. 规则严重度、修复级别和标题以 catalog 为准；
 4. 每次发版执行 `npm run verify` 与 Java 8 的 `npm run verify:quality-maven`。
-5. `npm run eval:quality` 必须阻断 precision/recall、P95、规则短路比例或 MCP token/字节预算回退。
+5. `npm run eval:quality` 必须阻断 precision/recall、P95、规则短路比例、MCP 或 Catalog 摘要 token/字节预算回退。
 
 ## 变更记录
 
@@ -75,4 +75,5 @@
 - 2026-07-18 v0.13.0：任务路由复用 B1~B23 子集；路由只读，写入统一进入既有安全链。
 - 2026-07-19 v0.17.0：同步 B24/B25、production assurance 证据门和实际生成源码质量门。
 - 2026-08-24 v0.21.0：加入规则前置执行计划、共享 ScanContext、两级缓存与准确率/性能/token 回退门禁。
+- 2026-08-31 v0.23.0：加入契约分类、字段影响、集成闭环与 Catalog 摘要/token 回退门禁。
 - 2026-07-17 v0.6.0：补 B12 与设计级规则。

@@ -81,12 +81,12 @@ const codegenTool = {
 
 const contractTool = {
   name: "wls_be_contract",
-  description: "从 docs/db-spec 抽取保守契约种子，或渲染/核对前端 wl-api-contract、运行时 OpenAPI 3、权限清单与 kit 风格 api.md；只读。",
+  description: "契约种子、分类/兼容迁移、协作差异、集成完备性与字段影响。inspect/impact/integration-inspect 只读；migrate 必须 planHash + confirmApply。",
   inputSchema: {
     type: "object",
     required: ["mode"],
     properties: {
-      mode: { type: "string", enum: ["seed", "show", "diff"] },
+      mode: { type: "string", enum: ["seed", "show", "diff", "inspect", "migrate", "impact", "integration-inspect"] },
       contract: { type: "string", minLength: 1 },
       table: { type: "string", minLength: 1 },
       database: { type: "string", enum: ["oracle", "mysql"] },
@@ -102,10 +102,19 @@ const contractTool = {
       permissions: { type: "string", minLength: 1 },
       kitApiMd: { type: "string", minLength: 1, description: "kit 风格 api.md（含 dict-contract 块），核对 API_CONFIG 与 externalBasePath" },
       strict: { type: "boolean" },
+      field: { type: "string", minLength: 1, maxLength: 128, description: "impact：字段名或物理列名" },
+      table: { type: "string", minLength: 1, maxLength: 128, description: "impact：可选物理表过滤" },
+      limit: { type: "integer", minimum: 1, maximum: 200, description: "impact：单页证据上限，默认 50" },
+      cursor: { type: "integer", minimum: 0, description: "impact：证据游标" },
+      confirmApply: { type: "boolean", description: "migrate：评审预览后显式确认" },
+      planHash: { type: "string", pattern: "^[a-f0-9]{64}$", description: "migrate：必须与预览一致" },
+      allowUnresolved: { type: "boolean", description: "migrate：经人工确认后允许保留非确定项" },
+      allowProductionWrites: { type: "boolean", description: "migrate：受保护环境单次授权" },
     },
     allOf: [
       { if: { properties: { mode: { const: "seed" } } }, then: { required: ["table", "database"] } },
-      { if: { properties: { mode: { enum: ["show", "diff"] } } }, then: { required: ["contract"] } },
+      { if: { properties: { mode: { enum: ["show", "diff", "inspect", "migrate", "integration-inspect"] } } }, then: { required: ["contract"] } },
+      { if: { properties: { mode: { const: "impact" } } }, then: { required: ["module", "field"] } },
     ],
     additionalProperties: false,
   },
@@ -253,19 +262,25 @@ const taskTool = {
 
 const catalogTool = {
   name: "wls_be_catalog",
-  description: "模块目录治理。默认必须指定 module，只扫描当前模块契约/源码根并复用其他模块快照；full 仅供显式 CI/初始化。apply 需要同一 planHash 与 confirmApply=true。",
+  description: "模块目录治理与重复集成工具审计。默认摘要；show 可按 section/cursor 有界读取。扫描默认只限当前模块；apply 需要同一 planHash 与确认。",
   inputSchema: {
     type: "object",
     required: ["mode"],
     properties: {
-      mode: { type: "string", enum: ["plan", "apply", "show", "check"] },
+      mode: { type: "string", enum: ["plan", "apply", "show", "check", "integration-audit"] },
       module: { type: "string", pattern: "^[a-z][a-zA-Z0-9]*$" },
       full: { type: "boolean" },
       detail: { type: "string", enum: ["summary", "full"], description: "show/check 默认 summary；full 显式返回完整快照" },
+      section: { type: "string", enum: ["resources", "services", "apis", "databases", "relations", "sourceEvidence"], description: "show：只返回指定分区" },
+      limit: { type: "integer", minimum: 1, maximum: 200, description: "show：分区单页上限，默认 50" },
+      cursor: { type: "integer", minimum: 0, description: "show：分区游标" },
       confirmApply: { type: "boolean" },
       planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
       allowProductionWrites: { type: "boolean" },
     },
+    allOf: [
+      { if: { properties: { mode: { enum: ["check", "integration-audit"] } } }, then: { required: ["module"] } },
+    ],
     additionalProperties: false,
   },
   handle: handleCatalog,

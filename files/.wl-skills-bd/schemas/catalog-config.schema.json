@@ -40,6 +40,7 @@
       "required": ["displayName", "contractRoots", "sourceRoots", "upstream", "downstream", "owners"],
       "properties": {
         "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "root": { "$ref": "#/$defs/relativePath", "description": "可选模块工程根；聚合工程建议显式声明。省略时仅从 contractRoots/sourceRoots 的共同祖先确定性推导。" },
         "contractRoots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } },
         "sourceRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } },
         "upstream": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" } },

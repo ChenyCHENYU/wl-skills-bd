@@ -53,6 +53,14 @@ Retry retry = Retry.of("orderApi", config);
 
 > **重试 + 重试 = 重试风暴**：调用链上每层都重试 3 次，总重试 = 3^n。网关层应关闭重试，只在 Service 层重试。
 
+### 2.1 跨系统集成契约
+
+生产者、消费者或消息投递不得只写在人读说明中。契约应机器声明：方向、producer/consumer、transport、payloadVersion/contractRef、稳定 identityId、排序键、重试次数与退避、确认方式、死信、重放、操作和错误码。
+
+- 逻辑 ID 必须固定来源字段顺序、规范化规则、字符集和算法版本；禁止各模块各写一份可能漂移的 StableBusinessId/PayloadHash。
+- 出站/双向投递必须声明 orderingKey；启用重试时必须有 deadLetter，并关联 `retryable=true` 的错误码。
+- `integration inspect` 检查单份契约的声明完备性；`integration audit --module <module>` 只扫描当前模块根，报告重复或实现漂移，不自动改业务算法。
+
 ## 3. 熔断（级联雪崩事故源）
 
 错误率 / 慢调用达到阈值时熔断，半开探测恢复：
@@ -215,4 +223,5 @@ public void save() { saleClient.call(); } // 网络调用进事务
 
 ## 变更记录
 
+- 2026-08-31 v0.23：新增逻辑 ID、载荷版本、排序、重试/确认/死信/重放和重复工具机器审计。
 - 2026-07-18 v0.10：新增限流熔断与外部调用规范，落地 Feign/Resilience4j/Sentinel 团队基线。

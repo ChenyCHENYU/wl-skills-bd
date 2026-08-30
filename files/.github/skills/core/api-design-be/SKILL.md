@@ -21,6 +21,7 @@ metadata:
 ✅ 已读取 standards/04-controller.md       → Controller 模板
 ✅ 已读取 standards/11-security-permission.md → 权限码规范
 ✅ 已读取 standards/13-api-doc-swagger.md  → OpenAPI 3 注解
+✅ 涉及跨系统集成时已读取 standards/08-exception.md 与 standards/22-resilience.md
 ```
 
 ## 前置检查
@@ -32,7 +33,7 @@ metadata:
 
 已有 `docs/db-spec` 时，先执行 `contract seed --table <TABLE> --database <oracle|mysql> --json`。它只推导数据库证据可证明的名称、类型和存储边界；`unresolved` 中的写策略、查询方式、分级、语义 ID、API、权限和迁移风险必须人工确认。
 
-先产出符合 `.wl-skills-bd/schemas/contract.schema.json` 的 `wl-contract.json`。`api.requestPath` 是 Controller 路径，`api.externalBasePath` 是前端经过网关调用的完整资源根路径，两者都必须明确。
+先执行 `contract inspect <file>` 分类。新建并进入代码生成的契约语义必须是 `crud`，并建议显式声明 `contractKind=crud`；未声明的旧严格契约可兼容推断，再用受控迁移固定类型。`schema-mirror` 和 `integration-projection` 只进入只读目录与对账，不伪造成 CRUD。`api.requestPath` 是 Controller 路径，`api.externalBasePath` 是前端经过网关调用的完整资源根路径，两者都必须明确。
 
 执行：
 
@@ -74,6 +75,8 @@ wl-skills-bd codegen plan wl-contract.json --json
 - 更新必须形成 `详情 revision → UpdateDTO id+revision` 的乐观锁闭环
 - ID 长度由 Profile 的 `idPolicy` 同时驱动 DDL、Controller/DTO 校验与协作契约；不得在模板中另写魔法长度
 - 生产契约必须声明目标数据库风险、业务错误码目录和对外字段稳定语义 ID
+- 跨系统逻辑 ID 必须声明来源字段、算法/版本、规范化、字符集与最大长度；出站/双向集成必须声明排序键、载荷版本、重试/确认/死信/重放并引用已登记错误码
+- 使用 `integration inspect <contract>` 验证单契约完备性；使用 `integration audit --module <module>` 检查 StableBusinessId/PayloadHash 重复或漂移，不让 AI 主观判断算法是否一致
 
 ## 完成摘要
 

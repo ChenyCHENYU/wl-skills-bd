@@ -25,6 +25,11 @@ readJson(PROFILE_SCHEMA_FILE);
 assert.strictEqual(schema.properties.indexes.items.properties.name.maxLength, 64);
 assert.ok(schema.properties.databaseTarget);
 assert.ok(schema.properties.errors);
+assert.strictEqual(schema.properties.contractKind.const, "crud");
+assert.ok(schema.properties.logicalIds);
+assert.ok(schema.properties.integrations);
+assert.ok(schema.$defs.logicalId);
+assert.ok(schema.$defs.integration);
 assert.ok(schema.allOf.some((rule) => (rule.then.required || []).includes("databaseTarget")));
 
 const loaded = loadContract(CONTRACT_FILE, { projectRoot: ROOT });
@@ -74,4 +79,4 @@ for (const requiredPath of ["$.databaseTarget", "$.errors"]) {
 }
 assert.ok(productionResult.errors.some((item) => item.path === "$.fields[0].semanticId"));
 
-console.log("✓ contract invariants：Schema/Profile/运行时/API/DDL 的 ID、审计列、错误码与生产目标策略一致");
+console.log("✓ contract invariants：Schema/Profile/运行时/API/DDL 的 ID、逻辑 ID、集成与错误码策略一致");

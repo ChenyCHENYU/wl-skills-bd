@@ -1,6 +1,6 @@
 # Copilot Instructions — wl-skills-bd 后端主入口
 
-本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 29 条。
+本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 29 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
 
 ## 技术基线
 
@@ -29,6 +29,8 @@
 ```
 
 生成前必须读 `.github/guides/codegen-workflow.md`；启用 Catalog 的项目先以当前模块执行 `catalog check/context plan`，不得全仓扫描。前后端协作读 `frontend-backend-contract.md`；MCP 写入规则读 `mcp-workflow.md`。
+
+字段变更先执行 `impact field --module ...` 核对存储容量、所有权、迁移链和精确源码引用。跨系统集成使用契约化逻辑 ID、载荷版本、重试/确认/死信/重放与错误码；使用 `integration inspect/audit` 取代主观判断或全仓重读。
 
 ## Pre-flight
 
@@ -70,7 +72,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_validate` | B1~B31 只读扫描 |
 | `wls_be_doctor` | 环境与门禁诊断 |
 | `wls_be_codegen` | validate/plan/受控 apply |
-| `wls_be_contract` | show/diff 前端、OpenAPI、权限 |
+| `wls_be_contract` | seed/inspect/migrate/show/diff/impact/integration-inspect |
 | `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
 | `wls_be_standards` | 查询 29 条规范 |
 | `wls_be_templates` | 查询 16 个模板 |
@@ -79,7 +81,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_config` | 配置 doctor/init/migrate/fix；写入需确认 |
 | `wls_be_troubleshoot` | 常见后端故障只读诊断 |
 | `wls_be_task` | 只读任务路由；不得绕过 codegen/safe-fix/config 写链 |
-| `wls_be_catalog` | 模块目录 plan/apply/check/show；默认只扫描当前模块 |
+| `wls_be_catalog` | 模块目录 plan/apply/check/show、分区分页与 integration-audit；默认只扫描当前模块 |
 | `wls_be_context` | 当前模块 + 一跳快照的有界上下文；不扫关联源码 |
 | `wls_be_commit` | 提交消息/range 校验与 Hook doctor |
 | `wls_be_test` | 行为契约测试 gen/scenarios（测行为不测镜像） |

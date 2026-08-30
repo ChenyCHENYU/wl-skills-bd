@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.22.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.23.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-29-orange.svg)]()
@@ -19,13 +19,15 @@
 | 数据安全护栏（v0.10/v0.14） | B13~B19：Redis TTL/Redisson 锁/禁用命令、物理删禁令/全表写禁令/批量分批、受保护环境只读护栏、二次确认 |
 | 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
 | 独立协同（v0.12） | 内置统一 delivery profile；没有 design/kit 也能从评审需求独立生成；有 kit 时用 `wl-api-contract` 严格握手 |
-| 配置分层（v0.12） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix + troubleshoot 故障诊断 |
+| 配置分层（v0.12/v0.23） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix；明文 Secret、Bean 覆盖、Actuator 全暴露和错误详情泄露体检 |
 | 任务驱动（v0.13/v0.21） | 8 种任务类型精准触发；标准 DAG 输出 discover/context/validate/plan/approval/apply/verify、pipelineHash、节点状态与确认门 |
 | 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
 | 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
+| 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
+| 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
@@ -35,6 +37,15 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
 | AI 接入 | 16 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.23.0 多模块、存量契约与精准影响闭环
+
+- **多模块根目录**：由 Catalog 配置显式发现模块根；doctor、配置体检和 B 规则按模块执行，根目录只汇总证据，不把聚合工程误判成单体工程。
+- **契约分流**：`contract inspect` 确定性区分严格 CRUD、数据库镜像与集成投影；只有 `crud` 可进入 codegen，存量格式通过 `contract migrate` 的 planHash/备份/回滚链渐进收敛。
+- **真实目录**：Catalog 只把契约形状 JSON 当资源，接口以 Controller 源码观测为准；默认仅返回摘要，`--section/--limit/--cursor` 按需读取。
+- **字段影响**：`impact field` 在指定模块内关联契约字段、存储容量、Java 校验、所有权、Expand/Backfill/Contract 迁移链及精确文件行号，禁止隐式全仓扫描。
+- **集成治理**：契约可声明版本化逻辑 ID 和集成投递闭环；`integration inspect/audit` 检查缺项以及 StableBusinessId/PayloadHash 的重复或实现漂移。
+- **量化结果**：质量基准固定规则 precision/recall=1.0，并把 Catalog 默认摘要与分页加入 token 回退门禁；1000 资源夹具摘要约 118 tokens。
 
 ### v0.22.0 契约、安全写链与数据库证据闭环
 
@@ -111,6 +122,8 @@ npx @agile-team/wl-skills-bd validate src/main --format sarif --output reports/b
 wl-skills-bd catalog plan --module order
 wl-skills-bd catalog apply --module order --plan-hash <sha256> --confirm
 wl-skills-bd catalog check --module order
+wl-skills-bd catalog show --module order
+wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
 
 wl-skills-bd context plan --module order \
   --task "增加订单创建接口" \
@@ -121,7 +134,7 @@ wl-skills-bd context plan --module order \
 
 模块模式只遍历 `order` 配置的契约/源码根。上游 `customer`、下游 `billing` 等模块只读取已生成快照，且仅把关系命中的契约列为候选，不扫描它们的源码目录。快照缺失时明确告警，不会偷偷回退全仓扫描。`catalog plan --full` 仅供 CI、首次初始化或显式全局治理。
 
-机器快照写入 `.wl-skills-bd/catalog/`；人读文档写入 `docs/backend/`。每份生成文档都带用途、受众、范围、来源、目录哈希和 `editable: false` 注释头。当前模块文档是开发事实入口，项目索引只汇总快照。Catalog 会阻断重复契约、服务类、API 路由、权限码、表写归属和 Flyway 版本；配置存在时，codegen 还会校验当前模块新鲜度并将上下文哈希绑定到 `planHash`。Context Plan 同时受文件数、字节数和估算 token 三重预算约束；中文任务会拆成可命中的语义片段，避免整句不命中后扩大扫描范围。
+机器快照写入 `.wl-skills-bd/catalog/`；人读文档写入 `docs/backend/`。每份生成文档都带用途、受众、范围、来源、目录哈希和 `editable: false` 注释头。当前模块文档是开发事实入口，项目索引只汇总快照。Catalog 会阻断重复契约、服务类、真实 API 路由、权限码、表写归属和 Flyway 版本；只有具备契约身份形状的 JSON 才进入资源目录，Controller 实际注解才是 API 观测事实。配置存在时，codegen 还会校验当前模块新鲜度并将上下文哈希绑定到 `planHash`。Context Plan 同时受文件数、字节数和估算 token 三重预算约束；中文任务会拆成可命中的语义片段，避免整句不命中后扩大扫描范围。
 
 日常只需遵循五步：
 
@@ -140,6 +153,8 @@ wl-skills-bd context plan --module order \
 ```bash
 # 已有 DB Spec 时，先生成只含可证明事实的契约种子
 wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
+wl-skills-bd contract inspect contracts/legacy.json --json
+wl-skills-bd contract migrate contracts/legacy.json --json
 
 cp .github/templates/examples/feature-category.contract.json wl-contract.json
 wl-skills-bd codegen validate wl-contract.json
@@ -160,6 +175,8 @@ wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm
 每个需要 body 的业务命令额外生成一个 `OperationRequestDTO`。分页的 `current/size`、查询方法和载荷位置由生效 Delivery Profile 决定（内置基线使用 POST JSON body）；字段必须显式声明 `writable`，状态等命令字段应设为 `false`。
 
 DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。生产变更继续由 DBA/CD 和人工审批负责。
+
+严格生成契约固定为 `contractKind=crud`。存量数据库镜像和 OMS/跨系统投影可分别声明 `schema-mirror`、`integration-projection`，由兼容检查器纳入 Catalog 和治理报告，但不会被误送入代码生成器。兼容迁移默认只预览确定性动作；写入必须携带同一 planHash，保留备份，并在所有权等事实未明确时继续阻断。
 
 标准 CRUD 是完整实现。export、关联查询或缺少确定性 patch 的业务命令会明确标记为 draft，并放入 `<wl-custom>` 保护区；人工补齐实现和测试后，后续 codegen 会保留该区域。需要拒绝所有业务骨架时，在 apply 增加 `--require-complete`。
 
@@ -238,6 +255,21 @@ wl-skills-bd contract diff wl-contract.json \
 
 安全边界不变：DDL 只生成不执行；本包不连接数据库（drift 用离线快照）；生产变更仍由 DBA/CD 审批执行，执行后用 `db executed` 回执闭环。
 
+### 字段影响与集成闭环（v0.23）
+
+```bash
+# 必须指定模块；按字段/列名关联契约、库表、Java 边界、迁移链和源码证据
+wl-skills-bd impact field --module pl --table pl_l2_heat_plan_out --field heat_no --limit 50 --json
+
+# 检查单份契约的逻辑身份、载荷版本、重试/确认/死信/重放声明
+wl-skills-bd integration inspect contracts/heat-plan.contract.json --json
+
+# 在当前模块源码根内检查 StableBusinessId / PayloadHash 重复与实现漂移
+wl-skills-bd integration audit --module pl --json
+```
+
+`impact field` 不执行数据库查询，也不靠字段名猜业务语义；所有结论来自兼容契约、Catalog 模块根和源码精确引用。输出默认 50 条证据并返回 `nextCursor`。逻辑 ID 必须固定来源字段顺序、分隔符/namespace、trim/case/nullToken、UTF-8、算法版本和最大长度；启用重试的集成必须绑定可重试错误码并声明死信闭环。
+
 ## 检查与安全修复
 
 ```bash
@@ -283,7 +315,7 @@ mvn verify -Pwl-quality
 | `wls_be_validate` | 否 | B1~B31 扫描；结果含 Controller `endpoints[]` 清单 |
 | `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
-| `wls_be_contract` | 否 | 从 DB Spec 生成保守契约种子，或协作契约 show/diff（前端/OpenAPI/权限/kit api.md） |
+| `wls_be_contract` | 条件 | seed/inspect/migrate/show/diff/impact/integration-inspect；仅 migrate 写入且保留计划确认门 |
 | `wls_be_safe_fix` | 条件 | B3/B5 安全修复闭环 |
 | `wls_be_standards` | 否 | 读取 29 条规范 |
 | `wls_be_templates` | 否 | 读取 16 个模板 |
@@ -292,7 +324,7 @@ mvn verify -Pwl-quality
 | `wls_be_config` | 条件 | 配置分层 init/migrate/doctor/fix；写操作保留计划与确认门 |
 | `wls_be_troubleshoot` | 否 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
 | `wls_be_task` | 否 | 只读任务路由：自然语言/显式类型 → Skill、规则子集与统一安全写链 |
-| `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show；默认禁止隐式全量扫描 |
+| `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show + integration-audit；show 支持 section/cursor，默认禁止隐式全量扫描 |
 | `wls_be_context` | 否 | 当前模块 + 一跳快照的文件/字节/token 有界上下文选择，不扫描关联源码 |
 | `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
 | `wls_be_test` | 否 | 行为契约测试生成（gen/scenarios），测行为不测镜像 |
@@ -403,7 +435,7 @@ wl-skills-bd troubleshoot "NacosException"
 wl-skills-bd troubleshoot "CrashLoopBackOff"
 ```
 
-**L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。`env-port` 优先校验 env-matrix 中项目冻结端口，不会用通用业务域范围覆盖已确认的客户端口。
+**L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-security-posture（Bean 覆盖、Actuator 全暴露、env/configprops 值和错误详情泄露）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。`env-port` 优先校验 env-matrix 中项目冻结端口，不会用通用业务域范围覆盖已确认的客户端口。
 
 **治理列闭环**：受管 profile 提供默认值；项目差异写入未受管的 `.wl-skills-bd/profile.local.json`，禁止直接编辑 `profiles/*.json` 制造安装漂移。合并后的 `softDelete/auditTime` 同时驱动 DDL、Entity、Service 与 Mapper XML；doctor 校验 profile、`rules.local.json`、本地 MyBatis-Plus 运行值三点一致。运行值仅由 Nacos 下发时，doctor 会明确标记“本地未验证”，联调前需保留配置证据。
 
@@ -473,7 +505,7 @@ wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest
 
 ```bash
 npm run verify                 # 版本/计数/Schema/规则/测试套件（含协作契约、扩展编译、事务回滚与生产护栏）
-npm run eval:quality           # precision/recall、P95、规则短路、缓存与 MCP token 回退门禁
+npm run eval:quality           # precision/recall、P95、规则短路、缓存、MCP 与 Catalog token 回退门禁
 npm run verify:quality-maven   # Java 8 真实 Maven 生命周期 + 实际生成源码 Checkstyle/Spotless/PMD 门
 npm run release:check          # 全量验证 + npm 发布内容 dry-run
 ```

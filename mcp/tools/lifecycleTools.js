@@ -87,7 +87,81 @@ function handleContract(args) {
     if (!seed.ok) return blockedResult((seed.errors || []).map((item) => `${item.path || item.code}: ${item.message}`).join("\n"), seed.reason, seed);
     return toolResult(`契约种子：${seed.source.table}；确定性字段 ${seed.suggestions.fields.length} 个；待确认 ${seed.unresolved.length} 项`, seed);
   }
-  if (!args.contract) return blockedResult("contract show/diff 必须提供 contract", "invalid-input");
+  if (args.mode === "impact") {
+    const result = require("../../lib/impact-analysis").analyzeFieldImpact(root, {
+      module: args.module,
+      field: args.field,
+      table: args.table,
+      limit: args.limit,
+      cursor: args.cursor,
+    });
+    if (!result.matches) return blockedResult(
+      (result.errors || []).map((item) => `${item.path}: ${item.message}`).join("\n") || "字段未找到",
+      result.reason || "impact-invalid",
+      result,
+    );
+    return toolResult(
+      `${result.ok ? "✅" : "❌"} 字段影响：${result.module}.${result.query.field}；契约 ${result.matches.length}，引用 ${result.evidence.total}，error ${result.diagnostics.errors}，warn ${result.diagnostics.warnings}`,
+      result,
+      !result.ok,
+    );
+  }
+  if (!args.contract) return blockedResult(`contract ${args.mode} 必须提供 contract`, "invalid-input");
+  if (["inspect", "migrate", "integration-inspect"].includes(args.mode)) {
+    let file;
+    try {
+      file = readableProjectFile(root, args.contract, "后端契约");
+    } catch (error) {
+      return blockedResult(error.message, "invalid-input");
+    }
+    const compat = require("../../lib/contract-compat");
+    if (args.mode === "inspect") {
+      const inspected = compat.loadContractCompat(file, { projectRoot: root });
+      const output = {
+        ok: inspected.ok,
+        contractKind: inspected.contractKind,
+        codegenSafe: inspected.codegenSafe,
+        descriptor: inspected.descriptor,
+        errors: inspected.errors,
+        warnings: inspected.warnings,
+      };
+      return toolResult(
+        `${output.ok ? "✅" : "❌"} 契约分类：${output.contractKind || "unknown"}；codegen=${output.codegenSafe ? "enabled" : "disabled"}；error ${output.errors.length}，warn ${output.warnings.length}`,
+        output,
+        !output.ok,
+      );
+    }
+    if (args.mode === "integration-inspect") {
+      const inspected = compat.loadContractCompat(file, { projectRoot: root });
+      if (!inspected.ok) return blockedResult("集成契约校验失败", "invalid-contract", { errors: inspected.errors, warnings: inspected.warnings });
+      const governance = require("../../lib/integration-contract");
+      const result = inspected.contractKind === "integration-projection"
+        ? { ok: true, contractId: inspected.descriptor.contractId, contractKind: inspected.contractKind, ...governance.inspectLegacyProjection(inspected.raw) }
+        : {
+          ok: true,
+          contractId: inspected.descriptor.contractId,
+          contractKind: inspected.contractKind,
+          readiness: (inspected.raw.integrations || []).length > 0 ? "complete" : "not-declared",
+          integrations: (inspected.raw.integrations || []).map((item) => item.id),
+          warnings: (inspected.raw.integrations || []).length > 0 ? [] : [{ code: "N202", severity: "warn", path: "$.integrations", message: "当前契约未声明跨系统集成" }],
+        };
+      return toolResult(`集成契约：${result.contractId}；readiness=${result.readiness}；warn ${(result.warnings || []).length}`, result);
+    }
+    const plan = compat.buildMigrationPlan(root, file);
+    if (!plan.ok) return blockedResult("契约迁移计划无效", plan.reason || "invalid-contract", plan);
+    if (args.confirmApply !== true) {
+      const preview = compat.publicMigrationPlan(plan);
+      return previewResult(`契约迁移预览：${preview.contractKind}；动作 ${preview.actions.length}，待确认 ${preview.unresolved.length}\nplanHash: ${preview.planHash}`, preview);
+    }
+    const result = compat.applyMigrationPlan(plan, {
+      confirm: true,
+      planHash: args.planHash,
+      allowUnresolved: args.allowUnresolved === true,
+      allowProductionWrites: args.allowProductionWrites === true,
+    });
+    if (!result.ok) return blockedResult(`契约迁移零写入：${result.reason}`, result.reason, result);
+    return completedResult(`✅ 契约迁移已写入：${result.rel}`, result);
+  }
   let value;
   try {
     value = contractAndManifest(root, args.contract);
@@ -402,11 +476,25 @@ function handleTask(args) {
 function handleCatalog(args) {
   const catalog = require("../../lib/project-catalog");
   const root = projectRoot();
+  if (args.mode === "integration-audit") {
+    const result = require("../../lib/integration-contract").auditIntegrationUtilities(root, { module: args.module });
+    if (!result.summary) return blockedResult((result.errors || []).map((item) => `${item.path}: ${item.message}`).join("\n"), "invalid-input", result);
+    return toolResult(
+      `${result.ok ? "✅" : "❌"} 集成工具审计：扫描 ${result.scannedFiles} 个 Java 文件，发现 ${result.summary.utilities} 个实现、${result.summary.duplicates} 组重复`,
+      result,
+      !result.ok,
+    );
+  }
   if (args.mode === "show") {
     if (args.module) {
       const value = catalog.readModuleCatalog(root, args.module);
       if (!value) return blockedResult(`模块目录快照不存在：${args.module}`, "catalog-missing");
       const summary = catalog.summarizeCatalog(value);
+      if (args.section) {
+        const slice = catalog.catalogSlice(value, args.section, { limit: args.limit, cursor: args.cursor });
+        if (!slice.ok) return blockedResult(slice.errors[0].message, "invalid-input", slice);
+        return toolResult(`Catalog 分区：${value.module.id}.${args.section}；${slice.items.length}/${slice.total}，nextCursor=${slice.nextCursor}`, slice);
+      }
       if (args.detail !== "full") return toolResult(`Catalog 摘要：${value.module.id}，资源 ${summary.resources}，证据文件 ${summary.evidenceFiles}`, { ok: true, state: "read", detail: "summary", catalog: summary });
       return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", detail: "full", catalog: value });
     }

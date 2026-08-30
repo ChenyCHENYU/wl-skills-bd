@@ -40,10 +40,26 @@ cp .wl-skills-bd/catalog.config.example.json .wl-skills-bd/catalog.config.json
 wl-skills-bd catalog check --module order
 wl-skills-bd catalog plan --module order
 wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
+wl-skills-bd catalog show --module order
+wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
 wl-skills-bd context plan --module order --task "增加订单创建接口" --json
 ```
 
-其他模块只读取一跳快照；只有关系或任务关键词命中的契约进入上下文。快照缺失时告警并等待协同，不扫描对方源码、不扩大到全仓。`--full` 只用于 CI、首次初始化或显式治理。
+其他模块只读取一跳快照；只有关系或任务关键词命中的契约进入上下文。快照缺失时告警并等待协同，不扫描对方源码、不扩大到全仓。`--full` 只用于 CI、首次初始化或显式治理。Catalog 默认返回摘要；需要资源、API、数据库或证据正文时按 section/cursor 分页读取。API 清单来自 Controller 源码观测，不为数据库镜像合成接口。
+
+## 契约分类、字段影响与集成
+
+```bash
+wl-skills-bd contract inspect contracts/legacy.json --json
+wl-skills-bd contract migrate contracts/legacy.json --json
+wl-skills-bd contract migrate contracts/legacy.json --plan-hash <hash> --confirm
+
+wl-skills-bd impact field --module order --field orderNo --table order_info --limit 50 --json
+wl-skills-bd integration inspect contracts/order.contract.json --json
+wl-skills-bd integration audit --module order --json
+```
+
+`crud` 是唯一允许 codegen 的严格契约；`schema-mirror` 与 `integration-projection` 只用于存量事实治理。字段影响命令必须指定模块，输出物理容量、Java 边界、所有权、迁移阶段和文件行号。集成契约固定逻辑 ID 算法/版本/规范化以及重试、确认、死信、重放和错误码引用；审计器只报告重复/漂移，不自动修改业务算法。
 
 ## 新资源
 
@@ -88,7 +104,7 @@ wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
 
 ## MCP
 
-`init` 会安装编辑器配置。16 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 返回标准 Pipeline，但实际写入仍走 codegen/safe-fix/config/catalog。
+`init` 会安装编辑器配置。16 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；`wls_be_contract` 还提供 inspect/migrate/impact/integration-inspect，`wls_be_catalog` 提供分区读取和 integration-audit。不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 返回标准 Pipeline，但实际写入仍走 codegen/safe-fix/config/catalog/contract migrate。
 
 MCP 默认使用 `response.mode=summary` 和有界 `maxItems/maxBytes`；超预算结果从 `nextCursor` 续取，禁止为了获取正文反复执行同一全量工具。
 

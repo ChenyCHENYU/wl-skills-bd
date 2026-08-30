@@ -1,6 +1,6 @@
 # wl-skills-bd Architecture Decision Record
 
-> 状态：accepted · 版本：0.17.0 · 日期：2026-07-19
+> 状态：accepted · 版本：0.23.0 · 日期：2026-08-31
 
 ## 目标
 
@@ -15,10 +15,10 @@
 L0 机器事实  JSON Schema + shared delivery profile + rule catalog + module catalog
                     │
                     ▼
-L1 上下文治理  当前模块增量扫描 / 一跳快照 / 关系与预算选择 / 全局身份去重
+L1 上下文治理  多模块根发现 / 当前模块增量扫描 / 一跳快照 / 源码 API / 关系与预算选择 / 全局身份去重
                     │
                     ▼
-L2 确定性核心  install / contract / codegen / audit / safe-fix / config / task-router / pipeline
+L2 确定性核心  install / contract-compat / codegen / impact / integration / audit / config / pipeline
                     │
           ┌─────────┴─────────┐
           ▼                   ▼
@@ -44,6 +44,7 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 | `files/.wl-skills-bd/` | contract/collaboration/rules Schema，Profile，兼容矩阵，规则目录 | 业务工程源码 |
 | `lib/installer.js` | manifest、增量更新、漂移、清理、备份 | 猜测文件归属 |
 | `lib/contract.js` / `lib/profile-policy.js` | JSON Schema、跨字段语义校验及 ID/审计列单一策略 | 自然语言需求解析 |
+| `lib/contract-compat.js` | crud/schema-mirror/integration-projection 分类、只读描述符和存量迁移事务 | 把镜像/投影伪装成 codegen 契约或猜未知所有权 |
 | `lib/contract-seed.js` | 从 DB Spec 抽取可证明的契约种子并显式列出未决项 | 猜测 API、权限、写策略或业务语义 |
 | `lib/codegen.js` | 17+N 产物、planHash、业务保护区、Flyway 不可变、冲突、事务回滚与完成度证据 | 执行 DDL |
 | `lib/collaboration.js` | manifest 渲染，前端/OpenAPI/权限差异 | 修改前端或权限平台 |
@@ -52,12 +53,14 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 | `lib/db-drift.js` | 快照双向漂移、缺表/缺列、精确列审批回执、事务化幂等账本 | 连接数据库或执行 DDL |
 | `lib/safe-fix.js` | B3/B5 条件安全修复、备份、恢复、复扫 | 业务语义重构 |
 | `lib/doctor.js` | 工具链/Profile/门禁/租户证据 | 安装 Maven 或修改 POM |
-| `lib/config-*.js` / `lib/env-matrix.js` | 配置骨架、矩阵、迁移计划、体检、脱敏修复与 TCP 探测 | 写 Nacos/数据库/K8s 或自动部署 |
+| `lib/config-*.js` / `lib/env-matrix.js` | 配置骨架、矩阵、迁移计划、Secret/Bean 覆盖/Actuator/错误详情体检、脱敏修复与 TCP 探测 | 写 Nacos/数据库/K8s 或自动部署 |
 | `lib/write-guard.js` / `lib/file-transaction.js` | 多环境 fail-closed 护栏及通用 planHash/确认/原子写/回滚事务 | 绕过人工授权或写外部平台 |
 | `lib/permission-export.js` | 权限导出计划/回滚 | 发布权限到平台 |
 | `lib/task-router.js` | 只读识别任务并选择 Skill、Standards、规则子集与统一安全写链 | 直接修改源码或绕过 codegen/safe-fix/config |
 | `lib/pipeline.js` | DAG 校验、pipelineHash、节点状态、只读重试/超时与写节点确认 | 自动扩大写权限或重试有副作用操作 |
-| `lib/project-catalog.js` / `lib/context-planner.js` | 当前模块增量目录、全局身份去重、一跳快照和文件/字节/token 预算化上下文 | 隐式全仓扫描或读取关联模块源码目录 |
+| `lib/workspace.js` / `lib/project-catalog.js` / `lib/context-planner.js` | 模块根发现、契约候选过滤、源码 API 观测、当前模块目录、全局去重、一跳快照和文件/字节/token 预算 | 隐式全仓扫描、合成镜像 CRUD 或读取关联模块源码目录 |
+| `lib/impact-analysis.js` | 指定模块字段的存储/Java 边界、所有权、迁移链与精确引用证据 | 数据库写入、业务语义猜测或隐式全仓扫描 |
+| `lib/integration-contract.js` | 逻辑 ID 与投递闭环校验、稳定 ID/PayloadHash 重复实现审计 | 自动选择业务算法或改写业务工具 |
 | `lib/commit-policy.js` | type/scope/subject 与 Git range 校验、Hook 接入诊断 | 分支策略、自动提交或仓库保护配置 |
 | `files/.github/java-quality/` | J1~J8 Maven 质量能力 | 替代业务测试/人工评审 |
 | `mcp/` | 严格入参 Schema、根目录边界、统一结果预算/游标和 stdio 协议 | 第二套执行器或无限制注入上下文 |
@@ -67,6 +70,8 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 ### 契约先于代码
 
 `wl-contract.json` 是资源级生成事实。契约缺外部路径、权限、数据库、迁移恢复或字段语义时阻断，不能用模板默认值掩盖未知事实。Profile 固定框架约定；资源契约只描述业务差异。
+
+严格生成契约固定为 crud。schema-mirror 与 integration-projection 由兼容层只读建模，可进入 Catalog、影响分析与迁移收敛，但不进入 codegen。存量迁移复用文件事务链，任何未决业务事实保持显式 unresolved。
 
 ### 当前模块先于全仓
 
@@ -102,7 +107,7 @@ ScanContext 在同一进程按文件状态复用源码内容，Source Index 再�
 
 ### MCP 统一预算
 
-所有工具默认摘要并共享数组/字节预算。大结果仅在当前 MCP 进程短期保存，用绑定工具的 cursor 续取；不写项目、不重新执行 handler。响应报告原始/返回字节和 token 估算，CI 固定输出体积上限。
+所有工具默认摘要并共享数组/字节预算。Catalog 额外提供 section/cursor，在进入 MCP 通用预算前先裁剪事实。大结果仅在当前 MCP 进程短期保存，用绑定工具的 cursor 续取；不写项目、不重新执行 handler。响应报告原始/返回字节和 token 估算，CI 固定 MCP 与 Catalog 摘要输出上限。
 
 ### PMD 版本隔离
 
@@ -138,11 +143,11 @@ ScanContext 在同一进程按文件状态复用源码内容，Source Index 再�
 |---|---|
 | 包一致性 | version/计数/MCP 名称/模板/Schema/文件白名单 |
 | Node 核心 | 安装、契约、生成、协作、报告、安全修复、配置、任务路由、CLI、MCP 测试 |
-| 精益质量 | 正反例 precision/recall、规则执行组缩减、P95、缓存命中、MCP 字节/token 预算 |
+| 精益质量 | 正反例 precision/recall、规则执行组缩减、P95、缓存命中、MCP 与 Catalog 摘要字节/token 预算 |
 | Java 生成 | Java 8 编译夹具 |
 | Maven 门禁 | Java 8 真实执行 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo；实际扩展契约生成源码再过 Checkstyle/Spotless/PMD |
 | 发布物 | `npm pack --dry-run` 内容审计 |
 
 ## 已知边界
 
-1 个 Skill 仍是流程骨架：业务文档抽取；行为测试生成已由 `test gen/scenarios` 落地，db-migration 对复杂数据回填仍是部分能力。环境配置已由 config 命令族落地。这些产品能力边界不影响 v0.21 的规则/缓存/MCP/Pipeline/评测优化闭环；没有对应执行器的能力仍不得宣称自动 apply。
+1 个 Skill 仍是流程骨架：业务文档抽取；行为测试生成已由 `test gen/scenarios` 落地，db-migration 对复杂数据回填仍是部分能力。环境配置已由 config 命令族落地。数据库与集成审计均只读，不连接数据库、不自动修改业务算法；没有对应执行器的能力仍不得宣称自动 apply。

@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "contractKind": "crud",
   "contractId": "mdm-feature-category",
   "profile": "jh4j3-openapi3",
   "rootPackage": "com.jhict.mdm",

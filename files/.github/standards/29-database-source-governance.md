@@ -10,6 +10,7 @@
 - 文档有的表必须同名复用，禁止另建同义表架空基线；发现文档不合理时先提出问题，由业务负责人确认后修订文档和镜像。
 - Entity、Mapper、SQL、Flyway 与库快照必须使用同一物理名称。MySQL 为 `lower_snake_case`，Oracle 为 `UPPER_SNAKE_CASE`，同一 schema 禁止混用。
 - B31、`codegen validate/plan/apply` 和 `db preview` 必须运行同一事实源门禁；门禁指纹进入 planHash，文档或审批登记变化后旧计划自动失效。
+- 契约必须先分类：`crud` 是严格生成事实，`schema-mirror` 是数据库只读镜像，`integration-projection` 是跨系统投影。后两类可进入 Catalog/影响分析，但禁止假装满足 CRUD Schema 后进入 codegen。
 
 ## 2. 字段顺序与扩展规则
 
@@ -28,6 +29,14 @@
 - 台账写入必须经过 preview → planHash → confirm → 受保护环境护栏 → 原子写入 → 哈希复核；账本 JSON 损坏时 fail closed，禁止按空账本覆盖。
 - 禁止根据字段名猜字典、类型、默认值或外键；无可靠来源就标为待确认并阻断生成。
 - 禁止修改已执行的 Flyway 文件；修复必须新增版本。
+
+## 3.1 字段影响分析
+
+加字段、改长度、改类型或退役前先执行 `impact field --module <module> --field <name|column> [--table <table>]`。报告至少给出契约类型、物理容量、所有权、Java 请求边界、Expand/Backfill/Contract 顺序以及带文件/行号的源码引用。
+
+- 必须指定模块，禁止为“保险”隐式扫描全仓。
+- DTO 最大长度超过物理容量时阻断；缺少可确定边界时只对直接关联的 Entity/DTO 报告，不能拿其他表的同名字段制造误报。
+- contract 阶段必须有在先 expand 和 backfill 证据；所有权未知或冲突必须显式保留，不由工具猜测。
 
 ## 4. 环境分级：严结构、简流程
 
@@ -57,4 +66,5 @@ SIT 不要求每个只读步骤重复审批，也不为无风险信息重复造�
 
 ## 变更记录
 
+- 2026-08-31 v0.23：新增契约类型分流、字段影响证据、所有权和迁移链门禁。
 - 2026-08-22 v0.20：将数据库基线复用、扩展登记、字段全属性/顺序门禁和环境分级流程固化为阻断规范。

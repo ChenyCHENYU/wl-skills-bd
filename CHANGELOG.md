@@ -6,6 +6,29 @@
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-08-31（多模块、存量契约、字段影响与集成治理）
+
+### Added
+
+- 新增 Catalog 驱动的多模块根发现；doctor、配置体检和后端规则按模块执行，聚合根仅汇总结果，避免单体工程假设造成误报。
+- 新增 `crud/schema-mirror/integration-projection` 契约分类、兼容描述符与 `contract inspect/migrate`；存量迁移复用 planHash、受保护环境、备份、原子写和失败回滚。
+- 新增 `impact field`，在显式模块内关联字段/列、物理容量、Java 校验边界、数据所有权、Expand/Backfill/Contract 迁移链及文件行号证据。
+- 新增逻辑 ID 与集成投递机器契约；校验算法版本/规范化/长度、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、操作与错误码引用，并提供重复 StableBusinessId/PayloadHash 审计。
+- config doctor 新增 Bean 覆盖、Actuator 全端点/配置值暴露与错误详情泄露检查，同时支持 `.properties` 解析。
+
+### Changed
+
+- Catalog 只把契约形状 JSON 作为资源，API 以 Controller 源码实际注解为准；镜像/投影不再合成 CRUD。默认 show 改为摘要，并支持 section/limit/cursor。
+- 现有 16 个 MCP 工具扩展契约分类/迁移、字段影响、集成检查与目录分区能力，不新增重复执行器；CLI/MCP 继续复用同一 `lib/` 核心。
+- 契约 Schema、Standards、Skills、AGENTS、使用指南、架构文档和 README 同步三类契约、字段影响、集成闭环与安全配置边界。
+- 质量评测新增 1000 资源 Catalog 摘要/token 和默认分页门禁；移除文档中未实现的 `config diff` 承诺及默认 Bean 覆盖配置。
+
+### Fixed
+
+- 非字符串配置标量不再被误判为明文 Secret；多模块工程不再因根目录缺 bootstrap/pom 或重复扫描子模块产生噪声。
+- DB Spec 可委派到文档索引声明的机器镜像；B31 只在工程存在数据库治理事实时启用。
+- 字段影响仅比较直接关联 Entity/DTO 的同名字段，避免跨表同名字段导致长度误报；整数显示宽度归一化不再被当作存储类型变化。
+
 ## [0.22.0] - 2026-08-30（契约事实源、事务写链与精确数据库回执）
 
 ### Added

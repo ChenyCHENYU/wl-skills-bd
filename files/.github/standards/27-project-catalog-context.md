@@ -12,7 +12,7 @@ document-meta:
 
 Catalog 负责回答“有多少模块、服务、接口、数据库对象，谁拥有它们、如何关联、是否重复”。它不是第二份源码，也不要求每次读取全仓。
 
-默认开发模式必须指定当前模块。只有显式的 CI/治理任务才允许 `--full`。任何工具不得因为关联快照缺失而偷偷回退为全仓源码扫描。
+默认开发模式必须指定当前模块。只有显式的 CI/治理任务才允许 `--full`。任何工具不得因为关联快照缺失而偷偷回退为全仓源码扫描。聚合工程的模块根由 Catalog `modules.*.root` 显式声明；未声明时只能从该模块的契约根/源码根共同祖先确定性推导，不得把仓库根当作每个模块根。
 
 ## 2. 三层事实
 
@@ -30,9 +30,13 @@ Catalog 负责回答“有多少模块、服务、接口、数据库对象，谁
 wl-skills-bd catalog plan --module order
 wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
 wl-skills-bd catalog check --module order
+wl-skills-bd catalog show --module order
+wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
 ```
 
 模块模式只遍历当前模块配置的 `contractRoots` 与 `sourceRoots`；其他模块只读取固定快照文件。计划包含扫描模块、复用模块、缺失快照、操作哈希和 `planHash`。确认前重新计划；发生漂移、冲突或写入失败时整批零写入/回滚。
+
+目录只能把 `wl-contract.json`、`*.contract.json` 或具备 `contractId + entity` 形状的 JSON 当作契约；其他 manifest 仅作为证据文件。API 以 Controller 源码实际注解的 method/path/file/line 为观测事实；数据库镜像或集成投影不得合成虚构 CRUD 接口。`catalog show` 默认只返回统计摘要，大数组必须按 section/cursor 分页获取。
 
 ```bash
 # 仅限 CI、初始化或全局治理
@@ -82,5 +86,6 @@ wl-skills-bd context plan --module order --task "增加订单创建接口" --key
 
 ## 变更记录
 
+- 2026-08-31 v3：加入模块根解析、契约候选过滤、源码 API 观测和摘要/分区 token 预算。
 - 2026-08-24 v2：Source Index 两级缓存、指纹失效、损坏重建和只读降级进入机器约束。
 - 2026-07-19 v1：新增模块增量目录、一跳快照上下文、预算选择、全局身份冲突和 codegen 前置门禁。

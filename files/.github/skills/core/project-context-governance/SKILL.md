@@ -22,19 +22,23 @@ metadata:
 
 ## 执行
 
-首次接入时从 `.wl-skills-bd/catalog.config.example.json` 复制为 `catalog.config.json`，按实际模块填写契约根、源码根、上下游与负责人。
+首次接入时从 `.wl-skills-bd/catalog.config.example.json` 复制为 `catalog.config.json`，按实际模块填写 `root`、契约根、源码根、上下游与负责人。聚合工程优先显式声明 `root`；省略时只接受由事实根共同祖先确定性推导的模块根。
 
 ```bash
 # 默认路径：仅刷新当前模块
 wl-skills-bd catalog plan --module <module>
 wl-skills-bd catalog apply --module <module> --plan-hash <hash> --confirm
 wl-skills-bd catalog check --module <module>
+wl-skills-bd catalog show --module <module>
+wl-skills-bd catalog show --module <module> --section apis --limit 50 --cursor 0
 
 # 为本次任务选取有界上下文
 wl-skills-bd context plan --module <module> --task "<任务>" --keywords "<关键词>" --max-tokens 12000 --json
 ```
 
 只有 CI/初始化/全局治理任务可以显式执行 `catalog plan --full`。不得把 `--full` 当成本地默认，也不得手改自动生成的 Catalog 文档。
+
+`catalog show` 默认只取统计摘要；只在确有需要时按 `resources/services/apis/databases/relations/sourceEvidence` 分区分页，不把完整目录反复注入上下文。资源只来自契约形状 JSON，接口只采用 Controller 源码实际观测结果；schema-mirror/integration-projection 不合成 CRUD 路由。
 
 ## 进入生成的门
 

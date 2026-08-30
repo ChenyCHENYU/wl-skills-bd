@@ -249,6 +249,59 @@ function commandContract(args) {
     else for (const error of result.errors || []) console.error(`${error.path || error.code}: ${error.message}`);
     return result.ok ? 0 : 1;
   }
+  if (["inspect", "migrate"].includes(subcommand)) {
+    if (!contractArg || contractArg.startsWith("-")) {
+      console.error(`contract ${subcommand} 需要契约文件路径`);
+      return 1;
+    }
+    const compat = require("../lib/contract-compat");
+    if (subcommand === "inspect") {
+      const inspected = compat.loadContractCompat(contractArg, { projectRoot: root });
+      const output = {
+        ok: inspected.ok,
+        file: inspected.file,
+        contractKind: inspected.contractKind,
+        codegenSafe: inspected.codegenSafe,
+        descriptor: inspected.descriptor,
+        errors: inspected.errors,
+        warnings: inspected.warnings,
+      };
+      if (has(allArgs, "--json")) printJson(output);
+      else {
+        console.log(`${output.ok ? "✅" : "❌"} ${output.contractKind || "unknown"}；codegen=${output.codegenSafe ? "enabled" : "disabled"}`);
+        for (const item of output.errors) console.error(`  ${item.code} ${item.path}: ${item.message}`);
+        for (const item of output.warnings) console.warn(`  ${item.code} ${item.path}: ${item.message}`);
+      }
+      return output.ok ? 0 : 1;
+    }
+    const plan = compat.buildMigrationPlan(root, contractArg);
+    if (!plan.ok) {
+      if (has(allArgs, "--json")) printJson(plan);
+      else for (const item of plan.errors || []) console.error(`${item.code || "K000"} ${item.path}: ${item.message}`);
+      return 1;
+    }
+    if (!has(allArgs, "--confirm")) {
+      const preview = compat.publicMigrationPlan(plan);
+      if (has(allArgs, "--json")) printJson(preview);
+      else {
+        console.log(`迁移预览：${preview.contractKind}，${preview.actions.length} 个确定性动作，${preview.unresolved.length} 个待确认项`);
+        for (const action of preview.actions) console.log(`  ${action.action} ${action.path}: ${action.reason}`);
+        for (const item of preview.unresolved) console.log(`  待确认 ${item.path}: ${item.reason}`);
+        console.log(`planHash: ${preview.planHash}`);
+      }
+      return preview.unresolved.length > 0 ? 2 : 0;
+    }
+    const result = compat.applyMigrationPlan(plan, {
+      confirm: true,
+      planHash: option(allArgs, "--plan-hash"),
+      allowUnresolved: has(allArgs, "--allow-unresolved"),
+      allowProductionWrites: has(allArgs, "--allow-production-writes"),
+    });
+    if (has(allArgs, "--json")) printJson(result);
+    else if (result.ok) console.log(`✅ 契约迁移已写入：${result.rel}；备份：${result.backup || "无"}`);
+    else console.error(`契约迁移零写入：${result.reason}`);
+    return result.ok ? 0 : 2;
+  }
   if (!contractArg || contractArg.startsWith("-")) {
     console.error("contract 需要后端契约文件路径");
     return 1;
@@ -620,7 +673,10 @@ function commandCatalog(args) {
       console.error(moduleId ? `模块目录快照不存在：${moduleId}` : "项目目录快照不存在");
       return 1;
     }
-    printJson(result);
+    const section = option(rest, "--section");
+    if (has(rest, "--full")) printJson(result);
+    else if (section) printJson(catalog.catalogSlice(result, section, { limit: option(rest, "--limit"), cursor: option(rest, "--cursor") }));
+    else printJson(catalog.summarizeCatalog(result));
     return 0;
   }
   if (subcommand === "check") {
@@ -694,6 +750,79 @@ function commandContext(args) {
   return result.ok ? 0 : 1;
 }
 
+function commandImpact(args) {
+  const [subcommand = "field", ...rest] = args;
+  if (subcommand !== "field") {
+    console.error(`未知 impact 子命令：${subcommand}（当前仅支持 field）`);
+    return 1;
+  }
+  const result = require("../lib/impact-analysis").analyzeFieldImpact(targetRoot(rest), {
+    module: option(rest, "--module"),
+    field: option(rest, "--field"),
+    table: option(rest, "--table"),
+    limit: option(rest, "--limit"),
+    cursor: option(rest, "--cursor"),
+  });
+  if (has(rest, "--json")) printJson(result);
+  else if (!result.matches) {
+    for (const item of result.errors || []) console.error(`${item.code || "I000"} ${item.path}: ${item.message}`);
+    if (result.candidates && result.candidates.length > 0) console.log(`候选字段：${result.candidates.join(", ")}`);
+  } else {
+    console.log(`${result.ok ? "✅" : "❌"} ${result.module}.${result.query.field}：命中 ${result.matches.length} 个契约，${result.evidence.total} 条引用证据`);
+    console.log(`所有权：${result.ownership.owners.join(", ")}；边界 error=${result.diagnostics.errors}, warn=${result.diagnostics.warnings}`);
+    for (const item of result.propagation.findings) console.log(`  ${item.severity} ${item.code} ${item.path}: ${item.message}`);
+    for (const item of result.evidence.items) console.log(`  ${item.role.padEnd(13)} ${item.file}:${item.line} ${item.snippet}`);
+    if (result.evidence.nextCursor !== null) console.log(`下一页：--cursor ${result.evidence.nextCursor}`);
+  }
+  return result.ok ? 0 : 1;
+}
+
+function commandIntegration(args) {
+  const [subcommand = "inspect", contractArg, ...rest] = args;
+  const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
+  const root = targetRoot(allArgs);
+  const governance = require("../lib/integration-contract");
+  let result;
+  if (subcommand === "audit") {
+    result = governance.auditIntegrationUtilities(root, { module: option(allArgs, "--module") });
+  } else if (subcommand === "inspect") {
+    if (!contractArg || contractArg.startsWith("-")) {
+      console.error("integration inspect 需要契约文件路径");
+      return 1;
+    }
+    const loaded = require("../lib/contract-compat").loadContractCompat(contractArg, { projectRoot: root });
+    if (!loaded.ok) result = loaded;
+    else if (loaded.contractKind === "integration-projection") {
+      result = { ok: true, contractId: loaded.descriptor.contractId, contractKind: loaded.contractKind, ...governance.inspectLegacyProjection(loaded.raw) };
+    } else {
+      const integrations = loaded.raw.integrations || [];
+      result = {
+        ok: true,
+        contractId: loaded.descriptor.contractId,
+        contractKind: loaded.contractKind,
+        readiness: integrations.length > 0 ? "complete" : "not-declared",
+        integrations: integrations.map((item) => item.id),
+        warnings: integrations.length > 0 ? [] : [{ code: "N202", severity: "warn", path: "$.integrations", message: "当前契约未声明跨系统集成" }],
+      };
+    }
+  } else {
+    console.error(`未知 integration 子命令：${subcommand}（支持 inspect/audit）`);
+    return 1;
+  }
+  if (has(allArgs, "--json")) printJson(result);
+  else if (subcommand === "audit") {
+    if (!result.summary) for (const item of result.errors || []) console.error(`${item.path}: ${item.message}`);
+    else {
+      console.log(`${result.ok ? "✅" : "❌"} 集成工具审计：${result.summary.utilities} 个实现，${result.summary.duplicates} 组重复`);
+      for (const item of result.findings) console.log(`  ${item.severity} ${item.code}: ${item.message}`);
+    }
+  } else {
+    console.log(`${result.ok ? "✅" : "❌"} ${result.contractId || "unknown"}：${result.readiness || "invalid"}`);
+    for (const item of result.warnings || []) console.log(`  ${item.code} ${item.path}: ${item.message}`);
+  }
+  return result.ok ? 0 : 1;
+}
+
 function commandCommit(args) {
   const policy = require("../lib/commit-policy");
   const [subcommand = "validate", ...rest] = args;
@@ -739,11 +868,13 @@ function help() {
   validate     执行 B1~B31 快速规则并输出 Controller 端点及数据库事实源差异
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
-  contract     协作契约：show / diff（前端、OpenAPI、权限、kit api.md）
+  contract     契约治理：seed / inspect / migrate / show / diff
   db           数据库治理：preview / drift / executed / ledger（DDL 只生成不执行）
   permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
   catalog      项目目录：plan / apply / show / check（默认仅当前模块）
   context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
+  impact       字段影响：field（契约/存储/迁移/源码引用，必须指定模块）
+  integration  集成治理：inspect / audit（逻辑 ID、重试/死信/重放、重复工具）
   commit       提交规范：validate / check / doctor
   fix          安全修复：plan / apply（仅 B3/B5，强制复扫）
   config       配置分层（v0.12）：init / migrate / doctor / fix
@@ -773,6 +904,9 @@ codegen 示例：
 
 contract 示例：
   wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
+  wl-skills-bd contract inspect contracts/legacy.json --json
+  wl-skills-bd contract migrate contracts/legacy.json --json
+  wl-skills-bd contract migrate contracts/legacy.json --plan-hash <hash> --confirm
   wl-skills-bd contract show wl-contract.json --format markdown
   wl-skills-bd contract diff wl-contract.json --frontend docs/contracts/page.api.md --openapi openapi.json --permissions permissions.json
   wl-skills-bd contract diff wl-contract.json --kitApiMd src/views/mdm/feature/api.md
@@ -791,7 +925,12 @@ permissions 示例：
 模块目录与上下文示例：
   wl-skills-bd catalog plan --module order
   wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
+  wl-skills-bd catalog show --module order
+  wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
   wl-skills-bd context plan --module order --task "增加订单接口" --json
+  wl-skills-bd impact field --module order --field orderNo --table order_info --limit 50 --json
+  wl-skills-bd integration inspect contracts/order.contract.json --json
+  wl-skills-bd integration audit --module order --json
   wl-skills-bd commit check --range origin/main..HEAD
 
 fix 示例：
@@ -1152,6 +1291,8 @@ function main(argv = process.argv.slice(2)) {
   if (command === "permissions") return commandPermissions(args);
   if (command === "catalog") return commandCatalog(args);
   if (command === "context") return commandContext(args);
+  if (command === "impact") return commandImpact(args);
+  if (command === "integration") return commandIntegration(args);
   if (command === "commit") return commandCommit(args);
   if (command === "fix") return commandFix(args);
   if (command === "config") return commandConfig(args);

@@ -197,7 +197,8 @@ wl-skills-bd config doctor --probe    # 连通性探测（DB/Redis/Nacos）
 | 级别 | 检查项 | 通过条件 | 失败指引 |
 |---|---|---|---|
 | **L0** | config-skeleton | bootstrap.yml 存在 + profiles.active | 创建 bootstrap.yml（config init） |
-| **L0** | config-secret | 无明文密码（password:/username: 硬编码）| 改 `${VAR}` 占位符（config fix） |
+| **L0** | config-secret | password/token/secret 等敏感键无明文字面量 | 改 `${VAR}` 占位符（config fix） |
+| **L0** | config-security-posture | 禁止 Bean 覆盖、Actuator `*` 全暴露、env/configprops 值和错误堆栈无条件展示 | 使用最小端点白名单并让重复 Bean fail-fast |
 | **L1** | config-placeholder | 敏感字段用 `${VAR}` 而非字面量 | config fix 自动替换 |
 | **L2** | env-matrix | env-matrix.yml 存在 + current 客户有效 | config init 生成矩阵 |
 | **L2** | env-completeness | 5 环境变量齐全（PROFILES/NACOS/DB/REDIS） | 补 .env |
@@ -240,25 +241,7 @@ $ wl-skills-bd troubleshoot "Communications link failure"
 
 ---
 
-## 6. 配置漂移检测（config diff）
-
-三方比对：代码库占位符 ↔ 部署侧环境变量 ↔ Nacos 实际值
-
-```bash
-wl-skills-bd config diff
-# 输出：
-# ✅ L1 占位符 vs L2 .env：一致
-# ⚠️ L2 .env vs L3 Nacos：datasource-prod.yml 的 DB_HOST 与 .env.prod 不一致
-#    .env.prod: DB_HOST=mysql.basic-services
-#    nacos:    DB_HOST=mysql-old.basic-services
-#    建议：同步 nacos 配置或更新 .env
-```
-
-> Nacos 读取是可选能力（`--nacos-read`），需提供只读凭据，bd 不持久化凭据。
-
----
-
-## 7. 与其他规范的关系
+## 6. 与其他规范的关系
 
 | 规范 | 25 的边界 |
 |---|---|
@@ -269,7 +252,7 @@ wl-skills-bd config diff
 
 ---
 
-## 8. 工程闭环
+## 7. 工程闭环
 
 ```
 config init          → 生成标准骨架（L1 占位符 + L2 .env.example + L3 nacos dataId 清单）
@@ -282,9 +265,7 @@ config doctor        → L0~L8 全链路体检（每项失败给指引）
        ↓
 config doctor --probe→ 连通性探测（DB/Redis/Nacos TCP 可达）
        ↓
-config fix           → 安全修复（明文密码改占位符 + 补缺失配置）
-       ↓
-config diff          → 三方漂移检测（L1↔L2↔L3）
+config fix           → 安全修复（仅把可确定的明文敏感值改为占位符并复扫）
        ↓
 troubleshoot "<错误>"→ 故障关键字诊断（错误码→排查步骤）
 ```
@@ -293,7 +274,7 @@ troubleshoot "<错误>"→ 故障关键字诊断（错误码→排查步骤）
 
 ---
 
-## 9. 正反例
+## 8. 正反例
 
 ### ✅ 标准三层分层
 
@@ -344,6 +325,7 @@ spring:
 
 ## 变更记录
 
+- 2026-08-31 v0.23：doctor 增加 Bean 覆盖、Actuator 全暴露与错误详情泄露检查；移除未实现的 config diff 能力描述。
 - 2026-07-28 v0.17.8：集群化 datasource dataId、未知业务域 fail-closed、profile 显式注入及 matrix/K8s 三方一致性检查。
 - 2026-07-18 v0.14：init/migrate/fix 统一 preview→planHash→confirm→原子写→回滚→复验；pre/prod/production 默认阻断。
 - 2026-07-18 v0.12：新增配置分层与多环境管理规范，落地三层分层模型 + env-matrix + config doctor/init/migrate/fix/diff + troubleshoot 工程闭环。

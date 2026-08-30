@@ -28,13 +28,20 @@
 20. **精益执行（v0.21）**：精准规则必须在扫描前短路，并报告 `execution/coverage`；quick/staged/changed 是 partial，不能替代最终 full。Source Index 缓存损坏或失效时必须真实重扫。
 21. **MCP Token（v0.21）**：16 个工具默认 summary 与有界 response 预算；需要大正文时使用 cursor 续取，不反复重跑全量 handler。cursor 不授予写权限。
 22. **节点契约（v0.21）**：任务按 discover/context/validate/plan/approval/apply/verify 编排；有副作用节点禁止自动重试和不可取消超时，必须显式确认并校验 pipelineHash。
+23. **契约分流（v0.23）**：先用 `contract inspect` 区分 crud/schema-mirror/integration-projection；仅 crud 可 codegen。存量迁移必须走 planHash/确认/备份链，未知所有权不得猜。
+24. **字段与集成影响（v0.23）**：字段变更先跑限定模块的 `impact field`；跨系统逻辑 ID/投递必须固定算法版本、规范化、载荷版本、排序、重试/确认/死信/重放与错误码引用。Catalog API 只采用源码观测事实。
 
 ## 快速命令
 
 ```bash
 wl-skills-bd doctor                        # 含环境体检（bootstrap/profile/dbcluster）
 wl-skills-bd catalog check --module <module>
+wl-skills-bd catalog show --module <module> --section apis --limit 50
 wl-skills-bd context plan --module <module> --task "<任务>" --json
+wl-skills-bd contract inspect <contract.json> --json
+wl-skills-bd impact field --module <module> --field <field> --table <table> --json
+wl-skills-bd integration inspect <contract.json> --json
+wl-skills-bd integration audit --module <module> --json
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
 wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可加 --require-complete

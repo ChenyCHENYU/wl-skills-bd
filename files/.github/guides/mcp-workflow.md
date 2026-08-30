@@ -9,7 +9,7 @@
 | `wls_be_validate` | 只读 | B1~B31 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status |
 | `wls_be_doctor` | 只读 | JDK/Maven/Profile/质量门/租户证据诊断 |
 | `wls_be_codegen` | 受控写 | contract validate/plan/apply，17+N 个受管产物 |
-| `wls_be_contract` | 只读 | 协作契约 show；前端/OpenAPI/权限 diff |
+| `wls_be_contract` | 只读/受控写 | seed/inspect/show/diff/impact/integration-inspect；migrate 使用计划确认链 |
 | `wls_be_safe_fix` | 受控写 | 仅 B3/B5 白名单修复与强制复扫 |
 | `wls_be_standards` | 只读 | 查询 29 条规范 |
 | `wls_be_templates` | 只读 | 查询 16 个模板白名单 |
@@ -18,7 +18,7 @@
 | `wls_be_config` | 只读/受控写 | doctor/init/migrate/fix；写操作必须预览、确认并保留迁移证据 |
 | `wls_be_troubleshoot` | 只读 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
 | `wls_be_task` | 只读 | 任务识别、Skill/规则子集和统一安全写链计划；不直接修改代码 |
-| `wls_be_catalog` | 只读/受控写 | 当前模块目录 plan/apply/check/show；其他模块只复用快照 |
+| `wls_be_catalog` | 只读/受控写 | 当前模块目录 plan/apply/check/show、section/cursor 与 integration-audit；其他模块只复用快照 |
 | `wls_be_context` | 只读 | 当前模块与一跳上下游快照的预算化文件选择；不扫关联源码 |
 | `wls_be_commit` | 只读 | 单条提交、Git range 与本地 Hook 接入检查 |
 | `wls_be_test` | 只读 | 行为契约测试场景与可执行 ServiceTest 生成 |
@@ -43,6 +43,7 @@
 - 数组和字符串先按统一预算裁剪，响应声明 `originalBytes/returnedBytes/estimatedTokens/truncated`；
 - 超预算完整结果短期保留在 MCP 进程内，使用同一工具和 `{ "response": { "cursor": "<nextCursor>" } }` 续取，不重跑 handler；
 - cursor 有期限、绑定原工具且不写项目目录，过期或跨工具使用时 fail-closed。
+- Catalog `show` 优先使用 `section/limit/cursor` 在执行核心内先裁剪；字段影响也使用自身证据 cursor，再叠加通用响应预算，避免重复全量扫描。
 
 ## 启动
 
@@ -72,7 +73,8 @@
 8. permissions export 默认预览，apply 同样要求 confirmApply + 当前 planHash，并执行备份、原子写、哈希复验与失败回滚；
 9. config 的 init/migrate/fix 全部纳入当前文件哈希、重算计划、原子写与失败回滚；task/troubleshoot 永远只读，不能作为旁路写入口；
 10. catalog apply 同样要求当前 planHash、确认、写前重算、原子写和回滚；模块模式不得扫描其他模块源码；
-11. `pre/prod/production` 的受控写默认阻断；显式授权只覆盖工程文件，不授权数据库、部署或外部系统写入。
+11. contract migrate 默认只返回确定性动作与 unresolved；apply 要求同一 planHash，保留备份并在未授权 unresolved 时零写入；
+12. `pre/prod/production` 的受控写默认阻断；显式授权只覆盖工程文件，不授权数据库、部署或外部系统写入。
 
 调用方不得在同一次模型动作中先取 hash 又未经用户评审直接 apply。`confirmApply` 是用户授权的传递，不是让 Agent 自动填 true 的便利开关。
 
@@ -87,6 +89,7 @@
 
 ## 变更记录
 
+- 2026-08-31 v8：在既有 16 工具内加入契约分类/迁移、字段影响、集成检查、Catalog 分区分页与重复工具审计。
 - 2026-08-24 v7：16 工具统一 response 预算、token 估算与短期大结果 cursor；task 返回标准 Pipeline。
 - 2026-07-19 v6：扩展为 15 个工具；加入模块增量 Catalog、一跳 Context Plan 和提交消息/range 校验。
 - 2026-07-18 v5：17+N 代码生成产物、16 模板；permissions/config 纳入统一 planHash/原子写/回滚与受保护环境护栏。

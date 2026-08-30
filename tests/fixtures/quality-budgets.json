@@ -12,5 +12,11 @@
   "mcp": {
     "maxBytes": 6000,
     "maximumEstimatedTokens": 1500
+  },
+  "catalog": {
+    "maximumSummaryBytes": 4096,
+    "maximumSummaryEstimatedTokens": 1024,
+    "maximumSummaryToFullRatio": 0.03,
+    "defaultPageItems": 50
   }
 }

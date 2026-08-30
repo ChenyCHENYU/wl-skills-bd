@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.21.0）
+# Backend Skills 注册表（v0.23.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 `metadata.status` 严格一致，改一处必须同步另一处。
@@ -9,14 +9,14 @@
 
 | 触发词（示例）                                          | SKILL                                                                    | 阶段 | 状态     | MCP 依赖   |
 | ------------------------------------------------------ | ------------------------------------------------------------------------ | ---- | -------- | ---------- |
-| 设计接口 / 评审 api.md / 接口契约审查                  | [`core/api-design-be`](core/api-design-be/SKILL.md)                      | ②   | ✅ 落地  | contract   |
+| 设计接口 / 评审 api.md / 接口契约审查 / 逻辑 ID / 集成契约 | [`core/api-design-be`](core/api-design-be/SKILL.md)                   | ②   | ✅ 落地  | contract   |
 | 生成实体 / Entity / DTO / VO                          | [`core/entity-codegen`](core/entity-codegen/SKILL.md)                    | ③   | ✅ 落地  | —          |
 | 生成 Service / 全套 CRUD / 业务命令 / 状态机           | [`core/service-codegen`](core/service-codegen/SKILL.md)                  | ④   | ✅ 落地  | —          |
 | 生成 Mapper / XML / SQL                                 | [`core/mapper-xml-gen`](core/mapper-xml-gen/SKILL.md)                    | ⑤   | ✅ 落地  | —          |
 | 后端规范审计 / 代码体检 / 全量扫描                      | [`core/convention-audit-be`](core/convention-audit-be/SKILL.md)          | ⑧   | ✅ 落地  | validate   |
-| 模块上下文 / 查关联服务 / 生成前去重 / 避免全仓扫描             | [`core/project-context-governance`](core/project-context-governance/SKILL.md) | ⓪ | ✅ 落地 | catalog/context |
+| 模块上下文 / 查关联服务 / 生成前去重 / 避免全仓扫描 / 集成工具审计 | [`core/project-context-governance`](core/project-context-governance/SKILL.md) | ⓪ | ✅ 落地 | catalog/context |
 | 抽取业务文档 / 阅读旧代码生成业务说明                  | [`core/business-doc-extract-be`](core/business-doc-extract-be/SKILL.md)  | ②预  | 🟡 骨架  | —          |
-| 建表 / DDL / ALTER TABLE / 字段新增 / 索引            | [`data/db-migration`](data/db-migration/SKILL.md)                        | ⑥   | 🟡 部分  | db_preview |
+| 建表 / DDL / ALTER TABLE / 字段新增 / 字段影响 / 索引 | [`data/db-migration`](data/db-migration/SKILL.md)                         | ⑥   | 🟡 部分  | contract/db_preview |
 | 生成单元测试 / Mock 测试 / Controller 测试            | [`test/unit-test-gen`](test/unit-test-gen/SKILL.md)                      | ⑦   | ✅ 落地  | test       |
 | 修复规范违规 / 按审计报告改代码                        | [`ops/code-fix-be`](ops/code-fix-be/SKILL.md)                            | ⑨   | ✅ 落地  | validate   |
 | Redis / 缓存 / 分布式锁 / 批量删除 / 物理删 / 熔断 / 限流 / Feign 超时 / 生产只读 / 二次确认 | [`ops/data-safety`](ops/data-safety/SKILL.md) | ops 横切 | ✅ 落地 | validate   |
@@ -60,6 +60,13 @@
 - 16 个 MCP 工具共享 response 字节/数组预算，大结果用短期 cursor 续取；
 - task 返回 discover/context/validate/plan/approval/apply/verify Pipeline；写节点禁止自动重试且必须确认；
 - `npm run eval:quality` 固化 precision/recall、P95、短路比例和 token 回退门禁。
+
+## v0.23 契约分类、影响与集成治理
+
+- `contract inspect/migrate` 将严格 CRUD、数据库镜像和集成投影分流；只有 CRUD 可 codegen，迁移写入保留 planHash/备份/回滚门；
+- `impact field --module` 输出字段容量、所有权、迁移阶段和精确源码引用，禁止隐式全仓扫描；
+- `integration inspect/audit` 校验逻辑 ID、投递闭环、错误码引用以及 StableBusinessId/PayloadHash 重复漂移；
+- Catalog 默认摘要且支持 section/cursor，API 来自 Controller 源码观测，不为镜像契约合成接口。
 
 ## v0.12 配置分层矩阵
 

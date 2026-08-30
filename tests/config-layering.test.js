@@ -340,6 +340,8 @@ withRoot((root) => {
   assert.ok(result.checks.length >= 8, `至少 8 项体检，实际 ${result.checks.length}`);
   const secretCheck = result.checks.find((c) => c.id === "config-secret");
   assert.ok(secretCheck && !secretCheck.ok, "应检测到明文密码");
+  const securityCheck = result.checks.find((c) => c.id === "config-security-posture");
+  assert.ok(securityCheck && securityCheck.ok, "安全配置体检应默认通过");
   const skeletonCheck = result.checks.find((c) => c.id === "config-skeleton");
   assert.ok(skeletonCheck && skeletonCheck.ok, "bootstrap 存在");
   const matrixCheck = result.checks.find((c) => c.id === "env-matrix");
@@ -351,6 +353,25 @@ withRoot((root) => {
 });
 
 console.log("✅ config-doctor：全链路体检 L0~L8 通过");
+
+withRoot((root) => {
+  const initPlan = configInit.buildInitPlan(root, { project: "wl-test", module: "test", port: 9101, datasourceType: "mysql", dbCluster: "pt", customer: "internal" });
+  configInit.applyInitPlan(initPlan, { projectRoot: root, confirm: true, planHash: initPlan.planHash });
+  const resources = path.join(root, "src/main/resources");
+  fs.writeFileSync(path.join(resources, "application-risk.yml"), [
+    "spring:",
+    "  main:",
+    "    allow-bean-definition-overriding: true",
+    "management.endpoints.web.exposure.include=*",
+    "server.error.include-stacktrace=always",
+  ].join("\n"));
+  const result = runConfigDoctor(root);
+  const check = result.checks.find((item) => item.id === "config-security-posture");
+  assert.ok(check && !check.ok, "应阻断 Bean 覆盖、Actuator 全暴露和堆栈泄露配置");
+  assert.match(check.detail, /3 处高风险配置/);
+});
+
+console.log("✅ config-doctor：高风险 YAML/properties 配置体检通过");
 
 // ─── 7. config-fix：明文密码修复 + 复扫 ───
 withRoot((root) => {

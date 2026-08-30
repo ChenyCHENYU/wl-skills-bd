@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "contractKind": "crud",
   "contractId": "sale-order-master-alter",
   "profile": "jh4j3-openapi3",
   "rootPackage": "com.jhict.sale",

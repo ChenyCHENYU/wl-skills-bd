@@ -31,6 +31,8 @@ metadata:
 - [ ] 业务唯一键已确认（用于建唯一索引）
 - [ ] database/dbCluster/Flyway version/verificationSql/rollbackStrategy 已明确
 - [ ] ALTER 已选择 `phase=expand|contract`；contract 已取得可追溯 approvalRef
+- [ ] 已执行 `contract inspect <file>` 确认类型；只有 `crud` 进入 codegen，数据库镜像只做对账
+- [ ] 改字段时已执行 `impact field --module <module> --field <name|column> [--table <table>]`，核对容量、所有权、源码引用和迁移链
 
 ## 产物
 
@@ -98,6 +100,8 @@ AI 不会直接执行任何 DDL。
 - 索引名 `IDX_{T}_xxx` / `UK_{T}_xxx`，不允许默认名
 - 触发器 / 序列 / 外键由 DBA 评审后决定（团队基线**不推荐**外键约束）
 - 生产数据迁移必须使用稳定游标/主键范围循环、批次进度、幂等和总量校验；禁止单次 `ROWNUM <= 1000` 后误报完成
+- `contract` 阶段前必须存在可追溯的 expand 与 backfill；`impact field` 报告有 error 时不得继续生成破坏性迁移
+- 存量契约格式收敛只使用 `contract migrate` 的 preview → planHash → confirm → 备份/回滚链；所有权等未知事实不得自动填充
 
 ## 完成摘要
 
@@ -111,4 +115,5 @@ AI 不会直接执行任何 DDL。
 
 ## 变更记录
 
+- 2026-08-31 v0.23：加入契约分类、字段容量/所有权/源码引用影响分析和迁移链门禁。
 - 2026-07-18 v0.14：ALTER expand/contract 强制分阶段；增加审批、只读校验 SQL、索引与 Flyway 不可变门禁。
