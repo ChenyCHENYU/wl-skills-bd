@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-quality-assertions-v1.json",
+  "title": "Project-owned exact quality and boundary assertions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "assertions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "module", "description", "evidenceRefs", "severity", "message", "owner", "sourceRef"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{2,63}$" },
+          "module": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "$ref": "#/$defs/nonEmptyStrings" },
+          "activateAnyOf": { "$ref": "#/$defs/strings" },
+          "requireAnyOf": { "$ref": "#/$defs/strings" },
+          "forbidAnyOf": { "$ref": "#/$defs/strings" },
+          "severity": { "enum": ["error", "warn", "info"] },
+          "message": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "sourceRef": { "type": "string", "minLength": 1 },
+          "safeReplacements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "before", "after"],
+              "properties": {
+                "file": { "type": "string", "minLength": 1 },
+                "before": { "type": "string", "minLength": 1 },
+                "after": { "type": "string" },
+                "expectedOccurrences": { "const": 1 }
+              }
+            }
+          }
+        },
+        "anyOf": [{ "required": ["requireAnyOf"] }, { "required": ["forbidAnyOf"] }]
+      }
+    }
+  },
+  "$defs": {
+    "strings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "nonEmptyStrings": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+  }
+}

@@ -9,6 +9,7 @@ const { runBeRules } = require("../lib/be-rules");
 const { clearScanContextCache } = require("../lib/scan-context");
 const sourceIndex = require("../lib/source-index");
 const { catalogSlice, summarizeCatalog } = require("../lib/project-catalog");
+const { compactExecution, compactModuleEvidence } = require("../lib/review");
 const { applyResultBudget, clearResultStore } = require("../mcp/result-budget");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -170,6 +171,38 @@ function evaluateCatalogBudget() {
   };
 }
 
+function evaluateReviewBudget() {
+  const rules = Array.from({ length: 31 }, (_, index) => `B${index + 1}`);
+  const modules = Array.from({ length: 100 }, (_, index) => ({
+    id: `module-${index}`,
+    root: `services/module-${index}`,
+    stats: { error: index % 17 === 0 ? 1 : 0, warn: 0, info: 0, total: index % 17 === 0 ? 1 : 0, suppressed: 0, byRule: index % 17 === 0 ? { B26: 1 } : {} },
+    execution: {
+      requestedRules: rules,
+      executedRules: rules,
+      executedGroups: ["controller", "mapperSql", "service"],
+      unknownRules: [],
+      scan: { discoveredFiles: 100, loadedFiles: 50, loadedBytes: 100000, oversizedFiles: 0, contentCacheHits: 0, contentCacheMisses: 50 },
+    },
+  }));
+  const full = { ruleCoverage: { status: "complete", evaluatedRules: rules, skippedRules: [] }, modules, execution: modules[0].execution };
+  const summary = {
+    ruleCoverage: full.ruleCoverage,
+    modules: compactModuleEvidence(modules, budgets.review.defaultModuleItems),
+    execution: compactExecution(full.execution),
+  };
+  const fullBytes = Buffer.byteLength(JSON.stringify(full), "utf8");
+  const summaryBytes = Buffer.byteLength(JSON.stringify(summary), "utf8");
+  return {
+    fullBytes,
+    summaryBytes,
+    estimatedTokens: Math.ceil(summaryBytes / 4),
+    summaryToFullRatio: summaryBytes / fullBytes,
+    returnedModuleItems: summary.modules.items.length,
+    totalModules: summary.modules.count,
+  };
+}
+
 const report = {
   schemaVersion: 1,
   accuracy: evaluateAccuracy(),
@@ -177,6 +210,7 @@ const report = {
   sourceCache: evaluateSourceCache(),
   mcp: evaluateMcpBudget(),
   catalog: evaluateCatalogBudget(),
+  review: evaluateReviewBudget(),
 };
 
 assert.ok(report.accuracy.precision >= budgets.accuracy.minimumPrecision, `precision ${report.accuracy.precision} 低于 ${budgets.accuracy.minimumPrecision}: ${report.accuracy.failures.join("; ")}`);
@@ -194,8 +228,12 @@ assert.ok(report.catalog.summaryEstimatedTokens <= budgets.catalog.maximumSummar
 assert.ok(report.catalog.summaryToFullRatio <= budgets.catalog.maximumSummaryToFullRatio, `Catalog 摘要/全文比例 ${report.catalog.summaryToFullRatio} 超预算`);
 assert.strictEqual(report.catalog.defaultPageItems, budgets.catalog.defaultPageItems);
 assert.strictEqual(report.catalog.nextCursor, budgets.catalog.defaultPageItems);
+assert.ok(report.review.summaryBytes <= budgets.review.maximumSummaryBytes, `Review 摘要 ${report.review.summaryBytes} bytes 超预算`);
+assert.ok(report.review.estimatedTokens <= budgets.review.maximumEstimatedTokens, `Review 摘要 token 估算 ${report.review.estimatedTokens} 超预算`);
+assert.ok(report.review.summaryToFullRatio <= budgets.review.maximumSummaryToFullRatio, `Review 摘要/全文比例 ${report.review.summaryToFullRatio} 超预算`);
+assert.strictEqual(report.review.returnedModuleItems, budgets.review.defaultModuleItems);
 
 if (process.argv.includes("--json")) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 else {
-  console.log(`✅ quality eval：precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog 摘要≈${report.catalog.summaryEstimatedTokens} tokens`);
+  console.log(`✅ quality eval：precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog≈${report.catalog.summaryEstimatedTokens} tokens；Review≈${report.review.estimatedTokens} tokens/100 modules`);
 }

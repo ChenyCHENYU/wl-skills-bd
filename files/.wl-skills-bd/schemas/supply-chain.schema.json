@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agile-team.example/schemas/wl-supply-chain-v1.json",
+  "title": "Project-owned Maven supply-chain quality policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "severity": { "enum": ["error", "warn", "info"] },
+    "enforceConvergence": { "type": "boolean" },
+    "forbidDynamicVersions": { "type": "boolean" },
+    "forbidSnapshots": { "type": "boolean" },
+    "requiredBoms": { "$ref": "#/$defs/coordinates" },
+    "forbiddenCoordinates": { "$ref": "#/$defs/coordinates" },
+    "allowedRepositories": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "coordinates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["groupId", "artifactId"],
+        "properties": {
+          "groupId": { "type": "string", "minLength": 1 },
+          "artifactId": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

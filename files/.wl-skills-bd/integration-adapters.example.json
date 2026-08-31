@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "adapters": [
+    {
+      "id": "platform-mq-example",
+      "provider": "project-owned",
+      "displayName": "项目平台 MQ 封装示例（不默认启用）",
+      "contractTransports": ["platform-mq"],
+      "detector": {
+        "dependencies": [
+          { "groupId": "com.example.platform", "artifactId": "platform-mq-starter" }
+        ],
+        "producerAnyOf": ["PlatformMessageSender", ".send("],
+        "consumerAnyOf": ["@PlatformMessageListener"],
+        "configurationAnyOf": ["platform.mq.topic"],
+        "testAnyOf": ["duplicateMessage", "retryExhausted"],
+        "runtimeEvidenceAnyOf": ["deploymentId", "observedAt"],
+        "capabilityAnyOf": {
+          "idempotency": ["IdempotencyStore", "inbox"],
+          "trace": ["traceId", "MessageTrace"]
+        }
+      },
+      "qualityGate": {
+        "inbound": {
+          "requiredStages": ["declared", "dependency", "configured", "wired", "tested"],
+          "requiredCapabilities": ["idempotency", "trace"],
+          "severity": "error"
+        },
+        "outbound": {
+          "requiredStages": ["declared", "dependency", "configured", "wired", "tested"],
+          "requiredCapabilities": ["trace"],
+          "severity": "error"
+        }
+      },
+      "implementationRecipes": []
+    }
+  ],
+  "bindings": []
+}

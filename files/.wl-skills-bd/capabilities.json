@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "wl-skills-bd-capabilities",
   "standards": {
-    "count": 29,
+    "count": 30,
     "ids": [
       "01",
       "02",
@@ -32,9 +32,10 @@
       "26",
       "27",
       "28",
-      "29"
+      "29",
+      "30"
     ],
-    "latest": "29"
+    "latest": "30"
   },
   "backendRules": {
     "count": 31,
@@ -75,7 +76,7 @@
     "displayRange": "B1~B31"
   },
   "skills": {
-    "count": 12,
+    "count": 13,
     "items": [
       {
         "name": "api-design-be",
@@ -127,6 +128,13 @@
         "stage": "③ 模型生成"
       },
       {
+        "name": "integration-adapter-be",
+        "path": "files/.github/skills/core/integration-adapter-be",
+        "status": "implemented",
+        "statusLabel": "✅ 已落地",
+        "stage": "⑦ 集成适配"
+      },
+      {
         "name": "mapper-xml-gen",
         "path": "files/.github/skills/core/mapper-xml-gen",
         "status": "implemented",
@@ -163,7 +171,7 @@
       }
     ],
     "summary": {
-      "implemented": 10,
+      "implemented": 11,
       "partial": 1,
       "skeleton": 1,
       "unknown": 0

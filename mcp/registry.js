@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { handleValidate } = require("./tools/beRulesTools");
-const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
+const { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleReview, handleTask, handleTest, handleTroubleshoot } = require("./tools/lifecycleTools");
 const capabilities = require("../files/.wl-skills-bd/capabilities.json");
 const { withResponseControls } = require("./result-budget");
 
@@ -50,6 +50,37 @@ const validateTool = {
     additionalProperties: false,
   },
   handle: handleValidate,
+};
+
+const reviewTool = {
+  name: "wls_be_review",
+  description: "变更级审查总控与平台适配闭环：统一 B 规则、项目质量断言、MQ/集成适配、Maven 供应链、JaCoCo 全量/变更行覆盖率及分级修复。平台语义只来自项目描述符；apply 均要求 planHash + confirmApply。",
+  inputSchema: {
+    type: "object",
+    required: ["mode"],
+    properties: {
+      mode: { type: "string", enum: ["run", "baseline-plan", "baseline-apply", "adapter-inspect", "adapter-plan", "adapter-apply", "assertion-inspect", "assertion-plan", "assertion-apply", "repair-advise", "supply-chain"] },
+      base: { type: "string", minLength: 1, description: "run：Git 比较基线，如 origin/main" },
+      staged: { type: "boolean", description: "run：只评审暂存变更" },
+      module: { type: "string", minLength: 1 },
+      quick: { type: "boolean" },
+      rules: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: capabilities.backendRules.ids } },
+      limit: { type: "integer", minimum: 1, maximum: 500 },
+      binding: { type: "string", minLength: 1 },
+      recipe: { type: "string", minLength: 1 },
+      variables: { type: "object", additionalProperties: { type: ["string", "number", "boolean"] } },
+      assertions: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", pattern: "^[A-Z][A-Z0-9_-]{2,63}$" } },
+      confirmApply: { type: "boolean" },
+      planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      allowProductionWrites: { type: "boolean" },
+    },
+    allOf: [
+      { if: { properties: { mode: { enum: ["adapter-plan", "adapter-apply"] } } }, then: { required: ["binding", "recipe"] } },
+      { if: { properties: { mode: { enum: ["baseline-apply", "adapter-apply", "assertion-apply"] } } }, then: { required: ["planHash", "confirmApply"] } }
+    ],
+    additionalProperties: false,
+  },
+  handle: handleReview,
 };
 
 const doctorTool = {
@@ -339,7 +370,7 @@ const testTool = {
   handle: handleTest,
 };
 
-const DEFINITIONS = [validateTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
+const DEFINITIONS = [validateTool, reviewTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

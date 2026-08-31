@@ -55,10 +55,20 @@
 | standards/09/10 | 敏感日志、事务内远程调用 | review | 静态工具不能完整证明语义安全 |
 | standards/12 | DDL 可执行性与恢复策略 | contract + Source Index + db-drift | 生成但不执行；缺表/缺列/无源变更由离线对账阻断，DBA/CD 仍是执行卡口 |
 | standards/28 | SLO、恢复、威胁模型、授权、压测、运行手册和数据评审 | assurance contract + evidence refs + external review | 缺声明/文件阻断完成；证据真实性由安全/DBA/SRE/业务评审 |
+| standards/30 | 新增/历史问题、平台接线、通用边界与供应链 | review + project policy executors | 项目显式策略决定阻断；未配置不激活，partial 不冒充 full |
+
+## 项目策略门
+
+| 配置 | 确定性执行器 | 无配置行为 | 写入边界 |
+|---|---|---|---|
+| `quality-gate.json` | `quality-gate.js` / `review.js` | 使用 new-only、完整规则覆盖基线 | baseline 必须 planHash/确认/事务写 |
+| `integration-adapters.json` | `integration-adapter.js` | `not-configured`，不猜 SDK、不产生 findings | 只按项目 recipe 新建文件，不覆盖现有封装 |
+| `quality-assertions.json` | `policy-assertions.js` | 不激活项目断言 | 仅 evidenceRefs 内单次字面替换，复验失败回滚 |
+| `supply-chain.json` | `supply-chain.js` | 只输出 POM 事实清单，不阻断 | 只读，不自动升级依赖/BOM/仓库 |
 
 ## 自动修复边界
 
-只有 B3/B5 标为 `safe-conditional`：满足安全前置条件才进入计划，否则降级人工。J5 可通过项目自己的 Spotless apply 格式化，但 `wl-skills-bd safe-fix` 不替业务工程自动执行它。其余规则不允许无确认批量修改。
+内置只有 B3/B5 标为 `safe-conditional`：满足安全前置条件才进入计划，否则降级人工。项目断言可声明精确 `safeReplacement`，但目标必须在 evidenceRefs 内且 before 恰好出现一次；0 次/多次匹配、写前漂移或复验失败均不保留修改。J5 可通过项目自己的 Spotless apply 格式化，但 `wl-skills-bd safe-fix` 不替业务工程自动执行它。其余规则不允许无确认批量修改。
 
 ## 维护规则
 
@@ -66,7 +76,7 @@
 2. J6/J7 必须保留 `gate=false`，不得在文档中描述成默认硬门；
 3. 规则严重度、修复级别和标题以 catalog 为准；
 4. 每次发版执行 `npm run verify` 与 Java 8 的 `npm run verify:quality-maven`。
-5. `npm run eval:quality` 必须阻断 precision/recall、P95、规则短路比例、MCP 或 Catalog 摘要 token/字节预算回退。
+5. `npm run eval:quality` 必须阻断 precision/recall、P95、规则短路比例、MCP/Catalog/Review 摘要 token/字节预算回退。
 
 ## 变更记录
 
@@ -76,4 +86,5 @@
 - 2026-07-19 v0.17.0：同步 B24/B25、production assurance 证据门和实际生成源码质量门。
 - 2026-08-24 v0.21.0：加入规则前置执行计划、共享 ScanContext、两级缓存与准确率/性能/token 回退门禁。
 - 2026-08-31 v0.23.0：加入契约分类、字段影响、集成闭环与 Catalog 摘要/token 回退门禁。
+- 2026-08-31 v0.24.0：加入变更审查、项目平台适配、显式边界/供应链策略与分级精确修复。
 - 2026-07-17 v0.6.0：补 B12 与设计级规则。

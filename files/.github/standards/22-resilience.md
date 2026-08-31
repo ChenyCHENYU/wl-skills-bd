@@ -61,6 +61,12 @@ Retry retry = Retry.of("orderApi", config);
 - 出站/双向投递必须声明 orderingKey；启用重试时必须有 deadLetter，并关联 `retryable=true` 的错误码。
 - `integration inspect` 检查单份契约的声明完备性；`integration audit --module <module>` 只扫描当前模块根，报告重复或实现漂移，不自动改业务算法。
 
+### 2.2 平台封装适配
+
+MQ/HTTP 客户端可能由不同平台二次封装。通用契约不得硬编码 RocketMQTemplate、KafkaListener 或某个公司内部注解；由项目 `integration-adapters.json` 登记真实 Maven 坐标、Producer/Consumer/配置/测试证据和方向门禁，再用 `integration adapters --module <module>` 对账。
+
+环境、Nacos 配置、公共 starter、Inbox/Outbox 任一单独存在都不等于 Transport 已接线。成熟度按 declared/dependency/configured/wired/tested/runtime-evidenced 逐级取证；BD 不连接 Broker，也不读取远端配置猜结果。详见 standards/30。
+
 ## 3. 熔断（级联雪崩事故源）
 
 错误率 / 慢调用达到阈值时熔断，半开探测恢复：
@@ -223,5 +229,6 @@ public void save() { saleClient.call(); } // 网络调用进事务
 
 ## 变更记录
 
+- 2026-08-31 v0.24：增加平台封装适配描述符与接线成熟度证据，禁止把特定 MQ API 固化为通用规则。
 - 2026-08-31 v0.23：新增逻辑 ID、载荷版本、排序、重试/确认/死信/重放和重复工具机器审计。
 - 2026-07-18 v0.10：新增限流熔断与外部调用规范，落地 Feign/Resilience4j/Sentinel 团队基线。

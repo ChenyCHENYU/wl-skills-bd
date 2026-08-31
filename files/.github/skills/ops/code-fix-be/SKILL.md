@@ -1,8 +1,8 @@
 ---
 name: code-fix-be
 description: |
-  根据 B1~B31 审计结果建立安全修复计划。只有满足确定性前置条件的 B3/B5 可自动修改；
-  其余规则输出人工方案。所有自动写入必须 planHash + 显式确认 + 备份 + 强制复扫。
+  根据 review/B1~B31/项目断言建立分级修复计划。只有满足确定性前置条件的 B3/B5，或项目批准的单次精确替换可自动修改；
+  建议补丁和业务语义项不自动应用。所有写入必须 planHash + 显式确认 + 备份 + 强制复扫/失败回滚。
   典型触发：「修复规范问题」「按审计报告改」「修违规」「批量整改」
 metadata:
   status: "✅ 已落地"
@@ -17,7 +17,7 @@ metadata:
 ```text
 🚀 已触发 code-fix-be
 ✅ 已读取 standards/index.md 与偏差报告
-✅ 自动修复白名单：B3/B5
+✅ 自动修复白名单：B3/B5 + 项目 quality-assertions 中批准的单次精确替换
 ⚠️ 其他规则不自动猜权限、字段、租户、异常或业务结构
 ⚠️ apply 必须使用刚刚预览的 planHash 并显式确认
 ```
@@ -25,12 +25,19 @@ metadata:
 ## 可执行流程
 
 ```bash
+# 先分级，不修改
+wl-skills-bd fix advise --module <module> --json
+
 # 预览，零写入
 wl-skills-bd fix plan src/main --rules B3,B5 --json
 
 # 评审 actions/manual 后应用
 wl-skills-bd fix apply src/main --rules B3,B5 \
   --plan-hash <hash> --confirm
+
+# 项目/平台精确断言修复
+wl-skills-bd fix policy plan --assertions <ID> --json
+wl-skills-bd fix policy apply --assertions <ID> --plan-hash <hash> --confirm
 ```
 
 MCP 对应工具为 `wls_be_safe_fix`：默认预览；正式写入传 `confirmApply: true` 和相同 `planHash`。
@@ -43,6 +50,8 @@ MCP 对应工具为 `wls_be_safe_fix`：默认预览；正式写入传 `confirmA
 | B5 缺事务 | 定位到 public 写方法，且没有 `javax/jakarta.transaction.Transactional` 冲突 | 加 Spring `@Transactional(rollbackFor = Exception.class)` 和精确 import |
 
 不满足前置条件时进入 `manual`，不会做部分猜测。
+
+项目断言修复不执行正则或命令，只在登记文件中对 `before` 精确命中一次时替换为 `after`；0 次或多次都降级人工。写后断言复验未通过或出现新增回归时恢复备份。
 
 ## 明确禁止自动修复
 

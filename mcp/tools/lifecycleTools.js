@@ -594,4 +594,76 @@ function handleTest(args) {
   return toolResult(text, { ok: true, scenarioCount: result.scenarioCount, ...(includeSource ? { content: result.content } : {}) });
 }
 
-module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleTask, handleTest, handleTroubleshoot };
+function handleReview(args) {
+  const root = projectRoot();
+  const mode = args.mode;
+  if (mode === "run") {
+    const engine = require("../../lib/review");
+    const result = engine.runReview(root, {
+      base: args.base,
+      staged: args.staged === true,
+      module: args.module,
+      quick: args.quick === true,
+      rules: args.rules,
+      limit: args.limit,
+    });
+    const output = engine.publicReview(result);
+    const text = result.reason
+      ? `审查失败：${result.error || result.reason}`
+      : `review ${result.decision.toUpperCase()}：新增 ${result.findingCount}，阻断 ${result.blockerCount}，基线 ${result.existingCount}，豁免 ${result.suppressedCount}`;
+    return toolResult(text, output, !result.ok);
+  }
+  if (["baseline-plan", "baseline-apply"].includes(mode)) {
+    const engine = require("../../lib/review");
+    const gate = require("../../lib/quality-gate");
+    const plan = engine.buildReviewBaselinePlan(root, { module: args.module });
+    if (!plan.ok) return blockedResult(`无法建立审查基线：${plan.reason}`, plan.reason, plan);
+    if (mode === "baseline-plan") {
+      const preview = { ...gate.publicBaselinePlan(plan), reviewSummary: plan.reviewSummary };
+      return previewResult(`审查基线预览：${preview.metadata.findings} 个 fingerprint；planHash=${preview.planHash}`, preview);
+    }
+    const result = gate.applyBaselinePlan(plan, { confirm: args.confirmApply === true, planHash: args.planHash, allowProductionWrites: args.allowProductionWrites === true });
+    return result.ok ? completedResult(`审查基线已写入：${result.rel}`, result) : blockedResult(`审查基线零写入：${result.reason}`, result.reason, result);
+  }
+  if (mode === "adapter-inspect") {
+    const result = require("../../lib/integration-adapter").inspectIntegrationAdapters(root, { module: args.module });
+    return toolResult(`平台适配 ${result.readiness}：评估 ${result.summary.evaluated} 个 binding，error=${result.summary.errors}`, result, !result.ok);
+  }
+  if (["adapter-plan", "adapter-apply"].includes(mode)) {
+    const engine = require("../../lib/integration-adapter");
+    const plan = engine.buildAdapterImplementationPlan(root, { bindingId: args.binding, recipeId: args.recipe, variables: args.variables });
+    if (!plan.ok) return blockedResult(`无法建立平台适配实现计划：${plan.reason}`, plan.reason, plan);
+    if (mode === "adapter-plan") {
+      const preview = engine.publicAdapterImplementationPlan(plan);
+      return previewResult(`平台适配实现预览：${preview.action} ${preview.rel}；planHash=${preview.planHash}`, preview);
+    }
+    const result = engine.applyAdapterImplementationPlan(plan, { confirm: args.confirmApply === true, planHash: args.planHash, allowProductionWrites: args.allowProductionWrites === true });
+    return result.ok ? completedResult(`平台适配实现已新增：${result.rel}`, result) : blockedResult(`平台适配实现零写入：${result.reason}`, result.reason, result);
+  }
+  if (mode === "assertion-inspect") {
+    const result = require("../../lib/policy-assertions").inspectPolicyAssertions(root, { module: args.module });
+    return toolResult(`项目断言 ${result.state}：评估 ${result.summary.evaluated}，error=${result.summary.errors}`, result, !result.ok);
+  }
+  if (["assertion-plan", "assertion-apply"].includes(mode)) {
+    const engine = require("../../lib/policy-assertions");
+    const plan = engine.buildAssertionFixPlan(root, { assertionIds: args.assertions, module: args.module });
+    if (!plan.ok) return blockedResult(`无法建立项目断言修复计划：${plan.reason}`, plan.reason, plan);
+    if (mode === "assertion-plan") {
+      const preview = engine.publicAssertionFixPlan(plan);
+      return previewResult(`项目断言修复预览：${preview.actions.length} 个文件；planHash=${preview.planHash}`, preview);
+    }
+    const result = engine.applyAssertionFixPlan(plan, { confirm: args.confirmApply === true, planHash: args.planHash, allowProductionWrites: args.allowProductionWrites === true });
+    return result.ok ? completedResult(`项目断言修复完成：${result.applied.length} 个文件`, result) : blockedResult(`项目断言修复零写入/已回滚：${result.reason}`, result.reason, result);
+  }
+  if (mode === "repair-advise") {
+    const result = require("../../lib/repair").adviseRepairs(root, { module: args.module, rules: args.rules });
+    return toolResult(`修复分级：auto-safe=${result.summary.autoSafe}，suggested=${result.summary.suggested}，manual=${result.summary.manual}`, result);
+  }
+  if (mode === "supply-chain") {
+    const result = require("../../lib/supply-chain").inspectSupplyChain(root);
+    return toolResult(`供应链 ${result.state}：依赖 ${result.inventory.dependencies}，error=${result.summary.errors}`, result, !result.ok);
+  }
+  return blockedResult(`不支持 review mode：${mode}`, "unsupported-mode");
+}
+
+module.exports = { handleCatalog, handleCodegen, handleCommit, handleConfig, handleContext, handleContract, handleDbPreview, handleDoctor, handleExportPermissions, handleFix, handleReview, handleTask, handleTest, handleTroubleshoot };

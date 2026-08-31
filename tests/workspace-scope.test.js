@@ -86,6 +86,13 @@ fixture({
   assert.strictEqual(result.suppressed.length, 1, "子模块豁免必须在整仓扫描中生效");
   assert.deepStrictEqual(result.issues.map((item) => item.file), ["module-beta/src/main/java/demo/BetaController.java"]);
   assert.strictEqual(result.issues[0].module, "beta");
+  const alphaOnly = runBeRules(root, { module: "alpha", rules: ["B1"] });
+  assert.deepStrictEqual(alphaOnly.modules.map((item) => item.id), ["alpha"]);
+  assert.strictEqual(alphaOnly.issues.length, 0);
+  assert.strictEqual(alphaOnly.suppressed.length, 1);
+  const unknown = runBeRules(root, { module: "missing", rules: ["B1"] });
+  assert.strictEqual(unknown.issues[0].rule, "WLS_CONFIG");
+  assert.match(unknown.issues[0].message, /未知模块/);
   const doctor = runConfigDoctor(root);
   assert.strictEqual(doctor.workspace, true);
   assert.strictEqual(doctor.checks.find((item) => item.id === "alpha:config-profile").detail, "profile=dev");

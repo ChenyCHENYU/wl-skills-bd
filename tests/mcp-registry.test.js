@@ -9,6 +9,7 @@ const { validateSchema } = require("../mcp/schema-validator");
   process.env.WL_PROJECT_ROOT = path.resolve(__dirname, "..");
   const expected = [
     "wls_be_validate",
+    "wls_be_review",
     "wls_be_doctor",
     "wls_be_codegen",
     "wls_be_contract",
@@ -31,6 +32,15 @@ const { validateSchema } = require("../mcp/schema-validator");
   const validate = await HANDLERS.wls_be_validate.handle({ quick: true });
   assert.ok(validate.structuredContent);
   assert.strictEqual(typeof validate.structuredContent.total, "number");
+  const review = await HANDLERS.wls_be_review.handle({ mode: "run", limit: 5 });
+  assert.strictEqual(review.structuredContent.decision, "pass");
+  const mqAdapters = await HANDLERS.wls_be_review.handle({ mode: "adapter-inspect" });
+  assert.strictEqual(mqAdapters.structuredContent.readiness, "not-configured");
+  const reviewSchema = TOOLS.find((tool) => tool.name === "wls_be_review").inputSchema;
+  assert.strictEqual(validateSchema(reviewSchema, { mode: "run", base: "origin/main", module: "order" }).valid, true);
+  assert.strictEqual(validateSchema(reviewSchema, { mode: "adapter-plan" }).valid, false);
+  assert.strictEqual(validateSchema(reviewSchema, { mode: "adapter-plan", binding: "b", recipe: "r", variables: { className: "Consumer" } }).valid, true);
+  assert.strictEqual(validateSchema(reviewSchema, { mode: "adapter-plan", binding: "b", recipe: "r", variables: { invalid: {} } }).valid, false);
 
   const standard = await HANDLERS.wls_be_standards.handle({ id: "04" });
   assert.match(standard.text, /^# 04/m);
@@ -88,8 +98,8 @@ const { validateSchema } = require("../mcp/schema-validator");
   }).valid, true);
   assert.strictEqual(validateSchema(codegenSchema, { mode: "plan", contract, unexpected: true }).valid, false);
   const standardsSchema = TOOLS.find((tool) => tool.name === "wls_be_standards").inputSchema;
-  assert.strictEqual(validateSchema(standardsSchema, { id: "29" }).valid, true, "最新标准必须通过真实 MCP schema");
-  assert.strictEqual(validateSchema(standardsSchema, { id: "30" }).valid, false);
+  assert.strictEqual(validateSchema(standardsSchema, { id: "30" }).valid, true, "最新标准必须通过真实 MCP schema");
+  assert.strictEqual(validateSchema(standardsSchema, { id: "31" }).valid, false);
   const validateToolSchema = TOOLS.find((tool) => tool.name === "wls_be_validate").inputSchema;
   assert.strictEqual(validateSchema(validateToolSchema, { rules: ["B31"], severity: "error", maxIssues: 5, includeEndpoints: false }).valid, true);
   assert.strictEqual(validateSchema(validateToolSchema, { rules: ["B32"] }).valid, false);
@@ -110,7 +120,7 @@ const { validateSchema } = require("../mcp/schema-validator");
   const generatedSourceFull = await HANDLERS.wls_be_test.handle({ mode: "gen", contract, includeSource: true });
   assert.match(generatedSourceFull.structuredContent.content, /class .*ServiceTest/);
 
-  console.log("✅ MCP registry：16 工具、严格 schema、路径边界及核心 handler 通过");
+  console.log("✅ MCP registry：17 工具、严格 schema、路径边界及核心 handler 通过");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

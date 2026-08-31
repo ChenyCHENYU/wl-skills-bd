@@ -26,7 +26,10 @@
 ⑤ Maven quality ──► ArchUnit + Checkstyle + PMD7 + SpotBugs + Spotless + JaCoCo
   │
   ▼
-⑥ safe fix ──► 仅白名单自动修复 + 复扫；DDL/业务语义问题转人工
+⑥ review gate ──► Git 变更 + 平台适配 + 断言 + 供应链 + 变更行覆盖率
+  │
+  ▼
+⑦ safe fix ──► B3/B5 或项目批准精确替换 + 复扫；业务语义问题转人工
 ```
 
 任务路由同时输出稳定的执行节点契约：
@@ -114,7 +117,11 @@ B1~B31 独立执行；指定 `--rules` 时在文件发现前构建执行计划�
 
 DDL 还必须单独完成数据库人工 diff、只读验证 SQL、DBA/发布审批和恢复策略评审；自动测试通过不代表允许执行 DDL。
 
-## ⑥ 修复闭环
+## ⑥ 变更审查与平台适配
+
+`review run --base <ref> --module <id>` 只把受影响事实送入执行器，并将规则、MQ/集成适配、项目边界断言、供应链和 JaCoCo 证据交给同一质量门。平台 API 和门禁要求来自项目描述符；没有描述符时不推断接线状态。
+
+## ⑦ 修复闭环
 
 - 规则型、无语义歧义的问题可进入安全修复计划；
 - DDL、权限分配、业务状态机、租户豁免、API 破坏性变更必须人工确认；
@@ -132,6 +139,7 @@ DDL 还必须单独完成数据库人工 diff、只读验证 SQL、DBA/发布审
 | db-migration | DDL 评审和恢复策略 | Flyway 正向脚本 + rollback manual |
 | unit-test-gen | 补充业务测试 | Maven test + 生成测试骨架 |
 | convention-audit-be | 汇总规则与质量门 | B1~B31 + Maven quality + production assurance |
+| integration-adapter-be | 衔接平台封装与集成契约 | adapter bindings + review + 项目模板 new-file-only plan/apply |
 | code-fix-be | 受控修复和复扫 | planHash/confirm + closure report |
 
 Skill 文档不能声称完成了执行器未实现的能力；命令输出和受管状态是闭环证据。
@@ -142,3 +150,4 @@ Skill 文档不能声称完成了执行器未实现的能力；命令输出和�
 - 2026-07-18 v2：统一独立 delivery profile、wl-api-contract、completion 与业务保护区。
 - 2026-07-18 v3：基础产物扩展为 17 个，并按命令增加 N 个 RequestDTO；DDL_PREVIEW 进入受管闭环。
 - 2026-08-24 v4：加入标准 Pipeline 节点契约、规则前置短路、执行证据与漂移阻断。
+- 2026-08-31 v5：加入 review quality gate、平台适配、通用断言、供应链和精确修复分级。

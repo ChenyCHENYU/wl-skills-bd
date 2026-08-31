@@ -1,4 +1,4 @@
-# Backend Skills 注册表（v0.23.0）
+# Backend Skills 注册表（v0.24.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 `metadata.status` 严格一致，改一处必须同步另一处。
@@ -14,6 +14,7 @@
 | 生成 Service / 全套 CRUD / 业务命令 / 状态机           | [`core/service-codegen`](core/service-codegen/SKILL.md)                  | ④   | ✅ 落地  | —          |
 | 生成 Mapper / XML / SQL                                 | [`core/mapper-xml-gen`](core/mapper-xml-gen/SKILL.md)                    | ⑤   | ✅ 落地  | —          |
 | 后端规范审计 / 代码体检 / 全量扫描                      | [`core/convention-audit-be`](core/convention-audit-be/SKILL.md)          | ⑧   | ✅ 落地  | validate   |
+| MQ 对接 / 平台消息封装适配 / Producer Consumer 接线 / 集成质量门 | [`core/integration-adapter-be`](core/integration-adapter-be/SKILL.md) | ⑦ | ✅ 落地 | review |
 | 模块上下文 / 查关联服务 / 生成前去重 / 避免全仓扫描 / 集成工具审计 | [`core/project-context-governance`](core/project-context-governance/SKILL.md) | ⓪ | ✅ 落地 | catalog/context |
 | 抽取业务文档 / 阅读旧代码生成业务说明                  | [`core/business-doc-extract-be`](core/business-doc-extract-be/SKILL.md)  | ②预  | 🟡 骨架  | —          |
 | 建表 / DDL / ALTER TABLE / 字段新增 / 字段影响 / 索引 | [`data/db-migration`](data/db-migration/SKILL.md)                         | ⑥   | 🟡 部分  | contract/db_preview |
@@ -22,7 +23,7 @@
 | Redis / 缓存 / 分布式锁 / 批量删除 / 物理删 / 熔断 / 限流 / Feign 超时 / 生产只读 / 二次确认 | [`ops/data-safety`](ops/data-safety/SKILL.md) | ops 横切 | ✅ 落地 | validate   |
 | 后端环境标准化 / 切华新 / 本地启动配不起来 / K8s 部署清单对齐 | [`ops/standard-env-config-be`](ops/standard-env-config-be/SKILL.md) | ops  | ✅ 落地 | config/troubleshoot |
 
-**落地度**：12 个 Skill 中 **10 已落地**（project-context / api-design / entity / service / mapper / audit / safe-fix / data-safety / env-config / unit-test）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **1 骨架**（business-doc：从旧代码抽取业务文档属 NLP 能力，不在代码生成包边界）。
+**落地度**：13 个 Skill 中 **11 已落地**（project-context / api-design / entity / service / mapper / integration-adapter / audit / safe-fix / data-safety / env-config / unit-test）/ **1 部分落地**（db-migration：CREATE/ALTER/索引已自动生成，复杂数据迁移/回填仍骨架）/ **1 骨架**（business-doc：从旧代码抽取业务文档属 NLP 能力，不在代码生成包边界）。
 
 ## v0.17 生产安全与行为契约测试
 
@@ -57,7 +58,7 @@
 
 - 规则子集在发现/读取/执行前短路，并返回实际执行组、文件字节、缓存和 coverage；
 - Source Index 使用可安全失效的内存/持久化缓存，缓存异常只触发真实重扫；
-- 16 个 MCP 工具共享 response 字节/数组预算，大结果用短期 cursor 续取；
+- 17 个 MCP 工具共享 response 字节/数组预算，大结果用短期 cursor 续取；
 - task 返回 discover/context/validate/plan/approval/apply/verify Pipeline；写节点禁止自动重试且必须确认；
 - `npm run eval:quality` 固化 precision/recall、P95、短路比例和 token 回退门禁。
 
@@ -67,6 +68,14 @@
 - `impact field --module` 输出字段容量、所有权、迁移阶段和精确源码引用，禁止隐式全仓扫描；
 - `integration inspect/audit` 校验逻辑 ID、投递闭环、错误码引用以及 StableBusinessId/PayloadHash 重复漂移；
 - Catalog 默认摘要且支持 section/cursor，API 来自 Controller 源码观测，不为镜像契约合成接口。
+
+## v0.24 变更审查、平台适配与精准修复
+
+- `review run` 汇总 Git 变更、B 规则、项目断言、平台适配、供应链及 JaCoCo 全量/变更行覆盖率；
+- `quality-gate.json` 管理新增/历史基线、阻断严重度、warning 预算、覆盖率与有期限豁免；
+- `integration-adapters.json` 由平台团队声明真实依赖、源码/配置/测试标记、方向门禁和项目模板，BD 不猜 MQ SDK；
+- `quality-assertions.json` 用项目证据表达 HTTP/幂等/并发等边界，精确修复只有单次字面命中才允许 apply；
+- `supply-chain.json` 显式启用版本收敛、BOM、禁用坐标和仓库门禁；未配置时只输出事实清单。
 
 ## v0.12 配置分层矩阵
 

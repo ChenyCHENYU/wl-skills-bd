@@ -21,7 +21,7 @@ metadata:
 ✅ 已读取 standards/04-controller.md       → Controller 模板
 ✅ 已读取 standards/11-security-permission.md → 权限码规范
 ✅ 已读取 standards/13-api-doc-swagger.md  → OpenAPI 3 注解
-✅ 涉及跨系统集成时已读取 standards/08-exception.md 与 standards/22-resilience.md
+✅ 涉及跨系统集成时已读取 standards/08-exception.md、standards/22-resilience.md 与 standards/30-change-review-integration-adapter.md
 ```
 
 ## 前置检查
@@ -77,6 +77,7 @@ wl-skills-bd codegen plan wl-contract.json --json
 - 生产契约必须声明目标数据库风险、业务错误码目录和对外字段稳定语义 ID
 - 跨系统逻辑 ID 必须声明来源字段、算法/版本、规范化、字符集与最大长度；出站/双向集成必须声明排序键、载荷版本、重试/确认/死信/重放并引用已登记错误码
 - 使用 `integration inspect <contract>` 验证单契约完备性；使用 `integration audit --module <module>` 检查 StableBusinessId/PayloadHash 重复或漂移，不让 AI 主观判断算法是否一致
+- 当 transport 由平台 MQ/HTTP 封装承载时，业务契约只声明方向、参与方、载荷、身份、排序和投递语义；具体依赖、注解、调用方法与配置键进入项目 `integration-adapters.json`，由 `integration-adapter-be` 对账，禁止把某个平台 API 固化进通用契约
 
 ## 完成摘要
 

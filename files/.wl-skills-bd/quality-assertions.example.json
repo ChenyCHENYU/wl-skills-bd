@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "PLATFORM_HTTP_TIMEOUT",
+      "module": "example",
+      "description": "项目平台 HTTP 封装启用时必须声明平台超时策略",
+      "evidenceRefs": ["src/main/java/com/example/RemoteClient.java"],
+      "activateAnyOf": ["PlatformHttpClient"],
+      "requireAnyOf": ["TimeoutPolicy"],
+      "forbidAnyOf": [],
+      "severity": "error",
+      "message": "缺少平台批准的 TimeoutPolicy",
+      "owner": "platform-team",
+      "sourceRef": "PLATFORM-HTTP-CONTRACT",
+      "safeReplacements": []
+    }
+  ]
+}

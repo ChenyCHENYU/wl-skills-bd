@@ -206,6 +206,7 @@ if (exists("mcp/registry.js")) {
     const { TOOLS } = require(path.join(ROOT, "mcp", "registry"));
     const expectedTools = [
       "wls_be_validate",
+      "wls_be_review",
       "wls_be_doctor",
       "wls_be_codegen",
       "wls_be_contract",
@@ -345,6 +346,14 @@ const REQUIRED_EXIST = [
   "files/.wl-skills-bd/schemas/project-catalog.schema.json",
   "files/.wl-skills-bd/schemas/profile-local.schema.json",
   "files/.wl-skills-bd/schemas/context-plan.schema.json",
+  "files/.wl-skills-bd/schemas/quality-gate.schema.json",
+  "files/.wl-skills-bd/schemas/integration-adapters.schema.json",
+  "files/.wl-skills-bd/schemas/quality-assertions.schema.json",
+  "files/.wl-skills-bd/schemas/supply-chain.schema.json",
+  "files/.wl-skills-bd/quality-gate.example.json",
+  "files/.wl-skills-bd/integration-adapters.example.json",
+  "files/.wl-skills-bd/quality-assertions.example.json",
+  "files/.wl-skills-bd/supply-chain.example.json",
   "files/.githooks/commit-msg",
   "files/.github/guides/frontend-backend-contract.md",
   "files/.github/guides/mcp-workflow.md",

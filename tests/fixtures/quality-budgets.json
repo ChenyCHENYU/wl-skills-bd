@@ -18,5 +18,11 @@
     "maximumSummaryEstimatedTokens": 1024,
     "maximumSummaryToFullRatio": 0.03,
     "defaultPageItems": 50
+  },
+  "review": {
+    "maximumSummaryBytes": 10000,
+    "maximumEstimatedTokens": 2500,
+    "maximumSummaryToFullRatio": 0.2,
+    "defaultModuleItems": 20
   }
 }

@@ -57,9 +57,21 @@ wl-skills-bd contract migrate contracts/legacy.json --plan-hash <hash> --confirm
 wl-skills-bd impact field --module order --field orderNo --table order_info --limit 50 --json
 wl-skills-bd integration inspect contracts/order.contract.json --json
 wl-skills-bd integration audit --module order --json
+wl-skills-bd integration adapters --module order --json
 ```
 
-`crud` 是唯一允许 codegen 的严格契约；`schema-mirror` 与 `integration-projection` 只用于存量事实治理。字段影响命令必须指定模块，输出物理容量、Java 边界、所有权、迁移阶段和文件行号。集成契约固定逻辑 ID 算法/版本/规范化以及重试、确认、死信、重放和错误码引用；审计器只报告重复/漂移，不自动修改业务算法。
+`crud` 是唯一允许 codegen 的严格契约；`schema-mirror` 与 `integration-projection` 只用于存量事实治理。字段影响命令必须指定模块，输出物理容量、Java 边界、所有权、迁移阶段和文件行号。集成契约固定逻辑 ID 算法/版本/规范化以及重试、确认、死信、重放和错误码引用；审计器只报告重复/漂移，不自动修改业务算法。平台 Producer/Consumer API、配置键、测试和运行证据标记来自项目 `integration-adapters.json`，未配置时不猜测接线状态；双向绑定必须同时证明两侧接线。
+
+## 变更审查与质量门
+
+```bash
+wl-skills-bd review run --base origin/main --module order --json
+wl-skills-bd review run --module order --json
+wl-skills-bd review baseline plan --json
+wl-skills-bd review baseline apply --plan-hash <hash> --confirm
+```
+
+从示例按需建立 `quality-gate.json`、`integration-adapters.json`、`quality-assertions.json` 和 `supply-chain.json`。review 区分新增、历史基线和未过期豁免，并汇总平台适配、供应链、JaCoCo 总行/变更行覆盖率。`--base/--staged` 是增量反馈；交付前执行无范围参数的 full review。没有项目策略时，平台断言不激活、供应链只给清单。
 
 ## 新资源
 
@@ -87,9 +99,11 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```bash
 wl-skills-bd fix plan src/main --rules B3,B5 --json
 wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
+wl-skills-bd fix advise --module order --json
+wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
 ```
 
-其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
+项目断言只有项目明确登记 safeReplacement、指定文件中字面 before 恰好命中一次时才可 apply；复验失败自动恢复。其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
 
 单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed 都是 partial，最终交付仍需 full。
 
@@ -104,7 +118,7 @@ wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
 
 ## MCP
 
-`init` 会安装编辑器配置。16 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；`wls_be_contract` 还提供 inspect/migrate/impact/integration-inspect，`wls_be_catalog` 提供分区读取和 integration-audit。不要把 MCP 当作绕过 planHash/人工评审的后门。`wls_be_task` 返回标准 Pipeline，但实际写入仍走 codegen/safe-fix/config/catalog/contract migrate。
+`init` 会安装编辑器配置。17 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；`wls_be_review` 提供变更门禁、平台适配、项目断言、供应链和修复分级，`wls_be_contract` 提供 inspect/migrate/impact/integration-inspect，`wls_be_catalog` 提供分区读取和 integration-audit。不要把 MCP 当作绕过 planHash/人工评审的后门。
 
 MCP 默认使用 `response.mode=summary` 和有界 `maxItems/maxBytes`；超预算结果从 `nextCursor` 续取，禁止为了获取正文反复执行同一全量工具。
 

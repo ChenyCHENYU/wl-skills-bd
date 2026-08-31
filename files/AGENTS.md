@@ -26,10 +26,12 @@
 18. **数据库变更（v0.14）**：ALTER 必须分 expand/contract；contract drop 需 approvalRef；Flyway 版本不可变，校验 SQL 只允许无副作用 SELECT，工具永不执行数据库写入。
 19. **模块上下文（v0.15）**：启用 Catalog 后，默认只扫描当前模块；关联模块只读一跳快照和关系/关键词命中的契约，不扫描其源码目录。当前目录过期、全局身份冲突或 codegen 上下文哈希漂移时必须阻断。
 20. **精益执行（v0.21）**：精准规则必须在扫描前短路，并报告 `execution/coverage`；quick/staged/changed 是 partial，不能替代最终 full。Source Index 缓存损坏或失效时必须真实重扫。
-21. **MCP Token（v0.21）**：16 个工具默认 summary 与有界 response 预算；需要大正文时使用 cursor 续取，不反复重跑全量 handler。cursor 不授予写权限。
+21. **MCP Token（v0.21/v0.24）**：17 个工具默认 summary 与有界 response 预算；需要大正文时使用 cursor 续取，不反复重跑全量 handler。cursor 不授予写权限。
 22. **节点契约（v0.21）**：任务按 discover/context/validate/plan/approval/apply/verify 编排；有副作用节点禁止自动重试和不可取消超时，必须显式确认并校验 pipelineHash。
 23. **契约分流（v0.23）**：先用 `contract inspect` 区分 crud/schema-mirror/integration-projection；仅 crud 可 codegen。存量迁移必须走 planHash/确认/备份链，未知所有权不得猜。
 24. **字段与集成影响（v0.23）**：字段变更先跑限定模块的 `impact field`；跨系统逻辑 ID/投递必须固定算法版本、规范化、载荷版本、排序、重试/确认/死信/重放与错误码引用。Catalog API 只采用源码观测事实。
+25. **变更门禁与平台适配（v0.24）**：最终交付运行 `review run`，新增问题、历史基线、有效/过期豁免和 partial coverage 必须分开报告。MQ/集成适配只读取项目 `integration-adapters.json` 中的平台真实依赖、API、配置、测试与运行证据；未配置时不得猜 SDK、不得自动激活规则。项目断言和供应链门同样必须显式配置。
+26. **受控实现与修复（v0.24）**：平台 recipe 只能创建项目登记的新文件，禁止覆盖现有封装；项目断言修复仅允许 evidenceRefs 内单次字面匹配。所有 apply 均需当前 planHash、显式确认、受保护环境检查、原子写、复验和失败回滚；权限、租户、SQL、MQ 语义与业务算法保持人工卡口。
 
 ## 快速命令
 
@@ -42,6 +44,11 @@ wl-skills-bd contract inspect <contract.json> --json
 wl-skills-bd impact field --module <module> --field <field> --table <table> --json
 wl-skills-bd integration inspect <contract.json> --json
 wl-skills-bd integration audit --module <module> --json
+wl-skills-bd integration adapters --module <module> --json
+wl-skills-bd review run --base origin/main --module <module> --json
+wl-skills-bd review run --module <module> --json                    # 交付前 full 门禁
+wl-skills-bd review baseline plan --json
+wl-skills-bd fix advise --module <module> --json
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
 wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可加 --require-complete
@@ -53,4 +60,4 @@ wl-skills-bd test gen wl-contract.json    # 行为契约测试（测行为不测
 wl-skills-bd test scenarios wl-contract.json
 ```
 
-MCP 提供 16 个等价工具；写工具的 confirm 只能在用户评审预览后传递。pre/prod/production 额外需要 `allowProductionWrites=true`。
+MCP 提供 17 个等价工具；`wls_be_review` 统一承载变更门禁、平台适配、项目断言、供应链与修复分级。写工具的 confirm 只能在用户评审预览后传递。pre/prod/production 额外需要 `allowProductionWrites=true`。

@@ -2,10 +2,10 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.23.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.24.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
-[![Standards](https://img.shields.io/badge/standards-29-orange.svg)]()
+[![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
 
 当前唯一经过验证的生成 Profile 是 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。包内能力以机器 Schema、兼容矩阵和回归测试为准，不从存量业务代码猜约定。
 
@@ -28,6 +28,9 @@
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
 | 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
 | 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
+| 变更审查（v0.24） | Git 新增问题与历史基线分离；B 规则、项目断言、平台适配、供应链、JaCoCo 全量/变更行覆盖率汇总到同一质量门 |
+| 平台适配（v0.24） | MQ/集成实现由项目登记真实依赖、API、配置、测试和运行证据；BD 只验证衔接与闭环，不选择 SDK、不连接 Broker、不覆盖平台封装 |
+| 项目策略（v0.24） | HTTP/幂等/并发等通用边界及 BOM/依赖/仓库门由项目显式激活；未配置时不做主观猜测、不新增阻断 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
@@ -35,8 +38,17 @@
 | Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
-| 安全修复 | 仅 B3/B5 严格前置条件下自动修复；计划确认、备份、失败恢复、强制复扫 |
-| AI 接入 | 16 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+| 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
+| AI 接入 | 17 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.24.0 变更审查、平台适配与精准修复
+
+- **同一质量门**：`review run` 汇总 Git 变更、B 规则、项目断言、平台适配、供应链与 JaCoCo；默认只阻断新增问题，并明确区分历史基线、有效豁免和过期豁免。
+- **平台拥有规则**：`.wl-skills-bd/integration-adapters.json` 由项目或平台团队登记真实 Maven 坐标、Producer/Consumer API、配置、测试和运行证据。BD 不内置 MQ SDK 选择，也不把某个平台封装推广成通用标准。
+- **零隐式激活**：未配置适配器或项目策略时，只返回 `not-configured`/事实清单，不根据依赖名猜接线、不改变已有质量门结果。
+- **受控实现衔接**：实现 recipe 只能渲染项目登记模板且只能新建文件；已有文件、未解析变量、写前漂移或受保护环境全部阻断，仍需项目编译、测试和 review 验证。
+- **精准修复**：`fix advise` 先分类；项目断言只有目标文件受证据约束、字面 before 恰好命中一次时才可 apply，写后复验失败自动回滚。权限、租户、SQL、MQ 语义和业务算法保持人工卡口。
+- **更省 Token**：Git changed-lines、规则执行计划、模块边界和摘要/cursor 先在确定性核心裁剪；review 的规则覆盖只列一次，模块证据只保留统计/扫描量，变更文件按 limit 截断；AI 只消费差异、证据位置和下一步。
 
 ### v0.23.0 多模块、存量契约与精准影响闭环
 
@@ -266,9 +278,47 @@ wl-skills-bd integration inspect contracts/heat-plan.contract.json --json
 
 # 在当前模块源码根内检查 StableBusinessId / PayloadHash 重复与实现漂移
 wl-skills-bd integration audit --module pl --json
+
+# 读取项目声明的平台封装适配状态；未配置时不猜 MQ SDK，也不产生违规
+wl-skills-bd integration adapters --module pl --json
+
+# 增量审查 Git 变更；默认 partial 会 fail-closed，项目可显式配置阶段策略
+wl-skills-bd review run --base origin/main --module pl --json
+
+# 交付前完整门禁，不带 base/staged/quick/rules
+wl-skills-bd review run --module pl --json
 ```
 
 `impact field` 不执行数据库查询，也不靠字段名猜业务语义；所有结论来自兼容契约、Catalog 模块根和源码精确引用。输出默认 50 条证据并返回 `nextCursor`。逻辑 ID 必须固定来源字段顺序、分隔符/namespace、trim/case/nullToken、UTF-8、算法版本和最大长度；启用重试的集成必须绑定可重试错误码并声明死信闭环。
+
+### 平台适配与项目质量门（v0.24）
+
+从 `.wl-skills-bd/*.example.json` 按需复制配置；这些文件是项目策略，不是 BD 的平台假设：
+
+```bash
+# 生成历史问题基线；apply 仍需评审 planHash
+wl-skills-bd review baseline plan --json
+wl-skills-bd review baseline apply --plan-hash <hash> --confirm
+
+# 仅使用项目登记的 recipe 生成一个不存在的新文件
+wl-skills-bd integration plan --binding order-created --recipe consumer \
+  --var className=OrderCreatedConsumer --json
+wl-skills-bd integration apply --binding order-created --recipe consumer \
+  --var className=OrderCreatedConsumer --plan-hash <hash> --confirm
+
+# 先分类所有修复，再决定自动、模板或人工处理
+wl-skills-bd fix advise --module pl --json
+wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
+wl-skills-bd fix policy apply --assertions PLATFORM_TIMEOUT \
+  --plan-hash <hash> --confirm
+```
+
+- `quality-gate.json`：新增问题/历史基线、阻断级别、warning 预算、覆盖率与有期限豁免；默认要求完整规则覆盖，partial 不能冒充通过。
+- `integration-adapters.json`：平台依赖、Producer/Consumer/配置/测试/capability 证据及方向门禁；BD 只验证 `declared → dependency → configured → wired → tested → runtime-evidenced` 成熟度。
+- `quality-assertions.json`：项目自有的 HTTP、幂等、并发等边界断言；没有显式激活证据就不执行，只有项目批准的精确替换可进入写链。
+- `supply-chain.json`：依赖收敛、动态版本、快照、BOM、禁用坐标与仓库前缀；未配置时只做确定性 POM 清单。
+
+适配 recipe 不覆盖已有平台封装、不修改 POM/配置、不连接 Broker，也不宣称生成后已可运行；项目编译、测试、容器装配及 `review run` 仍是交付门。完整约束见 [standards/30](files/.github/standards/30-change-review-integration-adapter.md) 与 [integration-adapter-be](files/.github/skills/core/integration-adapter-be/USAGE.md)。
 
 ## 检查与安全修复
 
@@ -278,14 +328,17 @@ wl-skills-bd validate src/main --format markdown --output reports/AUDIT_BE.md
 
 wl-skills-bd fix plan src/main --rules B3,B5 --json
 wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <sha256> --confirm
+wl-skills-bd fix advise --module <module> --json
+wl-skills-bd fix policy plan --assertions <id> --json
+wl-skills-bd fix policy apply --assertions <id> --plan-hash <sha256> --confirm
 ```
 
-自动修复白名单只有：
+内置自动修复白名单只有：
 
 - B3：能安全解析同 XML `BaseColumns`、别名一致且 SQL 不含危险文本替换时，将 `SELECT *` 替换为列清单；
 - B5：能确定是公开写方法且不存在事务注解冲突时，补 `@Transactional(rollbackFor = Exception.class)`。
 
-B1/B2/B4/B6~B12 以及不满足前置条件的 B3/B5 只报告证据和人工方案。apply 会重算计划、验证 `planHash`、备份原文件、失败时恢复，并强制复扫生成 `reports/FIX_BE_*.md`。
+B1/B2/B4/B6~B12 以及不满足前置条件的 B3/B5 只报告证据和人工方案。项目断言可额外登记 `safeReplacement`，但必须是 evidenceRefs 范围内的单文件、单次字面替换；0 次或多次匹配均零写入。apply 会重算计划、验证 `planHash`、备份原文件、失败时恢复，并强制复扫；业务语义修复永不因“AI 看起来合理”而自动执行。
 
 ## Java 质量门
 
@@ -317,7 +370,8 @@ mvn verify -Pwl-quality
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
 | `wls_be_contract` | 条件 | seed/inspect/migrate/show/diff/impact/integration-inspect；仅 migrate 写入且保留计划确认门 |
 | `wls_be_safe_fix` | 条件 | B3/B5 安全修复闭环 |
-| `wls_be_standards` | 否 | 读取 29 条规范 |
+| `wls_be_review` | 条件 | 变更门禁、质量基线、平台适配、项目断言、供应链与修复分级；写模式保留 planHash/确认链 |
+| `wls_be_standards` | 否 | 读取 30 条规范 |
 | `wls_be_templates` | 否 | 读取 16 个模板 |
 | `wls_be_db_preview` | 否 | 只读预览 CREATE/ALTER DDL + Expand-Contract 阶段 |
 | `wls_be_export_permissions` | 条件 | 导出权限码为 kit SYS_PERMISSION_INFO.md 片段 |
@@ -348,7 +402,7 @@ files/.wl-skills-bd/   机器事实：Schema、Profile、兼容矩阵、规则�
 files/.github/        人读规范、Skills、模板、质量门、指南
 lib/                  确定性核心、规则执行计划、共享扫描上下文、Source Index 缓存与 Pipeline
 bin/                  CLI 适配
-mcp/                  16 个工具的协议/Schema 适配、统一结果预算与游标存储
+mcp/                  17 个工具的协议/Schema 适配、统一结果预算与游标存储
 scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 夹具和回归测试
 ```
 
@@ -356,7 +410,7 @@ scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 
 
 ## 能力边界
 
-12 个 Skill 中 10 个已落地，1 个部分落地（db-migration：CREATE/ALTER/索引已自动生成），1 个仍是诚实标记的流程骨架（业务文档抽取）。项目上下文由 catalog/context 执行器落地；行为单测由 `test gen/scenarios` 落地；环境配置由 config init/migrate/doctor/fix 落地。无执行器的能力不展示虚构命令，也不承诺自动应用。
+13 个 Skill 中 11 个已落地，1 个部分落地（db-migration：CREATE/ALTER/索引已自动生成），1 个仍是诚实标记的流程骨架（业务文档抽取）。项目上下文由 catalog/context 执行器落地；平台适配由 review/integration 执行器落地；行为单测由 `test gen/scenarios` 落地；环境配置由 config init/migrate/doctor/fix 落地。无执行器的能力不展示虚构命令，也不承诺自动应用。
 
 ## 稳定性与多环境护栏（v0.11）
 

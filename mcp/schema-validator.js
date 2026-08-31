@@ -1,6 +1,7 @@
 "use strict";
 
 function typeMatches(type, value) {
+  if (Array.isArray(type)) return type.some((item) => typeMatches(item, value));
   if (type === "object") return value !== null && typeof value === "object" && !Array.isArray(value);
   if (type === "array") return Array.isArray(value);
   if (type === "integer") return Number.isInteger(value);
@@ -45,7 +46,7 @@ function validateValue(schema, value, location, errors) {
   if (schema.const !== undefined && value !== schema.const) errors.push(`${location} 必须等于 ${JSON.stringify(schema.const)}`);
   if (schema.enum && !schema.enum.includes(value)) errors.push(`${location} 只允许 ${schema.enum.join("/")}`);
   if (schema.type && !typeMatches(schema.type, value)) {
-    errors.push(`${location} 应为 ${schema.type}`);
+    errors.push(`${location} 应为 ${Array.isArray(schema.type) ? schema.type.join("/") : schema.type}`);
     return;
   }
   if ((schema.type === "object" || schema.required || schema.properties)
@@ -78,6 +79,7 @@ function validateObject(schema, data, location, errors) {
   for (const [key, value] of Object.entries(data)) {
     if (!Object.prototype.hasOwnProperty.call(properties, key)) {
       if (schema.additionalProperties === false) errors.push(`${location}.${key} 非允许字段`);
+      else if (schema.additionalProperties && typeof schema.additionalProperties === "object") validateValue(schema.additionalProperties, value, `${location}.${key}`, errors);
       continue;
     }
     validateValue(properties[key], value, `${location}.${key}`, errors);

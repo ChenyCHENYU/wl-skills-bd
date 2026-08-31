@@ -1,17 +1,18 @@
 # MCP 工具与写入安全
 
-`wl-skills-bd` MCP Server 通过 stdio 暴露 16 个本地工程工具，不连接数据库、网关或生产系统。
+`wl-skills-bd` MCP Server 通过 stdio 暴露 17 个本地工程工具，不连接数据库、网关、Broker 或生产系统。
 
 ## 工具清单
 
 | 工具 | 类型 | 作用 |
 |---|---|---|
 | `wls_be_validate` | 只读 | B1~B31 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status |
+| `wls_be_review` | 只读/受控写 | 变更审查、质量基线、平台适配、项目断言、供应链和分级修复；所有 apply 保留计划确认链 |
 | `wls_be_doctor` | 只读 | JDK/Maven/Profile/质量门/租户证据诊断 |
 | `wls_be_codegen` | 受控写 | contract validate/plan/apply，17+N 个受管产物 |
 | `wls_be_contract` | 只读/受控写 | seed/inspect/show/diff/impact/integration-inspect；migrate 使用计划确认链 |
 | `wls_be_safe_fix` | 受控写 | 仅 B3/B5 白名单修复与强制复扫 |
-| `wls_be_standards` | 只读 | 查询 29 条规范 |
+| `wls_be_standards` | 只读 | 查询 30 条规范 |
 | `wls_be_templates` | 只读 | 查询 16 个模板白名单 |
 | `wls_be_db_preview` | 只读 | CREATE/ALTER DDL 与 Expand-Contract 预览 |
 | `wls_be_export_permissions` | 受控写 | 导出 kit 权限清单片段 |
@@ -25,9 +26,11 @@
 
 所有文件参数必须是 `WL_PROJECT_ROOT` 内的相对路径。绝对路径、`../` 越界和指向项目外的符号链接会被拒绝。入参由严格 JSON Schema 校验，未知字段、错误枚举、错误类型或非法 planHash 不进入 handler。
 
+`wls_be_review` 的模式按职责命名：`run`、`baseline-plan/apply`、`adapter-inspect/plan/apply`、`assertion-inspect/plan/apply`、`repair-advise`、`supply-chain`。adapter 不等于内置 MQ SDK，它只解释项目描述符；plan/apply 仍必须分两次调用并由用户评审预览。
+
 ## 统一结果预算
 
-16 个工具都支持同一 `response` 对象：
+17 个工具都支持同一 `response` 对象：
 
 ```json
 {
@@ -75,6 +78,7 @@
 10. catalog apply 同样要求当前 planHash、确认、写前重算、原子写和回滚；模块模式不得扫描其他模块源码；
 11. contract migrate 默认只返回确定性动作与 unresolved；apply 要求同一 planHash，保留备份并在未授权 unresolved 时零写入；
 12. `pre/prod/production` 的受控写默认阻断；显式授权只覆盖工程文件，不授权数据库、部署或外部系统写入。
+13. review baseline、平台适配实现和项目断言修复同样写前重算；适配实现只新增项目模板文件，断言修复只允许 before 精确命中一次并在复验失败时回滚。
 
 调用方不得在同一次模型动作中先取 hash 又未经用户评审直接 apply。`confirmApply` 是用户授权的传递，不是让 Agent 自动填 true 的便利开关。
 
@@ -89,6 +93,7 @@
 
 ## 变更记录
 
+- 2026-08-31 v9：新增 `wls_be_review`，贯通变更门禁、平台适配、项目断言、供应链、覆盖率和精准修复；工具总数 17。
 - 2026-08-31 v8：在既有 16 工具内加入契约分类/迁移、字段影响、集成检查、Catalog 分区分页与重复工具审计。
 - 2026-08-24 v7：16 工具统一 response 预算、token 估算与短期大结果 cursor；task 返回标准 Pipeline。
 - 2026-07-19 v6：扩展为 15 个工具；加入模块增量 Catalog、一跳 Context Plan 和提交消息/range 校验。

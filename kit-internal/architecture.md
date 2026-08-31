@@ -1,6 +1,6 @@
 # wl-skills-bd Architecture Decision Record
 
-> 状态：accepted · 版本：0.23.0 · 日期：2026-08-31
+> 状态：accepted · 版本：0.24.0 · 日期：2026-08-31
 
 ## 目标
 
@@ -12,13 +12,13 @@
 已评审需求 / 可选 design-model 或前端契约 / 数据库约束
                     │
                     ▼
-L0 机器事实  JSON Schema + shared delivery profile + rule catalog + module catalog
+L0 机器事实  JSON Schema + shared delivery profile + rule/module catalog + project policies
                     │
                     ▼
 L1 上下文治理  多模块根发现 / 当前模块增量扫描 / 一跳快照 / 源码 API / 关系与预算选择 / 全局身份去重
                     │
                     ▼
-L2 确定性核心  install / contract-compat / codegen / impact / integration / audit / config / pipeline
+L2 确定性核心  install / contract / codegen / impact / review / adapter / policy / supply-chain / pipeline
                     │
           ┌─────────┴─────────┐
           ▼                   ▼
@@ -29,7 +29,7 @@ L3 CLI 适配              L3 MCP 适配
 L4 工程产物  Java/XML/DDL/tests/contracts/catalog/docs + standards/skills/quality config
                     │
                     ▼
-L5 验证  B1~B31 + J1~J8 + strict contract diff + assurance evidence + package self-check
+L5 验证  B1~B31 + J1~J8 + changed-lines + platform evidence + supply chain + package self-check
                     │
                     ▼
 L6 人工卡口  DDL/数据、权限发布、环境部署、破坏性 API、业务重构
@@ -52,6 +52,10 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 | `lib/source-index.js` | 契约/迁移显式根的统一事实索引、内存/持久化缓存与指纹失效 | 扫描整个项目、信任损坏缓存或猜测业务表 |
 | `lib/db-drift.js` | 快照双向漂移、缺表/缺列、精确列审批回执、事务化幂等账本 | 连接数据库或执行 DDL |
 | `lib/safe-fix.js` | B3/B5 条件安全修复、备份、恢复、复扫 | 业务语义重构 |
+| `lib/quality-gate.js` / `lib/review.js` | Git 变更、历史基线、有期限豁免、规则覆盖、项目检查与 JaCoCo 全量/变更行覆盖率的统一决策 | 用 partial 冒充 full，或把未配置能力算作通过/失败 |
+| `lib/integration-adapter.js` | 读取项目声明的平台依赖/API/配置/测试/运行证据，计算适配成熟度；只从项目 recipe 新建实现文件 | 内置 MQ SDK、覆盖平台封装、连接 Broker 或宣称生成文件已经可运行 |
+| `lib/policy-assertions.js` / `lib/supply-chain.js` | 显式激活项目边界断言与依赖/BOM/仓库策略；提供受证据约束的精确修复 | 根据关键词猜项目规范、隐式新增阻断或自动升级依赖 |
+| `lib/repair.js` | 把发现项确定性分为安全自动修复、补丁建议、平台模板和业务人工修复 | 把建议升级为写权限或自动修改业务语义 |
 | `lib/doctor.js` | 工具链/Profile/门禁/租户证据 | 安装 Maven 或修改 POM |
 | `lib/config-*.js` / `lib/env-matrix.js` | 配置骨架、矩阵、迁移计划、Secret/Bean 覆盖/Actuator/错误详情体检、脱敏修复与 TCP 探测 | 写 Nacos/数据库/K8s 或自动部署 |
 | `lib/write-guard.js` / `lib/file-transaction.js` | 多环境 fail-closed 护栏及通用 planHash/确认/原子写/回滚事务 | 绕过人工授权或写外部平台 |
@@ -91,7 +95,15 @@ DDL 仅生成正向 migration 和人工处置说明。权限发布、环境部�
 
 ### 条件安全修复
 
-安全修复白名单只有 B3/B5。计划必须是可重算的，apply 要求 SHA-256 planHash 和明确确认；源码漂移时整批零写入。写前备份、失败恢复、成功复扫是一个事务边界。
+内置安全修复白名单只有 B3/B5；项目策略可增加 evidenceRefs 内、字面 before 恰好命中一次的 `safeReplacement`，但不能扩大到业务语义。计划必须可重算，apply 要求 SHA-256 planHash 和明确确认；源码漂移、0 次或多次匹配时整批零写入。写前备份、失败恢复、成功复扫是一个事务边界。
+
+### 平台适配不拥有平台语义
+
+BD 不提供 MQ SDK 或统一 Producer/Consumer 接口。项目/平台团队通过 `integration-adapters.json` 登记真实 Maven 坐标、源码/配置/测试/capability 标记和方向门禁；未配置时状态是 `not-configured`，不扫描依赖名猜实现。recipe 也是项目资源，只允许渲染为不存在的新文件，不能覆盖现有平台封装。编译、测试、容器装配和运行证据继续由项目验证。
+
+### 质量门只执行显式事实和策略
+
+Review 把事实、策略、动作分层：Git/源码/POM/JaCoCo 是事实，`quality-gate.json`、`quality-assertions.json`、`supply-chain.json` 和 adapter descriptor 是项目策略，baseline/recipe/精确替换是受控动作。无策略时只报告事实或 `not-configured`；新增策略不得靠 AI 推断。默认 full 才能证明规则全覆盖，changed-lines 只用于缩小新增风险证据。
 
 ### 任务路由不拥有写权限
 

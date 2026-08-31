@@ -26,14 +26,19 @@ Catalog 启用时，当前模块目录过期或存在重复 API/权限/服务/�
 
 ```text
 doctor
-  → validate（JSON/Markdown/SARIF）
+  → review run（变更规则/平台适配/供应链/覆盖率）
+  → validate（全量 JSON/Markdown/SARIF）
   → Maven wl-quality
   → 人工确认修复范围
-  → B3/B5 可走 safe-fix，其他规则人工修改
+  → fix advise 分级；B3/B5 或项目批准精确替换可走受控修复
   → validate + Maven 复验
 ```
 
 审计阶段只读。`--quick` 只适合反馈迭代，不能替代最终全量扫描。
+
+## 平台 MQ/集成封装
+
+先由平台团队维护 `integration-adapters.json`，登记真实依赖、Producer/Consumer/配置/测试标记、方向门禁和可选项目模板，再执行 `integration adapters`。环境配置、公共 starter 或 Inbox/Outbox 存在都不能单独证明外部接线完成。BD 不选择 SDK、Topic、Group、ACK 或幂等算法；实现 recipe 只新增文件，禁止覆盖平台存量封装。
 
 ## DDL 或数据迁移
 

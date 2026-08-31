@@ -6,6 +6,31 @@
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-08-31（变更审查、平台适配与精准修复）
+
+### Added
+
+- 新增 `review run/baseline`，把 Git 变更、B 规则、历史基线、有期限豁免、项目断言、平台适配、供应链和 JaCoCo 全量/变更行覆盖率汇总到同一确定性质量门；partial coverage 默认不能冒充完整审查。
+- 新增项目自有 `integration-adapters.json` 与 `integration-adapter-be` Skill。平台团队声明真实 Maven 坐标、Producer/Consumer/配置/测试/capability 证据和方向门禁；未配置时返回 `not-configured`，BD 不选择 MQ SDK、不连接 Broker、不覆盖平台封装。
+- 新增 `quality-assertions.json` 和 `supply-chain.json`，分别承载项目显式 HTTP/幂等/并发边界及依赖收敛、BOM、禁用坐标、仓库策略；无配置时不隐式新增阻断。
+- 新增 `fix advise` 修复分级，以及项目 recipe 新文件生成和项目断言精确替换的 planHash/确认/事务写链；0 次或多次匹配、写前漂移、受保护环境和复验失败均阻断或回滚。
+- 新增 standards/30、4 份机器 Schema/示例配置和 `wls_be_review` MCP 工具，CLI/MCP 继续复用同一核心。
+
+### Changed
+
+- MCP 工具数 16 → 17，Skills 12 → 13，Standards 29 → 30；README、AGENTS、Copilot/Claude 入口、Skills 注册表、使用/MCP 指南与内部架构同步能力边界。
+- MCP Schema 校验器支持联合 `type` 与 Schema 形式 `additionalProperties`，确保项目变量映射仍经过严格类型校验。
+- 安全修复文档从“全部非 B3/B5 人工”细化为内置白名单、项目批准精确替换、平台模板和业务语义人工四类，未扩大隐式写权限。
+- Review 输出不再为每个模块重复 31 条规则列表；规则覆盖只列一次，模块证据按问题优先压缩并受 limit 约束，100 模块摘要约 1411 tokens，纳入 `eval:quality` 回退门禁。
+
+### Fixed
+
+- MQ 依赖或配置关键词不再自动触发平台假设；只有项目 adapter descriptor 的字面证据参与成熟度判断，避免不同平台封装产生误报和规则漂移。
+- Review 明确区分新增、历史、豁免和过期豁免，并把 warning 预算、规则完整覆盖与覆盖率缺口纳入同一最终决策，避免局部扫描或基线掩盖新增风险。
+- 多模块 `review --module` 现在把 B1~B31 真实扫描范围限制到目标模块，而不只是过滤平台断言；未知模块 fail-closed。炼钢分支只读 canary 证明仅扫描 `pl`，且前后工作区无变化。
+- 项目级 review baseline 拒绝 `--module` 切片，避免用单模块 fingerprint 覆盖其他模块历史基线；基线仍强制完整规则覆盖且不吸收损坏的策略/覆盖率基础设施错误。
+- Review 门禁 fingerprint 改为 source/rule/file/message/同类序号的稳定身份：无关行号移动不再制造“新增问题”，同文件新增第二个相同违规仍会获得独立 fingerprint。
+
 ## [0.23.0] - 2026-08-31（多模块、存量契约、字段影响与集成治理）
 
 ### Added

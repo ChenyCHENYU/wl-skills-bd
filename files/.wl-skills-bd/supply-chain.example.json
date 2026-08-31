@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "severity": "error",
+  "enforceConvergence": true,
+  "forbidDynamicVersions": true,
+  "forbidSnapshots": false,
+  "requiredBoms": [],
+  "forbiddenCoordinates": [],
+  "allowedRepositories": []
+}

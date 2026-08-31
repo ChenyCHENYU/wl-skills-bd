@@ -38,4 +38,4 @@ assert.ok(chunks.includes("structuredContent"), "游标必须可续取原始结�
 const expired = readCursor("wls_be_standards", `${"f".repeat(32)}:0`, 4096);
 assert.strictEqual(expired.isError, true);
 
-console.log("✅ MCP budget：16 工具统一预算、token 估算、输入兼容、大结果游标与过期阻断通过");
+console.log("✅ MCP budget：17 工具统一预算、token 估算、输入兼容、大结果游标与过期阻断通过");

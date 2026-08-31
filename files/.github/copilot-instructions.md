@@ -1,6 +1,6 @@
 # Copilot Instructions — wl-skills-bd 后端主入口
 
-本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 29 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
+本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 30 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
 
 ## 技术基线
 
@@ -30,7 +30,7 @@
 
 生成前必须读 `.github/guides/codegen-workflow.md`；启用 Catalog 的项目先以当前模块执行 `catalog check/context plan`，不得全仓扫描。前后端协作读 `frontend-backend-contract.md`；MCP 写入规则读 `mcp-workflow.md`。
 
-字段变更先执行 `impact field --module ...` 核对存储容量、所有权、迁移链和精确源码引用。跨系统集成使用契约化逻辑 ID、载荷版本、重试/确认/死信/重放与错误码；使用 `integration inspect/audit` 取代主观判断或全仓重读。
+字段变更先执行 `impact field --module ...` 核对存储容量、所有权、迁移链和精确源码引用。跨系统集成使用契约化逻辑 ID、载荷版本、重试/确认/死信/重放与错误码；使用 `integration inspect/audit` 取代主观判断或全仓重读。平台接线只以项目 `integration-adapters.json` 声明的真实依赖、API、配置、测试和运行证据为准；未配置时不猜 MQ SDK、不自动激活规则。
 
 ## Pre-flight
 
@@ -61,11 +61,11 @@ wl-skills-bd validate . --strict
 wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ```
 
-`code-fix-be`/`fix` 只自动处理满足严格前置条件的 B3/B5。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过。其他规则转人工或结构重构。
+`code-fix-be`/`fix` 的内置自动修复只处理满足严格前置条件的 B3/B5。项目断言的 `safeReplacement` 也必须限制在 evidenceRefs 内且字面 before 恰好命中一次。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过，失败必须回滚。其他规则转人工、平台模板或结构重构。
 
-精准 `--rules` 会在文件发现前缩小执行面；必须保留 `execution/coverage` 证据。quick/staged/changed 是 partial，最终交付补 full。`task` 输出标准 Pipeline 与 pipelineHash；写任务必须经过 approval/apply 双确认。
+精准 `--rules` 会在文件发现前缩小执行面；必须保留 `execution/coverage` 证据。quick/staged/changed 是 partial，最终交付执行 full `review run`，汇总新增/历史问题、适配、供应链和覆盖率。`task` 输出标准 Pipeline 与 pipelineHash；写任务必须经过 approval/apply 双确认。
 
-## MCP（16 个工具）
+## MCP（17 个工具）
 
 | 工具 | 作用 |
 |---|---|
@@ -74,7 +74,8 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_codegen` | validate/plan/受控 apply |
 | `wls_be_contract` | seed/inspect/migrate/show/diff/impact/integration-inspect |
 | `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
-| `wls_be_standards` | 查询 29 条规范 |
+| `wls_be_review` | 变更门禁、质量基线、平台适配、项目断言、供应链与修复分级 |
+| `wls_be_standards` | 查询 30 条规范 |
 | `wls_be_templates` | 查询 16 个模板 |
 | `wls_be_db_preview` | 只读 DDL/Expand-Contract 预览 |
 | `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |

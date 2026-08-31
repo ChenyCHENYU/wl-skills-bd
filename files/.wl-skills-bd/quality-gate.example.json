@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "baselineMode": "new-only",
+  "baselineFile": ".wl-skills-bd/review-baseline.json",
+  "blockSeverities": ["error"],
+  "requireCompleteRuleCoverage": true,
+  "warningBudget": null,
+  "coverage": {
+    "required": false,
+    "reportPaths": ["target/site/jacoco/jacoco.xml"],
+    "minimumLine": null,
+    "minimumChangedLine": null
+  },
+  "exemptions": []
+}

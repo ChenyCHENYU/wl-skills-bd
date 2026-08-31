@@ -25,6 +25,21 @@ function option(args, name, fallback) {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 }
 
+function keyValueOptions(args, name) {
+  const values = {};
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== name || !args[index + 1]) continue;
+    const raw = args[index + 1];
+    const separator = raw.indexOf("=");
+    if (separator <= 0) throw new Error(`${name} 必须使用 key=value`);
+    const key = raw.slice(0, separator);
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) throw new Error(`${name} 变量名非法：${key}`);
+    values[key] = raw.slice(separator + 1);
+    index += 1;
+  }
+  return values;
+}
+
 function targetRoot(args) {
   return path.resolve(option(args, "--target", process.cwd()));
 }
@@ -406,6 +421,41 @@ function commandContract(args) {
 
 function commandFix(args) {
   const [subcommand = "plan", ...rest] = args;
+  if (subcommand === "advise") {
+    const ruleValue = option(rest, "--rules");
+    const result = require("../lib/repair").adviseRepairs(targetRoot(rest), {
+      module: option(rest, "--module"),
+      rules: ruleValue ? ruleValue.split(",").map((item) => item.trim()).filter(Boolean) : undefined,
+    });
+    if (has(rest, "--json")) printJson(result);
+    else {
+      console.log(`修复分级：auto-safe=${result.summary.autoSafe}，suggested=${result.summary.suggested}，manual=${result.summary.manual}，platform-adapter=${result.summary.platformAdapter}`);
+      for (const item of result.source) console.log(`  ${item.remediation} ${item.rule} ${item.file}:${item.line}`);
+      for (const item of result.policy) console.log(`  ${item.remediation} ${item.assertionId}`);
+      for (const item of result.integration) console.log(`  ${item.remediation} ${item.bindingId} (${item.missingStages.join(",")})`);
+    }
+    return 0;
+  }
+  if (subcommand === "policy") {
+    const [action = "plan", ...policyArgs] = rest;
+    if (!["plan", "apply"].includes(action)) { console.error(`未知 fix policy 子命令：${action}`); return 1; }
+    const assertionValue = option(policyArgs, "--assertions");
+    const assertionIds = assertionValue ? assertionValue.split(",").map((item) => item.trim()).filter(Boolean) : undefined;
+    const engine = require("../lib/policy-assertions");
+    const plan = engine.buildAssertionFixPlan(targetRoot(policyArgs), { assertionIds, module: option(policyArgs, "--module") });
+    if (!plan.ok) { if (has(policyArgs, "--json")) printJson(plan); else console.error(`无法建立项目断言修复计划：${plan.reason}`); return 1; }
+    if (action === "plan") {
+      const preview = engine.publicAssertionFixPlan(plan);
+      if (has(policyArgs, "--json")) printJson(preview);
+      else { console.log(`项目断言修复预览：${preview.actions.length} 个文件，人工项 ${preview.manual.length}`); console.log(`planHash: ${preview.planHash}`); }
+      return 0;
+    }
+    const result = engine.applyAssertionFixPlan(plan, { confirm: has(policyArgs, "--confirm"), planHash: option(policyArgs, "--plan-hash"), allowProductionWrites: has(policyArgs, "--allow-production-writes") });
+    if (has(policyArgs, "--json")) printJson(result);
+    else if (result.ok) console.log(`✅ 项目断言修复完成：${result.applied.length} 个文件，复验 remaining=0`);
+    else console.error(`项目断言修复零写入/已回滚：${result.reason}`);
+    return result.ok ? 0 : 2;
+  }
   if (!["plan", "apply"].includes(subcommand)) {
     console.error(`未知 fix 子命令：${subcommand}`);
     return 1;
@@ -778,6 +828,37 @@ function commandImpact(args) {
 }
 
 function commandIntegration(args) {
+  const adapterSubcommand = args[0] || "inspect";
+  if (["adapters", "plan", "apply"].includes(adapterSubcommand)) {
+    const restArgs = args.slice(1);
+    const root = targetRoot(restArgs);
+    const engine = require("../lib/integration-adapter");
+    if (adapterSubcommand === "adapters") {
+      const result = engine.inspectIntegrationAdapters(root, { module: option(restArgs, "--module") });
+      if (has(restArgs, "--json")) printJson(result);
+      else {
+        console.log(`${result.ok ? "✅" : "❌"} 平台适配：${result.readiness}，评估 ${result.summary.evaluated} 个 binding`);
+        for (const item of result.bindings) console.log(`  ${item.id}: ${item.maturity} (${item.adapterId})`);
+        for (const item of result.findings) console.log(`  ${item.severity} ${item.rule} ${item.binding || "config"}: ${item.message}`);
+      }
+      return result.ok ? 0 : 1;
+    }
+    let variables;
+    try { variables = keyValueOptions(restArgs, "--var"); } catch (error) { console.error(error.message); return 1; }
+    const plan = engine.buildAdapterImplementationPlan(root, { bindingId: option(restArgs, "--binding"), recipeId: option(restArgs, "--recipe"), variables });
+    if (!plan.ok) { if (has(restArgs, "--json")) printJson(plan); else console.error(`无法建立平台适配实现计划：${plan.reason}`); return 1; }
+    if (adapterSubcommand === "plan") {
+      const preview = engine.publicAdapterImplementationPlan(plan);
+      if (has(restArgs, "--json")) printJson(preview);
+      else { console.log(`平台适配实现预览：${preview.action} ${preview.rel}`); console.log(`planHash: ${preview.planHash}`); }
+      return 0;
+    }
+    const result = engine.applyAdapterImplementationPlan(plan, { confirm: has(restArgs, "--confirm"), planHash: option(restArgs, "--plan-hash"), allowProductionWrites: has(restArgs, "--allow-production-writes") });
+    if (has(restArgs, "--json")) printJson(result);
+    else if (result.ok) console.log(`✅ 平台适配实现已新增：${result.rel}；状态=${result.verification.readiness}`);
+    else console.error(`平台适配实现零写入：${result.reason}`);
+    return result.ok ? 0 : 2;
+  }
   const [subcommand = "inspect", contractArg, ...rest] = args;
   const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
   const root = targetRoot(allArgs);
@@ -806,7 +887,7 @@ function commandIntegration(args) {
       };
     }
   } else {
-    console.error(`未知 integration 子命令：${subcommand}（支持 inspect/audit）`);
+    console.error(`未知 integration 子命令：${subcommand}（支持 inspect/audit/adapters/plan/apply）`);
     return 1;
   }
   if (has(allArgs, "--json")) printJson(result);
@@ -821,6 +902,49 @@ function commandIntegration(args) {
     for (const item of result.warnings || []) console.log(`  ${item.code} ${item.path}: ${item.message}`);
   }
   return result.ok ? 0 : 1;
+}
+
+function commandReview(args) {
+  const [subcommand = "run", ...rest] = args;
+  const root = targetRoot(rest);
+  const review = require("../lib/review");
+  if (subcommand === "run") {
+    const ruleValue = option(rest, "--rules");
+    const result = review.runReview(root, {
+      base: option(rest, "--base"), staged: has(rest, "--staged"), module: option(rest, "--module"),
+      quick: has(rest, "--quick"), limit: option(rest, "--limit"),
+      rules: ruleValue ? ruleValue.split(",").map((item) => item.trim()).filter(Boolean) : undefined,
+    });
+    const output = review.publicReview(result);
+    if (has(rest, "--json")) printJson(output);
+    else if (result.reason) console.error(`审查失败：${result.error || result.reason}`);
+    else {
+      console.log(`${result.decision === "pass" ? "✅" : result.decision === "warn" ? "⚠️" : "❌"} review ${result.decision.toUpperCase()}：新增 ${result.findingCount}，阻断 ${result.blockerCount}，基线 ${result.existingCount}，豁免 ${result.suppressedCount}`);
+      for (const item of result.blockers) console.log(`  ${item.severity} ${item.rule} ${item.file}:${item.line} ${item.message}`);
+      for (const item of result.qualityGate.reasons) console.log(`  gate ${item.code}: ${item.message}`);
+    }
+    return result.ok ? 0 : 1;
+  }
+  if (subcommand === "baseline") {
+    const [action = "plan", ...baselineArgs] = rest;
+    if (!["plan", "apply"].includes(action)) { console.error(`未知 review baseline 子命令：${action}`); return 1; }
+    const plan = review.buildReviewBaselinePlan(root, { module: option(baselineArgs, "--module") });
+    if (!plan.ok) { if (has(baselineArgs, "--json")) printJson(plan); else console.error(`无法建立审查基线：${plan.reason}`); return 1; }
+    const gate = require("../lib/quality-gate");
+    if (action === "plan") {
+      const preview = { ...gate.publicBaselinePlan(plan), reviewSummary: plan.reviewSummary };
+      if (has(baselineArgs, "--json")) printJson(preview);
+      else { console.log(`审查基线预览：${preview.metadata.findings} 个 fingerprint → ${preview.rel}`); console.log(`planHash: ${preview.planHash}`); }
+      return 0;
+    }
+    const result = gate.applyBaselinePlan(plan, { confirm: has(baselineArgs, "--confirm"), planHash: option(baselineArgs, "--plan-hash"), allowProductionWrites: has(baselineArgs, "--allow-production-writes") });
+    if (has(baselineArgs, "--json")) printJson(result);
+    else if (result.ok) console.log(`✅ 审查基线已写入：${result.rel}`);
+    else console.error(`审查基线零写入：${result.reason}`);
+    return result.ok ? 0 : 2;
+  }
+  console.error(`未知 review 子命令：${subcommand}（支持 run/baseline）`);
+  return 1;
 }
 
 function commandCommit(args) {
@@ -875,8 +999,9 @@ function help() {
   context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
   impact       字段影响：field（契约/存储/迁移/源码引用，必须指定模块）
   integration  集成治理：inspect / audit（逻辑 ID、重试/死信/重放、重复工具）
+  review       变更审查总控：run / baseline（规则、适配、边界、供应链、覆盖率）
   commit       提交规范：validate / check / doctor
-  fix          安全修复：plan / apply（仅 B3/B5，强制复扫）
+  fix          分级修复：advise / plan / apply / policy（确定性写链）
   config       配置分层（v0.12）：init / migrate / doctor / fix
   troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
   task         任务驱动（v0.13）：只读识别任务类型 → skill+规则子集+安全写链步骤
@@ -931,11 +1056,17 @@ permissions 示例：
   wl-skills-bd impact field --module order --field orderNo --table order_info --limit 50 --json
   wl-skills-bd integration inspect contracts/order.contract.json --json
   wl-skills-bd integration audit --module order --json
+  wl-skills-bd integration adapters --module order --json
+  wl-skills-bd integration plan --binding order-created --recipe consumer --var className=OrderConsumer --json
+  wl-skills-bd review run --base origin/main --module order --json
+  wl-skills-bd review baseline plan --json
   wl-skills-bd commit check --range origin/main..HEAD
 
 fix 示例：
+  wl-skills-bd fix advise --module order --json
   wl-skills-bd fix plan src/main --rules B3,B5 --json
   wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <hash> --confirm
+  wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
 
 配置分层与多环境（v0.12，详见 standards/25）：
 
@@ -1293,6 +1424,7 @@ function main(argv = process.argv.slice(2)) {
   if (command === "context") return commandContext(args);
   if (command === "impact") return commandImpact(args);
   if (command === "integration") return commandIntegration(args);
+  if (command === "review") return commandReview(args);
   if (command === "commit") return commandCommit(args);
   if (command === "fix") return commandFix(args);
   if (command === "config") return commandConfig(args);
