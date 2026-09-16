@@ -8,6 +8,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "⑦ 测试"
+  triggers: "生成单元测试、Mock 测试、Controller 测试、行为契约测试"
 ---
 
 # unit-test-gen

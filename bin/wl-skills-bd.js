@@ -1006,6 +1006,7 @@ function help() {
   troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
   task         任务驱动（v0.13）：只读识别任务类型 → skill+规则子集+安全写链步骤
   test         测试生成（v0.16）：行为契约测试 gen / scenarios（测行为不测镜像）
+  capabilities AI 能力清单（v0.25）：skills 触发词/MCP 工具/CLI 命令/读取顺序
   mcp          启动 stdio MCP Server                      
   version      输出版本
 
@@ -1217,6 +1218,25 @@ function commandTask(args) {
       console.error("task 是只读指挥层，不直接写代码；请按计划使用 codegen plan/apply（planHash + --confirm）或 safe-fix/config 的确认链。");
       return 1;
     }
+    if (has(args, "--json")) {
+      const pipeline = taskRouter.buildTaskPipeline(taskType);
+      printJson({
+        ok: true,
+        taskId: task.id,
+        taskName: task.name,
+        mode: task.mode,
+        requiresContract: task.requiresContract,
+        rules: task.rules,
+        javaGates: task.javaGates,
+        skills: task.skills,
+        standards: task.standards,
+        steps: task.steps,
+        tools: task.tools,
+        pipeline,
+        preflight: taskRouter.buildPreflightEvidence(task.id, targetRoot(args)),
+      });
+      return 0;
+    }
     // 默认：输出任务计划
     console.log(taskRouter.formatTaskPlan(task, { targetFile: option(args, "--target-file") }));
     return 0;
@@ -1232,6 +1252,22 @@ function commandTask(args) {
     console.log(`未识别任务意图："${keyword}"`);
     console.log("可用任务类型：wl-skills-bd task --list");
     return 1;
+  }
+  if (has(args, "--json")) {
+    printJson({
+      ok: true,
+      taskId: detected.task.id,
+      taskName: detected.task.name,
+      mode: detected.task.mode,
+      score: detected.score,
+      candidates: detected.candidates,
+      rules: detected.task.rules,
+      skills: detected.task.skills,
+      standards: detected.task.standards,
+      pipeline: taskRouter.buildTaskPipeline(detected.task.id),
+      preflight: taskRouter.buildPreflightEvidence(detected.task.id, targetRoot(args)),
+    });
+    return 0;
   }
   console.log(taskRouter.formatTaskPlan(detected.task));
   if (detected.candidates.length > 1) {
@@ -1407,6 +1443,34 @@ function commandTroubleshoot(args) {
   return result.ok ? 0 : 1;
 }
 
+function commandCapabilities(args) {
+  const manifest = require("../files/.wl-skills-bd/capabilities.json");
+  const { section } = (() => {
+    const value = option(args, "--section", "");
+    return { section: value || null };
+  })();
+  if (has(args, "--json")) {
+    printJson(section ? { [section]: manifest[section] } : manifest);
+    return 0;
+  }
+  const bootstrap = manifest.agentBootstrap || {};
+  console.log(`wl-skills-bd 能力清单（schemaVersion ${manifest.schemaVersion}）`);
+  console.log(`规则 ${manifest.backendRules.displayRange}（${manifest.backendRules.count} 条）｜规范 ${manifest.standards.count} 条｜Skill ${manifest.skills.count} 个（落地 ${manifest.skills.summary.implemented} / 部分 ${manifest.skills.summary.partial} / 骨架 ${manifest.skills.summary.skeleton}）｜MCP 工具 ${manifest.mcpTools.count} 个｜CLI 命令 ${manifest.cliCommands.count} 个`);
+  if (bootstrap.readingOrder) {
+    console.log("\nAI 推荐读取顺序：");
+    for (const [index, item] of bootstrap.readingOrder.entries()) console.log(`  ${index + 1}. ${item}`);
+  }
+  console.log("\nSkill 触发词（完整清单：wl-skills-bd capabilities --json）：");
+  for (const skill of manifest.skills.items) {
+    console.log(`  ${skill.name.padEnd(28)} [${skill.status}] ${skill.installedPath}`);
+    if (skill.triggers && skill.triggers.length > 0) console.log(`  ${"".padEnd(28)} 触发：${skill.triggers.join("、")}`);
+  }
+  console.log(`\nMCP 工具：${manifest.mcpTools.items.map((tool) => tool.name).join(", ")}`);
+  console.log(`CLI 命令：${manifest.cliCommands.items.map((cmd) => cmd.name).join(", ")}`);
+  console.log(`\n机器清单：${bootstrap.manifest || ".wl-skills-bd/capabilities.json"}（安装后路径为项目相对，可直接按图索骥）`);
+  return 0;
+}
+
 function main(argv = process.argv.slice(2)) {
   const [command = "help", ...args] = argv;
   if (["help", "--help", "-h"].includes(command)) { help(); return 0; }
@@ -1429,6 +1493,7 @@ function main(argv = process.argv.slice(2)) {
   if (command === "fix") return commandFix(args);
   if (command === "config") return commandConfig(args);
   if (command === "troubleshoot") return commandTroubleshoot(args);
+  if (command === "capabilities") return commandCapabilities(args);
   if (command === "task") return commandTask(args);
   if (command === "test") return commandTest(args);
   if (command === "mcp") { require("../mcp/server"); return 0; }

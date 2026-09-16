@@ -109,6 +109,10 @@ Review 把事实、策略、动作分层：Git/源码/POM/JaCoCo 是事实，`qu
 
 单点需求先由 `task-router` 缩小规则和执行面，再以契约增量进入既有 codegen。禁止额外维护正则/字符串拼接式 Java patch 内核；否则会绕过 planHash、确认、保护区、幂等、备份和失败整批回滚。
 
+### AI 入口单清单（v0.25）
+
+`capabilities.json`（schemaVersion 2）是 AI 接入的单一机器 manifest：Skill 触发词/状态/风险/安装路径（`installedPath`，目标项目相对）、MCP 工具（含写入分级）、CLI 命令与读取顺序，全部由 `sync-capabilities` 从 SKILL.md/registry/bin 生成，入口文档（AGENTS/CLAUDE/copilot-instructions/_registry）只做指针。`verify-version` 校验 manifest 与 registry/bin 分发一致，`verify-doc-sync` 扫描文档工具计数与编号断档，`lint-skills` 强制 triggers 与 standards 引用可解析。`task` 输出 Pre-flight 证据（必读 standards/skill 文件 sha256 + `preflightHash`），把"宣称已读"变成可对账事实。
+
 ### 执行节点粗细固定在可验证边界
 
 标准链使用 discover/context/validate/plan/approval/apply/verify。节点不能细到每个正则或文件写入，避免调度和 token 开销；也不能粗到一个节点同时计划、确认和写入。只读节点允许有界重试/超时；写节点必须显式确认且禁止自动重试。节点输入/输出契约、状态、耗时和 hash 是可回放证据。

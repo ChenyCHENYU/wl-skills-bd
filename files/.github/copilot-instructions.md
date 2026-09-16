@@ -1,6 +1,6 @@
 # Copilot Instructions — wl-skills-bd 后端主入口
 
-本文件是后端业务工程的统一 AI 入口。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 30 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
+本文件是后端业务工程的统一 AI 入口。首次接入先读 `.wl-skills-bd/capabilities.json`（机器能力清单：Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序），或调用 `wls_be_capabilities` / `wl-skills-bd capabilities --json`。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 30 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
 
 ## 技术基线
 
@@ -65,10 +65,11 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 精准 `--rules` 会在文件发现前缩小执行面；必须保留 `execution/coverage` 证据。quick/staged/changed 是 partial，最终交付执行 full `review run`，汇总新增/历史问题、适配、供应链和覆盖率。`task` 输出标准 Pipeline 与 pipelineHash；写任务必须经过 approval/apply 双确认。
 
-## MCP（17 个工具）
+## MCP（18 个工具）
 
 | 工具 | 作用 |
 |---|---|
+| `wls_be_capabilities` | AI 首次接入的单一能力清单（Skill 触发词/路径、规则范围、CLI 命令、读取顺序） |
 | `wls_be_validate` | B1~B31 只读扫描 |
 | `wls_be_doctor` | 环境与门禁诊断 |
 | `wls_be_codegen` | validate/plan/受控 apply |
@@ -81,7 +82,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 | `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |
 | `wls_be_config` | 配置 doctor/init/migrate/fix；写入需确认 |
 | `wls_be_troubleshoot` | 常见后端故障只读诊断 |
-| `wls_be_task` | 只读任务路由；不得绕过 codegen/safe-fix/config 写链 |
+| `wls_be_task` | 只读任务路由 + Pre-flight 证据（必读文件 sha256）；不得绕过 codegen/safe-fix/config 写链 |
 | `wls_be_catalog` | 模块目录 plan/apply/check/show、分区分页与 integration-audit；默认只扫描当前模块 |
 | `wls_be_context` | 当前模块 + 一跳快照的有界上下文；不扫关联源码 |
 | `wls_be_commit` | 提交消息/range 校验与 Hook doctor |

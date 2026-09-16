@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "wl-skills-bd-capabilities",
   "standards": {
     "count": 30,
@@ -73,7 +73,8 @@
       "B31"
     ],
     "latest": "B31",
-    "displayRange": "B1~B31"
+    "displayRange": "B1~B31",
+    "catalog": ".wl-skills-bd/rules/catalog.json"
   },
   "skills": {
     "count": 13,
@@ -81,93 +82,203 @@
       {
         "name": "api-design-be",
         "path": "files/.github/skills/core/api-design-be",
+        "installedPath": ".github/skills/core/api-design-be",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "② 设计阶段"
+        "stage": "② 设计阶段",
+        "triggers": [
+          "设计接口",
+          "评审 api.md",
+          "接口契约审查",
+          "逻辑 ID",
+          "集成契约",
+          "接口对齐"
+        ],
+        "risk": null
       },
       {
         "name": "business-doc-extract-be",
         "path": "files/.github/skills/core/business-doc-extract-be",
+        "installedPath": ".github/skills/core/business-doc-extract-be",
         "status": "skeleton",
         "statusLabel": "🟡 骨架",
-        "stage": "②预 业务理解"
+        "stage": "②预 业务理解",
+        "triggers": [
+          "抽取业务文档",
+          "阅读旧代码生成业务说明",
+          "业务理解"
+        ],
+        "risk": null
       },
       {
         "name": "code-fix-be",
         "path": "files/.github/skills/ops/code-fix-be",
+        "installedPath": ".github/skills/ops/code-fix-be",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⑨ 修复"
+        "stage": "⑨ 修复",
+        "triggers": [
+          "修复规范违规",
+          "按审计报告改代码",
+          "自动修复"
+        ],
+        "risk": "🟡 中风险（受控写代码）"
       },
       {
         "name": "convention-audit-be",
         "path": "files/.github/skills/core/convention-audit-be",
+        "installedPath": ".github/skills/core/convention-audit-be",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⑧ 审计"
+        "stage": "⑧ 审计",
+        "triggers": [
+          "后端规范审计",
+          "代码体检",
+          "全量扫描",
+          "质量检查"
+        ],
+        "risk": null
       },
       {
         "name": "data-safety",
         "path": "files/.github/skills/ops/data-safety",
+        "installedPath": ".github/skills/ops/data-safety",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "ops 横切"
+        "stage": "ops 横切",
+        "triggers": [
+          "Redis",
+          "缓存",
+          "分布式锁",
+          "批量删除",
+          "物理删",
+          "熔断",
+          "限流",
+          "生产只读"
+        ],
+        "risk": "🟡 中风险（写代码需人工确认语义）"
       },
       {
         "name": "db-migration",
         "path": "files/.github/skills/data/db-migration",
+        "installedPath": ".github/skills/data/db-migration",
         "status": "partial",
         "statusLabel": "🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）",
-        "stage": "⑥ 数据库"
+        "stage": "⑥ 数据库",
+        "triggers": [
+          "建表",
+          "DDL",
+          "ALTER TABLE",
+          "字段新增",
+          "字段影响",
+          "索引"
+        ],
+        "risk": "🔴 高风险（必经人工确认）"
       },
       {
         "name": "entity-codegen",
         "path": "files/.github/skills/core/entity-codegen",
+        "installedPath": ".github/skills/core/entity-codegen",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "③ 模型生成"
+        "stage": "③ 模型生成",
+        "triggers": [
+          "生成实体",
+          "生成 Entity",
+          "生成 DTO",
+          "生成 VO"
+        ],
+        "risk": null
       },
       {
         "name": "integration-adapter-be",
         "path": "files/.github/skills/core/integration-adapter-be",
+        "installedPath": ".github/skills/core/integration-adapter-be",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⑦ 集成适配"
+        "stage": "⑦ 集成适配",
+        "triggers": [
+          "MQ 对接",
+          "平台消息封装适配",
+          "Producer Consumer 接线",
+          "集成质量门"
+        ],
+        "risk": "🟡 中风险（项目模板只新增文件）"
       },
       {
         "name": "mapper-xml-gen",
         "path": "files/.github/skills/core/mapper-xml-gen",
+        "installedPath": ".github/skills/core/mapper-xml-gen",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⑤ 数据访问"
+        "stage": "⑤ 数据访问",
+        "triggers": [
+          "生成 Mapper",
+          "生成 XML",
+          "生成 SQL"
+        ],
+        "risk": null
       },
       {
         "name": "project-context-governance",
         "path": "files/.github/skills/core/project-context-governance",
+        "installedPath": ".github/skills/core/project-context-governance",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⓪ 生成前治理"
+        "stage": "⓪ 生成前治理",
+        "triggers": [
+          "模块上下文",
+          "查关联服务",
+          "生成前去重",
+          "避免全仓扫描",
+          "集成工具审计"
+        ],
+        "risk": null
       },
       {
         "name": "service-codegen",
         "path": "files/.github/skills/core/service-codegen",
+        "installedPath": ".github/skills/core/service-codegen",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "④ 业务实现"
+        "stage": "④ 业务实现",
+        "triggers": [
+          "生成 Service",
+          "全套 CRUD",
+          "业务命令",
+          "状态机"
+        ],
+        "risk": null
       },
       {
         "name": "standard-env-config-be",
         "path": "files/.github/skills/ops/standard-env-config-be",
+        "installedPath": ".github/skills/ops/standard-env-config-be",
         "status": "implemented",
         "statusLabel": "✅ 落地",
-        "stage": "ops（横切）"
+        "stage": "ops（横切）",
+        "triggers": [
+          "后端环境标准化",
+          "切客户",
+          "本地启动配不起来",
+          "K8s 部署清单对齐"
+        ],
+        "risk": "🟡 中风险"
       },
       {
         "name": "unit-test-gen",
         "path": "files/.github/skills/test/unit-test-gen",
+        "installedPath": ".github/skills/test/unit-test-gen",
         "status": "implemented",
         "statusLabel": "✅ 已落地",
-        "stage": "⑦ 测试"
+        "stage": "⑦ 测试",
+        "triggers": [
+          "生成单元测试",
+          "Mock 测试",
+          "Controller 测试",
+          "行为契约测试"
+        ],
+        "risk": null
       }
     ],
     "summary": {
@@ -176,5 +287,240 @@
       "skeleton": 1,
       "unknown": 0
     }
+  },
+  "mcpTools": {
+    "count": 18,
+    "items": [
+      {
+        "name": "wls_be_capabilities",
+        "description": "AI 首次接入的单一能力清单（只读）：13 个 Skill（触发词/状态/安装路径）、B1~B31 规则范围、30 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_validate",
+        "description": "只读扫描后端工程 B1~B31；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_review",
+        "description": "变更级审查总控与平台适配闭环：统一 B 规则、项目质量断言、MQ/集成适配、Maven 供应链、JaCoCo 全量/变更行覆盖率及分级修复。平台语义只来自项目描述符；apply 均要求 planHash + confirmApply。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_doctor",
+        "description": "只读检查 JDK/Maven、兼容性 Profile、质量门配置、ArchUnit 与租户接入证据。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_codegen",
+        "description": "契约驱动的 validate/plan/apply。apply 必须携带预览 planHash 与 confirmApply=true；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_contract",
+        "description": "契约种子、分类/兼容迁移、协作差异、集成完备性与字段影响。inspect/impact/integration-inspect 只读；migrate 必须 planHash + confirmApply。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_safe_fix",
+        "description": "仅自动修复有确定性前置条件的 B3/B5。默认预览；apply 必须携带 planHash 与 confirmApply=true，并执行备份、写前重算、失败回滚、强制复扫和 FIX_BE 报告。其他规则降级人工。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_standards",
+        "description": "查询 30 条后端规范。无参返回索引；id=01~30 返回指定全文。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_templates",
+        "description": "查询 16 个确定性代码/DDL/测试模板。无参返回 README；name 必须来自固定白名单。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_db_preview",
+        "description": "只读预览契约生成的 DDL（CREATE 或 ALTER）、Expand-Contract 阶段标注与自定义索引。不写盘。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_export_permissions",
+        "description": "从后端契约导出权限码为 wl-skills-kit 的 SYS_PERMISSION_INFO.md 片段。默认预览；apply 必须传 planHash + confirmApply=true，写前重算并可回滚。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_config",
+        "description": "配置分层与多环境管理（v0.12）：doctor 体检 L0~L8、init 生成骨架、migrate 客户迁移、fix 明文密码修复。详见 standards/25。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_troubleshoot",
+        "description": "故障排查导引（v0.12）：根据错误关键字匹配诊断树，输出可能原因与排查步骤。覆盖 DB/Redis/Nacos/K8s/端口/Bean/Profile/Flyway/Feign/MQ 常见错误。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_task",
+        "description": "只读任务路由（v0.13）：识别新服务/加接口/落库/业务命令/修复/重构/审计/配置，输出 skill、规则子集和统一安全写链；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_catalog",
+        "description": "模块目录治理与重复集成工具审计。默认摘要；show 可按 section/cursor 有界读取。扫描默认只限当前模块；apply 需要同一 planHash 与确认。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "gated"
+      },
+      {
+        "name": "wls_be_context",
+        "description": "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件/字节/token 预算和 contextHash。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_commit",
+        "description": "按 catalog 配置校验 type(scope): 功能点-具体内容。validate 校验单条消息，check 校验 Git range，doctor 检查版本受控 Hook 接入。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      },
+      {
+        "name": "wls_be_test",
+        "description": "行为契约测试生成：从 customOperations 生成正常路径、前置拒绝、状态转移及 batch 全成全败测试。gen 生成可执行 ServiceTest；scenarios 列出场景。禁止 TODO、空断言和部分成功语义。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "write": "readonly"
+      }
+    ]
+  },
+  "cliCommands": {
+    "count": 24,
+    "items": [
+      {
+        "name": "init",
+        "summary": "安装受管资产；冲突零写入，--force 备份后覆盖",
+        "write": "gated"
+      },
+      {
+        "name": "update",
+        "summary": "按 manifest 增量更新并保护本地修改",
+        "write": "gated"
+      },
+      {
+        "name": "diff",
+        "summary": "查看包内容、manifest 与当前项目差异",
+        "write": "readonly"
+      },
+      {
+        "name": "clean",
+        "summary": "只清理未被修改的受管文件",
+        "write": "gated"
+      },
+      {
+        "name": "check",
+        "summary": "检查 manifest 和安装漂移",
+        "write": "readonly"
+      },
+      {
+        "name": "validate",
+        "summary": "执行 B 规则快速审计并输出端点与数据库事实源差异",
+        "write": "readonly"
+      },
+      {
+        "name": "doctor",
+        "summary": "环境/JDK/质量门/租户/契约覆盖/配置体检",
+        "write": "readonly"
+      },
+      {
+        "name": "codegen",
+        "summary": "契约驱动生成 validate/plan/apply（planHash+确认）",
+        "write": "gated"
+      },
+      {
+        "name": "contract",
+        "summary": "契约治理 seed/inspect/migrate/show/diff",
+        "write": "gated"
+      },
+      {
+        "name": "db",
+        "summary": "数据库治理 preview/drift/executed/ledger（DDL 只生成不执行）",
+        "write": "gated"
+      },
+      {
+        "name": "permissions",
+        "summary": "权限码导出 export（kit 片段）",
+        "write": "gated"
+      },
+      {
+        "name": "catalog",
+        "summary": "模块目录 plan/apply/show/check（默认仅当前模块）",
+        "write": "gated"
+      },
+      {
+        "name": "context",
+        "summary": "精准上下文 plan（当前模块 + 一跳快照）",
+        "write": "readonly"
+      },
+      {
+        "name": "impact",
+        "summary": "字段影响 field（契约/存储/迁移/源码证据）",
+        "write": "readonly"
+      },
+      {
+        "name": "integration",
+        "summary": "集成治理 inspect/audit/adapters/plan/apply",
+        "write": "gated"
+      },
+      {
+        "name": "review",
+        "summary": "变更审查总控 run/baseline",
+        "write": "gated"
+      },
+      {
+        "name": "commit",
+        "summary": "提交规范 validate/check/doctor",
+        "write": "readonly"
+      },
+      {
+        "name": "fix",
+        "summary": "分级修复 advise/plan/apply/policy",
+        "write": "gated"
+      },
+      {
+        "name": "config",
+        "summary": "配置分层 init/migrate/doctor/fix",
+        "write": "gated"
+      },
+      {
+        "name": "troubleshoot",
+        "summary": "错误关键字 → 诊断步骤",
+        "write": "readonly"
+      },
+      {
+        "name": "task",
+        "summary": "只读任务路由 → skill+规则子集+安全写链",
+        "write": "readonly"
+      },
+      {
+        "name": "test",
+        "summary": "行为契约测试 gen/scenarios",
+        "write": "gated"
+      },
+      {
+        "name": "capabilities",
+        "summary": "输出 AI 能力清单（skills/触发词/MCP 工具/CLI 命令）",
+        "write": "readonly"
+      },
+      {
+        "name": "mcp",
+        "summary": "启动 stdio MCP Server",
+        "write": "launcher"
+      }
+    ]
+  },
+  "agentBootstrap": {
+    "manifest": ".wl-skills-bd/capabilities.json",
+    "firstCall": "wl-skills-bd capabilities --json 或 MCP wls_be_capabilities",
+    "readingOrder": [
+      ".wl-skills-bd/capabilities.json（机器能力清单：skills 触发词/状态/路径、MCP 工具、CLI 命令）",
+      ".github/copilot-instructions.md（统一 AI 入口与技术基线）",
+      ".github/skills/_registry.md（触发词 → Skill 路由）",
+      ".github/standards/index.md（任务类型 → 必读规范，懒加载）"
+    ],
+    "lazyLoadRules": [
+      "不要一次性读取全部 standards；按任务类型只读必需条目",
+      "任务路由先调 wls_be_task 或 wl-skills-bd task，再按输出加载 skill/规则子集",
+      "大结果使用 response.cursor 续取，不重复注入上下文"
+    ]
   }
 }

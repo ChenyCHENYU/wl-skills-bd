@@ -168,6 +168,8 @@ wl-skills-bd troubleshoot --list                          # 列出所有诊断�
 
 ## 错误码速查（B13~B25）
 
+> severity/fix 以 `.wl-skills-bd/rules/catalog.json` 为唯一事实源；本表是修复导读，与 SKILL.md 表格不构成第二事实源。
+
 | 规则 | 错误示例 | 修复 |
 |---|---|---|
 | B13 | `Redis set() 缺少 TTL 参数` | 加 `30, TimeUnit.MINUTES` |

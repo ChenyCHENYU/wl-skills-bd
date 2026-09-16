@@ -7,6 +7,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "⑧ 审计"
+  triggers: "后端规范审计、代码体检、全量扫描、质量检查"
 ---
 
 # convention-audit-be

@@ -9,6 +9,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "④ 业务实现"
+  triggers: "生成 Service、全套 CRUD、业务命令、状态机"
 ---
 
 # service-codegen

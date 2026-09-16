@@ -7,6 +7,7 @@ metadata:
   status: "✅ 落地"
   stage: "ops（横切）"
   risk: "🟡 中风险"
+  triggers: "后端环境标准化、切客户、本地启动配不起来、K8s 部署清单对齐"
 ---
 
 # standard-env-config-be

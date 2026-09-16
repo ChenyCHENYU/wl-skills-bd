@@ -1,63 +1,43 @@
 # Agent Instructions — wl-skills-bd
 
-完整规则见 `.github/copilot-instructions.md`；场景路由见 `.github/skills/_registry.md`，规范门控见 `.github/standards/index.md`。
+## 唯一入口（先读这里）
 
-## 强制约束
+1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B31 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
+2. `.github/skills/_registry.md`：触发词 → Skill 路由；`.github/standards/index.md`：任务类型 → 必读规范（懒加载，不一次读全 30 条）。
+3. 任务路由优先 `wl-skills-bd task "<描述>"`（只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。宣称"已读取"必须能与该清单对上。
 
-1. Java 8 / Spring Boot 2 / jh4j-cloud 3.1 / MyBatis-Plus；新代码使用 OpenAPI 3。
-2. Controller → Service → Mapper，禁止 Controller 直调 Mapper。
-3. 租户来自 AuthUtil；SQL 必须显式 COMPANY_ID，除非存在 doctor 可验证的统一拦截器证据。
-4. 软删列和值以“受管 profile + 未受管 profile.local”合并结果为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`。Entity、Service、Mapper、DDL、rules.local 与 MyBatis-Plus 运行值必须一致。受管更新/软删使用 `ID + COMPANY_ID + 有效标记 + REVISION` 显式原子 SQL，详情返回 revision。
-5. DDL、数据写入、权限发布和破坏性 API 变更必须展示差异并等待人工确认；MCP 不执行数据库写入。
-6. codegen 使用机器契约，先 plan 后 apply；apply 必须携带相同 planHash 与显式确认。
-7. 涉及表结构时先以 `docs/db-spec` 对账 standards/29：文档表同名复用，字段全属性与顺序一致，扩展有依据且末尾追加；再生成契约/Flyway/代码。
-8. 最终验证执行 B1~B31 与 `mvn verify -Pwl-quality`（J1~J5/J8）；J6/J7 不得冒充默认硬门。新增框架 SPI Bean 必须有最小 Spring 容器装配测试，并按接口类型解析唯一 Bean、验证必要委托；Controller 端点清单必须与契约/前端调用对账。
-8. 生产契约必须满足 standards/28：SLO/RTO/RPO、安全、数据治理、一致性、韧性与六类证据缺一不可；外部评审不得由工具伪造。
-8. 修复器只自动处理安全白名单 B3/B5，写后强制复扫；不得猜权限、SQL、租户、异常或业务文档。
-9. 每个生成/修复步骤后运行对应验证；error 未清零不得宣称完成。
-10. **Redis 操作（v0.10）**：必须带 TTL；分布式锁用 Redisson RLock（长任务 watchdog 自动续期）；禁用 KEYS \*/FLUSHDB/FLUSHALL；禁用 JdkSerializationRedisSerializer。
-11. **敏感写（v0.10）**：业务代码禁物理删除/TRUNCATE/DROP；Mapper XML 的 update/delete 必带 WHERE；saveBatch ≤ 1000；批量更新大表按主键游标分批。
-12. **受保护环境护栏（v0.14）**：pre/prod/production 的 codegen/safe-fix/config/permissions apply 默认阻断；所有工程写入必须 preview→planHash→confirm→原子写→复验→可回滚。
-13. **稳定性（v0.11）**：事务内禁发 MQ/HTTP；HttpUtil/RestTemplate 必须超时；新代码用 OpenAPI 3（Swagger 2 存量允许保留，同类混用禁止）；Service 注入依赖 ≤ 10。
-14. **多环境（v0.11/v0.14）**：5 环境矩阵（dev/sit/uat/pre/prod）；业务中心×端口×数据库集群（cx/non_cx/pt）映射固化。分支与合并链由团队单独管控，bd 不介入。
-15. **独立协同（v0.12）**：bd 不依赖 design/kit；所有包遵循 `jh4j3-openapi3@1.0` 与 `wl-api-contract`。发布前双方 completion confirmed，执行 `contract diff --strict`。
-16. **业务保护区（v0.12）**：export/relation/非确定性命令只在 `<wl-custom>` 区补实现和测试；不得删除或嵌套标记，保护区外漂移按冲突处理。
-17. **任务路由（v0.13）**：`task` 只读；接口/字段/业务命令增量必须更新契约并走 codegen planHash/confirm/rollback，禁止字符串拼接式旁路 patch。
-18. **数据库变更（v0.14）**：ALTER 必须分 expand/contract；contract drop 需 approvalRef；Flyway 版本不可变，校验 SQL 只允许无副作用 SELECT，工具永不执行数据库写入。
-19. **模块上下文（v0.15）**：启用 Catalog 后，默认只扫描当前模块；关联模块只读一跳快照和关系/关键词命中的契约，不扫描其源码目录。当前目录过期、全局身份冲突或 codegen 上下文哈希漂移时必须阻断。
-20. **精益执行（v0.21）**：精准规则必须在扫描前短路，并报告 `execution/coverage`；quick/staged/changed 是 partial，不能替代最终 full。Source Index 缓存损坏或失效时必须真实重扫。
-21. **MCP Token（v0.21/v0.24）**：17 个工具默认 summary 与有界 response 预算；需要大正文时使用 cursor 续取，不反复重跑全量 handler。cursor 不授予写权限。
-22. **节点契约（v0.21）**：任务按 discover/context/validate/plan/approval/apply/verify 编排；有副作用节点禁止自动重试和不可取消超时，必须显式确认并校验 pipelineHash。
-23. **契约分流（v0.23）**：先用 `contract inspect` 区分 crud/schema-mirror/integration-projection；仅 crud 可 codegen。存量迁移必须走 planHash/确认/备份链，未知所有权不得猜。
-24. **字段与集成影响（v0.23）**：字段变更先跑限定模块的 `impact field`；跨系统逻辑 ID/投递必须固定算法版本、规范化、载荷版本、排序、重试/确认/死信/重放与错误码引用。Catalog API 只采用源码观测事实。
-25. **变更门禁与平台适配（v0.24）**：最终交付运行 `review run`，新增问题、历史基线、有效/过期豁免和 partial coverage 必须分开报告。MQ/集成适配只读取项目 `integration-adapters.json` 中的平台真实依赖、API、配置、测试与运行证据；未配置时不得猜 SDK、不得自动激活规则。项目断言和供应链门同样必须显式配置。
-26. **受控实现与修复（v0.24）**：平台 recipe 只能创建项目登记的新文件，禁止覆盖现有封装；项目断言修复仅允许 evidenceRefs 内单次字面匹配。所有 apply 均需当前 planHash、显式确认、受保护环境检查、原子写、复验和失败回滚；权限、租户、SQL、MQ 语义与业务算法保持人工卡口。
+## 不变式（任何任务模式都不得违反）
+
+1. 分层与租户：Controller → 直接 Service → Mapper；租户来自 AuthUtil，SQL 显式 COMPANY_ID（除非有 doctor 可验证的统一拦截器证据）；`companyId` 不得来自请求。
+2. 软删事实源：受管 profile + 未受管 `profile.local` 合并为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`；受管更新用 `ID + COMPANY_ID + 有效标记 + REVISION` 原子 SQL，详情返回 revision。
+3. 数据库事实源：涉及表结构先对账 `docs/db-spec` 与 standards/29——文档表同名复用、字段全属性/顺序一致、扩展有依据且末尾追加；ALTER 分 expand/contract；Flyway 版本不可变；DDL 只生成，永不由工具执行。
+4. 契约先行：codegen 只接受机器契约，先 plan 后 apply；apply 必须携带同一 planHash 与显式确认；增量接口/字段/业务命令必须先更新 `wl-contract.json`，禁止字符串拼接旁路 patch。
+5. 统一写链：所有工程写入必须 preview → planHash → confirm → 原子写 → 复验 → 可回滚；pre/prod/production 默认零写入，显式授权后仍保留确认链；MCP 不执行数据库写入。
+6. 修复白名单：自动修复仅限 B3/B5 严格前置条件与项目批准的单次精确替换（evidenceRefs 内、字面 before 恰好命中一次）；写后强制复扫；权限、租户、SQL、MQ 语义与业务算法保持人工卡口。
+7. 验证收口：每步之后跑对应验证，error 未清零不得宣称完成；最终交付执行完整 `review run`（quick/staged/changed 是 partial，不能冒充 full）与 `mvn verify -Pwl-quality`（J1~J5/J8；J6/J7 不冒充硬门）。
+8. 模块上下文：启用 Catalog 后默认只扫当前模块；关联模块只读一跳快照；目录过期、身份冲突或上下文哈希漂移时阻断，不偷偷回退全仓扫描。
+9. 数据安全与稳定性底线：Redis 必带 TTL、锁用 Redisson、禁 KEYS \*/FLUSHDB/物理删/TRUNCATE、全表写必须有 WHERE、saveBatch ≤ 1000、事务内禁发 MQ/HTTP、外部调用必须超时、新代码统一 OpenAPI 3。详见 standards 20/21/22 与 `ops/data-safety`。
+10. Token 纪律：MCP 默认 summary 与有界 response 预算，超预算用 cursor 续取，不重复注入上下文；cursor 不授予写权限。
+
+场景级约束（生产保障、契约分流、集成治理、平台适配、受控修复等）以 standards/26~30 与对应 Skill 为准，不在本文件重复展开。
 
 ## 快速命令
 
 ```bash
-wl-skills-bd doctor                        # 含环境体检（bootstrap/profile/dbcluster）
+wl-skills-bd capabilities --json          # AI 能力清单（首次接入）
+wl-skills-bd task "<任务描述>" --json      # 任务路由 + Pre-flight 证据
+wl-skills-bd doctor                       # 含环境体检（bootstrap/profile/dbcluster）
 wl-skills-bd catalog check --module <module>
-wl-skills-bd catalog show --module <module> --section apis --limit 50
 wl-skills-bd context plan --module <module> --task "<任务>" --json
-wl-skills-bd contract inspect <contract.json> --json
-wl-skills-bd impact field --module <module> --field <field> --table <table> --json
-wl-skills-bd integration inspect <contract.json> --json
-wl-skills-bd integration audit --module <module> --json
-wl-skills-bd integration adapters --module <module> --json
-wl-skills-bd review run --base origin/main --module <module> --json
-wl-skills-bd review run --module <module> --json                    # 交付前 full 门禁
-wl-skills-bd review baseline plan --json
-wl-skills-bd fix advise --module <module> --json
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
 wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可加 --require-complete
-wl-skills-bd contract diff wl-contract.json --frontend <api.md> --openapi <openapi.json> --permissions <permissions.json> --strict
-wl-skills-bd db preview wl-contract.json
-wl-skills-bd permissions export wl-contract.json
-wl-skills-bd validate . --strict           # B1~B31（含真实端点与数据库事实源）
-wl-skills-bd test gen wl-contract.json    # 行为契约测试（测行为不测镜像）
-wl-skills-bd test scenarios wl-contract.json
+wl-skills-bd contract inspect <contract.json> --json   # 先分流：仅 crud 可 codegen
+wl-skills-bd impact field --module <module> --field <field> --table <table> --json
+wl-skills-bd review run --module <module> --json        # 交付前 full 门禁
+wl-skills-bd fix advise --module <module> --json
+wl-skills-bd validate . --strict          # B1~B31（含真实端点与数据库事实源）
+wl-skills-bd test gen wl-contract.json    # 行为契约测试
 ```
 
-MCP 提供 17 个等价工具；`wls_be_review` 统一承载变更门禁、平台适配、项目断言、供应链与修复分级。写工具的 confirm 只能在用户评审预览后传递。pre/prod/production 额外需要 `allowProductionWrites=true`。
+MCP 提供 18 个等价工具（`wls_be_capabilities` 起步）；`wls_be_review` 统一承载变更门禁、平台适配、项目断言、供应链与修复分级。写工具的 confirm 只能在用户评审预览后传递；pre/prod/production 额外需要 `allowProductionWrites=true`。

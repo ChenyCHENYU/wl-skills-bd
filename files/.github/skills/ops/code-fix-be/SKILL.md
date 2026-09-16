@@ -8,6 +8,7 @@ metadata:
   status: "✅ 已落地"
   stage: "⑨ 修复"
   risk: "🟡 中风险（受控写代码）"
+  triggers: "修复规范违规、按审计报告改代码、自动修复"
 ---
 
 # code-fix-be

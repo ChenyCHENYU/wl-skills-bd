@@ -6,6 +6,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "③ 模型生成"
+  triggers: "生成实体、生成 Entity、生成 DTO、生成 VO"
 ---
 
 # entity-codegen

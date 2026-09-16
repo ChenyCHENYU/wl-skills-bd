@@ -5,6 +5,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "⓪ 生成前治理"
+  triggers: "模块上下文、查关联服务、生成前去重、避免全仓扫描、集成工具审计"
 ---
 
 # project-context-governance

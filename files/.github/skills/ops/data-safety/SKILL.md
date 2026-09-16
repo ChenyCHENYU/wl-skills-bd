@@ -8,6 +8,7 @@ metadata:
   status: "✅ 已落地"
   stage: "ops 横切"
   risk: "🟡 中风险（写代码需人工确认语义）"
+  triggers: "Redis、缓存、分布式锁、批量删除、物理删、熔断、限流、生产只读"
 ---
 
 # data-safety
@@ -27,6 +28,8 @@ metadata:
 ```
 
 ## 覆盖范围（机器兜底）
+
+> severity/fix 以 `.wl-skills-bd/rules/catalog.json` 为唯一事实源；下表是导读，规则变更先改 catalog 再同步此处。
 
 | 规则 | 标准 | 检测 | severity |
 |---|---|---|---|

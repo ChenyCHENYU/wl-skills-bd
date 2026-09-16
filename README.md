@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.24.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.25.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -39,7 +39,13 @@
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
-| AI 接入 | 17 个 MCP 工具复用同一核心；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+| AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.25.0 AI 精准接入：能力清单、Pre-flight 证据与入口防漂移
+
+- **单一机器能力清单**：`capabilities.json` 升级为 schemaVersion 2 的 agent manifest——13 个 Skill 携带触发词、状态、风险与目标项目安装路径（修复安装后 `files/` 前缀死链），并索引 MCP 工具、CLI 命令和推荐读取顺序；`wl-skills-bd capabilities [--json]` 与 MCP `wls_be_capabilities` 一步返回。AGENTS.md 收敛为"清单 + 10 条不变式 + 指针"，MCP `initialize.instructions` 写明五步接入约定。
+- **Pre-flight 证据化**：`task`（CLI `--json` / MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`，"宣称已读"可被机器对账，不再只是自我报告。
+- **入口防漂移门禁**：`verify-version` 校验 capabilities 的 mcpTools/cliCommands 与 registry、bin 分发严格一致；`verify-doc-sync` 扫描文档中 "N 个 MCP" 数量漂移与 AGENTS.md 有序列表编号断档；`lint-skills` 强制每个 Skill 声明 `metadata.triggers` 且 standards 引用断链零容忍。
 
 ### v0.24.0 变更审查、平台适配与精准修复
 
@@ -120,6 +126,7 @@
 # 要求 Node.js >= 22
 npx @agile-team/wl-skills-bd init --dry-run
 npx @agile-team/wl-skills-bd init
+npx @agile-team/wl-skills-bd capabilities    # AI 单一能力清单（skills 触发词/工具/命令）
 npx @agile-team/wl-skills-bd doctor
 npx @agile-team/wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
 ```
@@ -365,6 +372,7 @@ mvn verify -Pwl-quality
 
 | 工具 | 写入 | 作用 |
 |---|:---:|---|
+| `wls_be_capabilities` | 否 | AI 首次接入的单一能力清单：Skill 触发词/状态/安装路径、规则范围、MCP 工具、CLI 命令与读取顺序 |
 | `wls_be_validate` | 否 | B1~B31 扫描；结果含 Controller `endpoints[]` 清单 |
 | `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
@@ -377,13 +385,15 @@ mvn verify -Pwl-quality
 | `wls_be_export_permissions` | 条件 | 导出权限码为 kit SYS_PERMISSION_INFO.md 片段 |
 | `wls_be_config` | 条件 | 配置分层 init/migrate/doctor/fix；写操作保留计划与确认门 |
 | `wls_be_troubleshoot` | 否 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
-| `wls_be_task` | 否 | 只读任务路由：自然语言/显式类型 → Skill、规则子集与统一安全写链 |
+| `wls_be_task` | 否 | 只读任务路由：自然语言/显式类型 → Skill、规则子集、统一安全写链与 Pre-flight 证据（必读文件 sha256 清单） |
 | `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show + integration-audit；show 支持 section/cursor，默认禁止隐式全量扫描 |
 | `wls_be_context` | 否 | 当前模块 + 一跳快照的文件/字节/token 有界上下文选择，不扫描关联源码 |
 | `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
 | `wls_be_test` | 否 | 行为契约测试生成（gen/scenarios），测行为不测镜像 |
 
 写工具默认停在 plan/preview；apply 必须显式确认。Cursor、VS Code、Kiro、Copilot、Claude Code 和通用 Agents 的配置随 `init` 安装。详见 [MCP 工作流](files/.github/guides/mcp-workflow.md)。
+
+Agent 接入约定：先读 `.wl-skills-bd/capabilities.json`（或调 `wls_be_capabilities` / `wl-skills-bd capabilities`）拿到触发词与读取顺序，再用 `wls_be_task` 路由任务，按其 Pre-flight 证据加载规范。
 
 所有工具都可增加统一响应控制：
 
@@ -398,11 +408,11 @@ mvn verify -Pwl-quality
 ## 包架构
 
 ```text
-files/.wl-skills-bd/   机器事实：Schema、Profile、兼容矩阵、规则目录
+files/.wl-skills-bd/   机器事实：能力清单 manifest、Schema、Profile、兼容矩阵、规则目录
 files/.github/        人读规范、Skills、模板、质量门、指南
 lib/                  确定性核心、规则执行计划、共享扫描上下文、Source Index 缓存与 Pipeline
 bin/                  CLI 适配
-mcp/                  17 个工具的协议/Schema 适配、统一结果预算与游标存储
+mcp/                  18 个工具的协议/Schema 适配、统一结果预算与游标存储
 scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 夹具和回归测试
 ```
 

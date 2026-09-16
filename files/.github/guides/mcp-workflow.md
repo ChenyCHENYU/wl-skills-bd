@@ -1,11 +1,14 @@
 # MCP 工具与写入安全
 
-`wl-skills-bd` MCP Server 通过 stdio 暴露 17 个本地工程工具，不连接数据库、网关、Broker 或生产系统。
+`wl-skills-bd` MCP Server 通过 stdio 暴露 18 个本地工程工具，不连接数据库、网关、Broker 或生产系统。
+
+接入约定：首次使用先调用 `wls_be_capabilities` 获取能力清单（Skill 触发词/路径、规则范围、CLI 命令、推荐读取顺序）；任务路由优先 `wls_be_task`，其 Pre-flight 证据列出本次必读 standards/skill 文件与 sha256。
 
 ## 工具清单
 
 | 工具 | 类型 | 作用 |
 |---|---|---|
+| `wls_be_capabilities` | 只读 | AI 首次接入的单一能力清单：skills 触发词/状态/安装路径、规则范围、MCP 工具、CLI 命令与读取顺序；支持 section 分区读取 |
 | `wls_be_validate` | 只读 | B1~B31 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status |
 | `wls_be_review` | 只读/受控写 | 变更审查、质量基线、平台适配、项目断言、供应链和分级修复；所有 apply 保留计划确认链 |
 | `wls_be_doctor` | 只读 | JDK/Maven/Profile/质量门/租户证据诊断 |
@@ -30,7 +33,7 @@
 
 ## 统一结果预算
 
-17 个工具都支持同一 `response` 对象：
+18 个工具都支持同一 `response` 对象：
 
 ```json
 {
@@ -93,6 +96,7 @@
 
 ## 变更记录
 
+- 2026-09-16 v10：新增 `wls_be_capabilities`（单一能力清单 + 触发词索引），`initialize.instructions` 写明五步接入约定，task 返回 Pre-flight 证据；工具总数 18。
 - 2026-08-31 v9：新增 `wls_be_review`，贯通变更门禁、平台适配、项目断言、供应链、覆盖率和精准修复；工具总数 17。
 - 2026-08-31 v8：在既有 16 工具内加入契约分类/迁移、字段影响、集成检查、Catalog 分区分页与重复工具审计。
 - 2026-08-24 v7：16 工具统一 response 预算、token 估算与短期大结果 cursor；task 返回标准 Pipeline。

@@ -370,7 +370,28 @@ const testTool = {
   handle: handleTest,
 };
 
-const DEFINITIONS = [validateTool, reviewTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
+const capabilitiesTool = {
+  name: "wls_be_capabilities",
+  description: `AI 首次接入的单一能力清单（只读）：${capabilities.skills.count} 个 Skill（触发词/状态/安装路径）、${capabilities.backendRules.displayRange} 规则范围、${capabilities.standards.count} 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。`,
+  inputSchema: {
+    type: "object",
+    properties: {
+      section: { type: "string", enum: ["skills", "standards", "backendRules", "mcpTools", "cliCommands", "agentBootstrap"], description: "只返回指定分区；缺省返回完整清单" },
+    },
+    additionalProperties: false,
+  },
+  handle(args) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, "files", ".wl-skills-bd", "capabilities.json"), "utf8"));
+    if (args.section) {
+      const value = manifest[args.section];
+      if (value === undefined) return { text: `❌ 无分区 ${args.section}`, isError: true, structuredContent: { ok: false, state: "invalid-input" } };
+      return { text: JSON.stringify({ [args.section]: value }, null, 2), structuredContent: { ok: true, state: "read", section: args.section } };
+    }
+    return { text: JSON.stringify(manifest, null, 2), structuredContent: { ok: true, state: "read", schemaVersion: manifest.schemaVersion } };
+  },
+};
+
+const DEFINITIONS = [capabilitiesTool, validateTool, reviewTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
 const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 

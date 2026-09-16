@@ -8,6 +8,7 @@ metadata:
   status: "🟡 部分（CREATE/ALTER/索引已自动生成；复杂数据迁移/回填仍骨架）"
   stage: "⑥ 数据库"
   risk: "🔴 高风险（必经人工确认）"
+  triggers: "建表、DDL、ALTER TABLE、字段新增、字段影响、索引"
 ---
 
 # db-migration

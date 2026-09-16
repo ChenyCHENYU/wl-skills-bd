@@ -205,6 +205,7 @@ if (exists("mcp/registry.js")) {
   try {
     const { TOOLS } = require(path.join(ROOT, "mcp", "registry"));
     const expectedTools = [
+      "wls_be_capabilities",
       "wls_be_validate",
       "wls_be_review",
       "wls_be_doctor",
@@ -227,6 +228,30 @@ if (exists("mcp/registry.js")) {
     mcpToolCount = actualTools.length;
     if (JSON.stringify(actualTools) !== JSON.stringify(expectedTools)) {
       errors.push(`mcp/registry.js: 工具集合漂移 (${actualTools.join(", ")})`);
+    }
+    // capabilities.json 的 mcpTools/cliCommands 必须与 registry/bin 分发一致
+    if (Array.isArray(capabilities.mcpTools?.items)) {
+      const manifestTools = capabilities.mcpTools.items.map((tool) => tool.name);
+      if (JSON.stringify(manifestTools) !== JSON.stringify(actualTools)) {
+        errors.push(`capabilities.json: mcpTools 与 registry 漂移 (${manifestTools.join(", ")})`);
+      }
+      if (capabilities.mcpTools.count !== manifestTools.length) {
+        errors.push(`capabilities.json: mcpTools.count ${capabilities.mcpTools.count} 与 items ${manifestTools.length} 不一致`);
+      }
+    } else {
+      errors.push("capabilities.json: 缺少 mcpTools（运行 npm run capabilities:sync）");
+    }
+    if (Array.isArray(capabilities.cliCommands?.items) && capabilities.cliCommands.items.length > 0) {
+      const binSource = read("bin/wl-skills-bd.js");
+      for (const cmd of capabilities.cliCommands.items) {
+        const dispatched = binSource.includes(`command === "${cmd.name}"`)
+          || new RegExp(`\\[[^\\]]*"${cmd.name}"[^\\]]*\\]\\.includes\\(command\\)`).test(binSource);
+        if (!dispatched) {
+          errors.push(`capabilities.json: CLI 命令 ${cmd.name} 未在 bin/wl-skills-bd.js main() 分发中找到`);
+        }
+      }
+    } else {
+      errors.push("capabilities.json: 缺少 cliCommands（运行 npm run capabilities:sync）");
     }
   } catch (e) {
     errors.push(`mcp/registry.js: 加载失败 - ${e.message}`);

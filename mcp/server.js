@@ -104,7 +104,7 @@ function initialize(id, params) {
     capabilities: { tools: {} },
     serverInfo: { name: "wl-skills-bd", version: PKG.version },
     instructions:
-      "后端工程闭环工具。只读工具可直接调用；codegen/safe-fix 默认只预览，正式写入必须携带同一 planHash 与 confirmApply=true，状态漂移时零写入。",
+      "后端工程闭环工具。接入约定：1) 首次使用先调用 wls_be_capabilities 获取能力清单（Skill 触发词/状态/路径、规则范围、CLI 命令、推荐读取顺序）；2) 任务路由优先 wls_be_task（只读），按其输出的规则子集与安全写链执行；3) 只读工具可直接调用；4) codegen/safe-fix/contract migrate/config/catalog/review 等写工具默认只预览，正式写入必须携带同一 planHash 与 confirmApply=true，状态漂移时零写入，cursor 不授予写权限；5) 大结果默认 summary，用 response.cursor 续取而非重跑。",
   });
 }
 

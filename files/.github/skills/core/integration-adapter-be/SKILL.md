@@ -7,6 +7,7 @@ metadata:
   status: "✅ 已落地"
   stage: "⑦ 集成适配"
   risk: "🟡 中风险（项目模板只新增文件）"
+  triggers: "MQ 对接、平台消息封装适配、Producer Consumer 接线、集成质量门"
 ---
 
 # integration-adapter-be

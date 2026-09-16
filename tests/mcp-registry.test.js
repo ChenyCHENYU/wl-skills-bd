@@ -8,6 +8,7 @@ const { validateSchema } = require("../mcp/schema-validator");
 (async () => {
   process.env.WL_PROJECT_ROOT = path.resolve(__dirname, "..");
   const expected = [
+    "wls_be_capabilities",
     "wls_be_validate",
     "wls_be_review",
     "wls_be_doctor",
@@ -28,6 +29,19 @@ const { validateSchema } = require("../mcp/schema-validator");
   ];
   assert.deepStrictEqual(TOOLS.map((tool) => tool.name), expected);
   assert.deepStrictEqual(Object.keys(HANDLERS), expected);
+
+  const capabilitiesResult = await HANDLERS.wls_be_capabilities.handle({});
+  assert.strictEqual(capabilitiesResult.structuredContent.ok, true);
+  const manifest = JSON.parse(capabilitiesResult.text);
+  assert.strictEqual(manifest.schemaVersion >= 2, true, "能力清单必须至少 schemaVersion 2");
+  assert.ok(manifest.skills.items.every((skill) => Array.isArray(skill.triggers)), "每个 skill 必须携带触发词");
+  assert.ok(manifest.skills.items.every((skill) => typeof skill.installedPath === "string" && !skill.installedPath.startsWith("files/")), "installedPath 必须是目标项目相对路径");
+  assert.strictEqual(manifest.mcpTools.items.length, expected.length, "清单 MCP 工具数必须与 registry 一致");
+  const capabilitiesSection = await HANDLERS.wls_be_capabilities.handle({ section: "skills" });
+  assert.ok(capabilitiesSection.structuredContent.section === "skills");
+  const routedWithPreflight = await HANDLERS.wls_be_task.handle({ input: "加个查询接口" });
+  assert.ok(routedWithPreflight.structuredContent.preflight, "task 必须返回 Pre-flight 证据");
+  assert.match(routedWithPreflight.structuredContent.preflight.preflightHash, /^[a-f0-9]{64}$/);
 
   const validate = await HANDLERS.wls_be_validate.handle({ quick: true });
   assert.ok(validate.structuredContent);
@@ -120,7 +134,7 @@ const { validateSchema } = require("../mcp/schema-validator");
   const generatedSourceFull = await HANDLERS.wls_be_test.handle({ mode: "gen", contract, includeSource: true });
   assert.match(generatedSourceFull.structuredContent.content, /class .*ServiceTest/);
 
-  console.log("✅ MCP registry：17 工具、严格 schema、路径边界及核心 handler 通过");
+  console.log("✅ MCP registry：18 工具（含 capabilities 清单）、严格 schema、路径边界及核心 handler 通过");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

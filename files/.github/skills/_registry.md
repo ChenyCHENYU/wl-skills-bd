@@ -1,7 +1,8 @@
-# Backend Skills 注册表（v0.24.0）
+# Backend Skills 注册表（v0.25.0）
 
 > 单一数据源。AI 触发 Skill 的唯一依据。**禁止从 README / 个人记忆推断 Skill 路径。**
 > 状态与各 SKILL.md 头部 `metadata.status` 严格一致，改一处必须同步另一处。
+> 机器可读版本：`.wl-skills-bd/capabilities.json`（含触发词/状态/安装路径，由 `npm run capabilities:sync` 从本表与 SKILL.md 生成）。
 
 ---
 
@@ -58,7 +59,7 @@
 
 - 规则子集在发现/读取/执行前短路，并返回实际执行组、文件字节、缓存和 coverage；
 - Source Index 使用可安全失效的内存/持久化缓存，缓存异常只触发真实重扫；
-- 17 个 MCP 工具共享 response 字节/数组预算，大结果用短期 cursor 续取；
+- 18 个 MCP 工具共享 response 字节/数组预算，大结果用短期 cursor 续取；
 - task 返回 discover/context/validate/plan/approval/apply/verify Pipeline；写节点禁止自动重试且必须确认；
 - `npm run eval:quality` 固化 precision/recall、P95、短路比例和 token 回退门禁。
 
@@ -123,7 +124,7 @@
 
 ---
 
-## 12 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
+## 13 个 Skill 的 Pipeline 联动（详见 `_pipeline.md`）
 
 ```
 business-doc-extract-be → api-design-be → entity-codegen → service-codegen

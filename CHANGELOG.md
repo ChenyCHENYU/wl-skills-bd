@@ -6,6 +6,25 @@
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-16（AI 精准接入：能力清单、Pre-flight 证据与入口防漂移）
+
+### Added
+
+- 新增 AI 单一机器能力清单：`capabilities.json` 升级为 schemaVersion 2 的 agent manifest，13 个 Skill 携带触发词（`metadata.triggers`）、状态、风险与目标项目安装路径（`installedPath`，修复安装后 `files/` 前缀死链），并索引 MCP 工具（含写入分级）、24 个 CLI 命令与推荐读取顺序。
+- 新增 `wl-skills-bd capabilities [--json] [--section <part>]` CLI 命令与 `wls_be_capabilities` MCP 只读工具（工具总数 17 → 18），AI 一次调用即可拿到 skills 触发词/路径、规则范围、工具与命令索引，替代 4 文件 474 行 bootstrap。
+- 新增任务 Pre-flight 证据：`task`（CLI `--json` 与 MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`，"宣称已读取"可被机器对账，不再只是自我报告；项目未安装对应文件时如实标记 missing。
+- `initialize.instructions` 写明五步接入约定（能力清单 → task 路由 → 只读直调 → 写确认协议 → cursor 预算）。
+
+### Changed
+
+- 重写 `files/AGENTS.md` 为"清单 + 10 条不变式 + 指针"模式：修复三个重复编号 8 的漂移，版本化历史约束收敛到 standards/Skill，入口不再维护平行长列表；CLAUDE.md 与 copilot-instructions.md 同步以 capabilities manifest 为第一读取入口。
+- MCP 工具数 17 → 18；README、AGENTS、Copilot/Claude 入口、Skills 注册表、MCP 工作流指南与内部文档同步能力边界。
+
+### Fixed
+
+- `capabilities.json` 中 Skill 路径带仓库 `files/` 前缀导致目标项目内按图索骥全部断链的问题：新增 `installedPath`（目标项目相对路径），机器清单安装后可直接使用。
+- `verify-version` 新增 capabilities.mcpTools/cliCommands 与 registry、bin 分发的一致性校验；`verify-doc-sync` 新增文档 "N 个 MCP" 数量漂移扫描与 AGENTS.md 有序列表编号断档检查（此前三个 8 无任何门禁能发现）；`lint-skills` 强制 `metadata.triggers` 存在且 standards 引用断链零容忍。
+
 ## [0.24.0] - 2026-08-31（变更审查、平台适配与精准修复）
 
 ### Added

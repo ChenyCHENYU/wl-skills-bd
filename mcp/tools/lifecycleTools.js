@@ -462,13 +462,23 @@ function handleTask(args) {
       skills: detected.task.skills,
       candidates: detected.candidates,
       pipeline: taskRouter.buildTaskPipeline(detected.task.id),
+      preflight: taskRouter.buildPreflightEvidence(detected.task.id, projectRoot()),
     });
   }
   // 模式 2：指定 type 输出统一安全写链。
   if (args.type) {
     const task = taskRouter.getTask(args.type);
     if (!task) return blockedResult(`未知任务类型：${args.type}`, "invalid-input");
-    return toolResult(taskRouter.formatTaskPlan(task, { targetFile: args.targetFile }), { ok: true, taskId: args.type, taskName: task.name, mode: task.mode, rules: task.rules, skills: task.skills, pipeline: taskRouter.buildTaskPipeline(args.type) });
+    return toolResult(taskRouter.formatTaskPlan(task, { targetFile: args.targetFile }), {
+      ok: true,
+      taskId: args.type,
+      taskName: task.name,
+      mode: task.mode,
+      rules: task.rules,
+      skills: task.skills,
+      pipeline: taskRouter.buildTaskPipeline(args.type),
+      preflight: taskRouter.buildPreflightEvidence(args.type, projectRoot()),
+    });
   }
   return blockedResult("task 需要 input（自然语言）或 type（指定）参数，或 list=true", "invalid-input");
 }

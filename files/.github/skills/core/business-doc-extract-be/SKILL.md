@@ -7,6 +7,7 @@ description: |
 metadata:
   status: "🟡 骨架"
   stage: "②预 业务理解"
+  triggers: "抽取业务文档、阅读旧代码生成业务说明、业务理解"
 ---
 
 # business-doc-extract-be

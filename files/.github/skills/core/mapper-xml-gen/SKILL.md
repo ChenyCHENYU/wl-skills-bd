@@ -8,6 +8,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "⑤ 数据访问"
+  triggers: "生成 Mapper、生成 XML、生成 SQL"
 ---
 
 # mapper-xml-gen

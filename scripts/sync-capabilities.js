@@ -11,7 +11,8 @@ const {
 
 const ROOT = path.resolve(__dirname, "..");
 const destination = path.join(ROOT, DEFAULT_OUTPUT_REL);
-const expected = serializeCapabilities(discoverCapabilities(ROOT));
+const { TOOLS } = require("../mcp/registry");
+const expected = serializeCapabilities(discoverCapabilities(ROOT, { mcpTools: TOOLS }));
 
 if (process.argv.includes("--write")) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });

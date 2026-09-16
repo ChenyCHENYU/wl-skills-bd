@@ -1,6 +1,8 @@
 # Claude Code Instructions — wl-skills-bd
 
-先读取 `.github/copilot-instructions.md`。按 `.github/skills/_registry.md` 选择 Skill，并按 `.github/standards/index.md` 懒加载本次必要规范。
+先读取 `.wl-skills-bd/capabilities.json`（机器能力清单：Skill 触发词/状态/路径、MCP 工具、CLI 命令与读取顺序；或调用 `wls_be_capabilities`）。再按 `.github/skills/_registry.md` 选择 Skill，并按 `.github/standards/index.md` 懒加载本次必要规范。
+
+任务路由优先 `wl-skills-bd task "<描述>" --json`：输出规则子集、安全写链和 Pre-flight 证据（必读 standards/skill 文件 sha256 清单）；宣称"已读取"必须与该清单对得上。
 
 核心流程：已评审需求/数据库设计 → `docs/db-spec` → `wl-contract.json` → codegen plan → 用户评审 planHash → apply → `wl-api-contract` strict diff → B1~B31 → `mvn verify -Pwl-quality`。数据库表必须优先复用文档基线，扩展有依据且字段末尾追加（standards/29）。生产契约还必须满足 standards/28 的证据链；design/kit 都不是 bd 的硬依赖。
 

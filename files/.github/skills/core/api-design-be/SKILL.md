@@ -8,6 +8,7 @@ description: |
 metadata:
   status: "✅ 已落地"
   stage: "② 设计阶段"
+  triggers: "设计接口、评审 api.md、接口契约审查、逻辑 ID、集成契约、接口对齐"
 ---
 
 # api-design-be

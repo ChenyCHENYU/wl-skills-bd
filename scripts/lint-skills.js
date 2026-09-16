@@ -116,6 +116,31 @@ for (const sp of skillFiles) {
     const name = (frontmatter[1].match(/^name:\s*([a-z0-9-]+)\s*$/m) || [])[1];
     if (!name) errors.push(`${rel}: frontmatter.name 缺失或不是 kebab-case`);
     else if (name !== path.basename(path.dirname(sp))) errors.push(`${rel}: name=${name} 与目录名不一致`);
+    if (!/^\s{2}triggers:\s*\S/m.test(frontmatter[1])) {
+      errors.push(`${rel}: metadata.triggers 缺失（capabilities 清单依赖触发词做精准路由）`);
+    }
+  }
+  // standards 引用必须可解析：standards/NN(-name).md 指向真实文件；裸 NN 必须存在对应规范
+  const standardsDir = path.join(GITHUB, "standards");
+  const standardRefs = content.match(/standards\/(\d{2})(?:-([a-z0-9-]+))?\.md/g) || [];
+  for (const ref of standardRefs) {
+    const parsed = ref.match(/^standards\/(\d{2})(?:-([a-z0-9-]+))?\.md$/);
+    if (!parsed) continue;
+    const candidates = fs.existsSync(standardsDir)
+      ? fs.readdirSync(standardsDir).filter((file) => file.startsWith(`${parsed[1]}-`) && file.endsWith(".md"))
+      : [];
+    if (candidates.length === 0) {
+      errors.push(`${rel}: 引用不存在的规范 ${ref}`);
+    } else if (parsed[2] && !candidates.includes(`${parsed[1]}-${parsed[2]}.md`)) {
+      errors.push(`${rel}: 引用不存在的规范文件 ${ref}（实际为 ${candidates.join(", ")}）`);
+    }
+  }
+  const bareStandardIds = content.match(/standards\/(\d{2})(?![\d-])/g) || [];
+  for (const ref of bareStandardIds) {
+    const id = ref.match(/(\d{2})/)[1];
+    const exists = fs.existsSync(standardsDir)
+      && fs.readdirSync(standardsDir).some((file) => file.startsWith(`${id}-`) && file.endsWith(".md"));
+    if (!exists) errors.push(`${rel}: 引用不存在的规范编号 ${ref}`);
   }
   const refs = new Set(content.match(/references\/[\w./-]+\.md/g) || []);
   for (const r of refs) {

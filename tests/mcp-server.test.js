@@ -25,8 +25,9 @@ assert.strictEqual(responses.length, 4, result.stdout);
 const byId = new Map(responses.map((response) => [response.id, response]));
 assert.strictEqual(byId.get(1).result.serverInfo.name, "wl-skills-bd");
 assert.strictEqual(byId.get(1).result.protocolVersion, "2025-06-18");
-assert.strictEqual(byId.get(2).result.tools.length, 17);
+assert.match(byId.get(1).result.instructions, /wls_be_capabilities/, "initialize instructions 必须指明能力清单入口");
+assert.strictEqual(byId.get(2).result.tools.length, 18);
 assert.match(byId.get(3).result.content[0].text, /^# 04/m);
 assert.strictEqual(byId.get(4).error.code, -32602);
 
-console.log("✅ MCP server：initialize、17 tools/list、tools/call 与严格参数错误通过");
+console.log("✅ MCP server：initialize（含接入约定）、18 tools/list、tools/call 与严格参数错误通过");
