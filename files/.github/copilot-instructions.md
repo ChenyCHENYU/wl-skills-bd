@@ -30,6 +30,8 @@
 
 生成前必须读 `.github/guides/codegen-workflow.md`；启用 Catalog 的项目先以当前模块执行 `catalog check/context plan`，不得全仓扫描。前后端协作读 `frontend-backend-contract.md`；MCP 写入规则读 `mcp-workflow.md`。
 
+plan 输出的 `openQuestions` 是机器枚举的业务闭环疑点（空批语义、状态并发、命令防重等）：阻断性疑点必须逐项与用户确认后才能携带 `--questions-reviewed` apply。字段长度/类型以 `docs/db-spec` 为准并可用 `db review` 做逐字段三方对账复核；ALTER 必须通过机器影响分析或登记 `alter.impactRef`。
+
 字段变更先执行 `impact field --module ...` 核对存储容量、所有权、迁移链和精确源码引用。跨系统集成使用契约化逻辑 ID、载荷版本、重试/确认/死信/重放与错误码；使用 `integration inspect/audit` 取代主观判断或全仓重读。平台接线只以项目 `integration-adapters.json` 声明的真实依赖、API、配置、测试和运行证据为准；未配置时不猜 MQ SDK、不自动激活规则。
 
 ## Pre-flight

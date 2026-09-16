@@ -52,12 +52,15 @@ try {
   const plan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
   assert.strictEqual(plan.ok, true, JSON.stringify(plan.errors));
   assert.strictEqual(plan.actions.length, 19, "基础 17 产物 + approve/batch 请求 DTO");
-  const productionBlocked = applyPlan(plan, { confirm: true, planHash: plan.planHash, requireComplete: true });
+  const productionBlocked = applyPlan(plan, { confirm: true, planHash: plan.planHash, requireComplete: true, questionsReviewed: true });
   assert.strictEqual(productionBlocked.reason, "contract-incomplete");
   assert.deepStrictEqual(productionBlocked.applied, []);
   assert.strictEqual(fs.existsSync(path.join(tempRoot, ".wl-skills-bd", ".state", "codegen-manifest.json")), false);
 
-  const applied = applyPlan(plan, { confirm: true, planHash: plan.planHash });
+  const questionGated = applyPlan(plan, { confirm: true, planHash: plan.planHash });
+  assert.strictEqual(questionGated.reason, "questions-unreviewed", "扩展契约含阻断性疑点时必须先人工确认");
+
+  const applied = applyPlan(plan, { confirm: true, planHash: plan.planHash, questionsReviewed: true });
   assert.strictEqual(applied.ok, true);
 
   const controller = fs.readFileSync(path.join(tempRoot, "src/main/java/com/jhict/sale/order/controller/SaleOrderMasterController.java"), "utf8");
@@ -167,6 +170,7 @@ class WeakEvidence {
     confirm: true,
     planHash: preservedPlan.planHash,
     requireComplete: true,
+    questionsReviewed: true,
   });
   assert.strictEqual(completionApplied.ok, true, "证据完整后 requireComplete 必须允许同步 completion");
   const stableCompletedPlan = buildPlan(path.join(examplesDir, "sale-order-master.contract.json"), { projectRoot: tempRoot });
@@ -184,7 +188,8 @@ const alterTemp = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-alter-"));
 try {
   const alterPlan = buildPlan(path.join(examplesDir, "sale-order-master-alter.contract.json"), { projectRoot: alterTemp });
   assert.strictEqual(alterPlan.ok, true);
-  const alterApplied = applyPlan(alterPlan, { confirm: true, planHash: alterPlan.planHash });
+  assert.strictEqual(alterPlan.alterImpact.mode, "manual-ref", "无 Catalog 时读取人工登记的 impactRef");
+  const alterApplied = applyPlan(alterPlan, { confirm: true, planHash: alterPlan.planHash, questionsReviewed: true });
   assert.strictEqual(alterApplied.ok, true);
 
   const migrationFiles = fs.readdirSync(path.join(alterTemp, "src/main/resources/db/migration"));

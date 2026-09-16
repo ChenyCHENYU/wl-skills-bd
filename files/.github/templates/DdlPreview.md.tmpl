@@ -9,6 +9,9 @@
 {{#ddlApprovalRef}}
 > - 审批单：`{{ddlApprovalRef}}`
 {{/ddlApprovalRef}}
+{{#ddlImpactRef}}
+> - 影响分析结论：`{{ddlImpactRef}}`
+{{/ddlImpactRef}}
 
 本报告只用于评审，`wl-skills-bd` 不连接数据库、不执行 SQL。结构正确性门禁在所有环境相同；流程强度按环境分级：{{executionRule}}
 
@@ -27,6 +30,18 @@
 ## 回滚/恢复策略
 
 {{rollbackStrategy}}
+
+{{#isAlter}}
+## 变更前证据采集（只读，执行 DDL 前留底）
+
+{{#preChangeEvidence}}
+```sql
+{{.}}
+```
+{{/preChangeEvidence}}
+
+> 执行任何 ALTER 前先运行以上只读 SQL 并保存结果，作为结构回溯与快速恢复的基线证据；配合 `db executed` 回执闭环。
+{{/isAlter}}
 
 ## 人工确认清单
 

@@ -78,16 +78,16 @@
       "column": "PRIORITY",
       "javaType": "Integer",
       "dbType": "NUMBER(10)",
-      "comment": "优先级（本次新增）"
-      ,"writable": true
+      "comment": "优先级（本次新增）",
+      "writable": true
     },
     {
       "name": "remark",
       "column": "REMARK",
       "javaType": "String",
       "dbType": "VARCHAR2(500 CHAR)",
-      "comment": "备注（扩展长度后）"
-      ,"writable": true
+      "comment": "备注（扩展长度后）",
+      "writable": true
     }
   ],
   "alter": {
@@ -116,6 +116,7 @@
         "comment": "备注（扩展长度后）",
         "compatibility": "widening"
       }
-    ]
+    ],
+    "impactRef": "工单 CHG-2026-0719：impact field 确认 PRIORITY/REMARK 无存量代码引用，已评审"
   }
 }

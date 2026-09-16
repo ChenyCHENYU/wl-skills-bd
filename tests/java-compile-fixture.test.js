@@ -173,7 +173,11 @@ try {
   fs.writeFileSync(extensionContractFile, `${JSON.stringify(extensionContract, null, 2)}\n`, "utf8");
   const extensionPlan = buildPlan(extensionContractFile, { projectRoot: extensionRoot });
   assert.strictEqual(extensionPlan.ok, true, JSON.stringify(extensionPlan.errors));
-  assert.strictEqual(applyPlan(extensionPlan, { confirm: true, planHash: extensionPlan.planHash }).ok, true);
+  assert.ok((extensionPlan.openQuestions || []).some((question) => question.id === "Q-STATE-CONCURRENCY" && question.blocking !== false), "状态机契约必须产生并发口径疑点");
+  const unreviewedApply = applyPlan(extensionPlan, { confirm: true, planHash: extensionPlan.planHash });
+  assert.strictEqual(unreviewedApply.ok, false, "含阻断性业务疑点时必须零写入");
+  assert.strictEqual(unreviewedApply.reason, "questions-unreviewed");
+  assert.strictEqual(applyPlan(extensionPlan, { confirm: true, planHash: extensionPlan.planHash, questionsReviewed: true }).ok, true);
 
   const extensionGeneratedModels = javaFiles(path.join(extensionRoot, "src", "main", "java", "com", "jhict", "sale", "api"));
   compile("extension-model", [...commonFiles, ...extensionGeneratedModels]);

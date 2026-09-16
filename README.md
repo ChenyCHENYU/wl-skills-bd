@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.25.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.26.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -40,6 +40,14 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.26.0 业务闭环与数据库复核
+
+- **状态机闭环校验**：契约校验把 stateTransition/command/batch 的前置与 patch 组合成状态转移图，从 initialValue 做可达性分析——不可达枚举值、永不可触发的空集前置直接 error；无终态（循环流程）产生人工确认警告。
+- **业务疑点人工确认门**：`codegen plan` 输出机器枚举的 `openQuestions[]`（空批语义、状态并发口径、命令防重、导出边界、关联空口径、ALTER 存量数据等）；阻断性疑点未确认时 apply 零写入，需携带 `--questions-reviewed`（MCP `questionsReviewed`）。清单确定性生成并计入 planHash。
+- **三方字段对账**：新增 `wl-skills-bd db review <contract> [--snapshot <file>]`——文档镜像/契约/线上快照逐字段正向对账（类型含长度/可空/默认值/注释），支持 `--output` 报告；codegen plan 的 `databaseSource.reconciliation` 同步暴露汇总。
+- **ALTER 影响硬门**：ALTER 契约在配置 Catalog 的项目由机器执行字段影响分析并留证据；未配置时必须登记 `alter.impactRef`（人工 impact field 结论/工单），否则 plan 阻断。
+- **快速恢复辅助**：ALTER 的 DDL 预览报告自动附"变更前证据采集 SQL"（information_schema/USER_TAB_COLUMNS 只读留底 + 行数）；新增 `db snapshot-template` 给 DBA 的快照导出 SQL 与 JSON 格式指南。
 
 ### v0.25.0 AI 精准接入：能力清单、Pre-flight 证据与入口防漂移
 
@@ -176,9 +184,15 @@ wl-skills-bd contract inspect contracts/legacy.json --json
 wl-skills-bd contract migrate contracts/legacy.json --json
 
 cp .github/templates/examples/feature-category.contract.json wl-contract.json
+
+# 契约驱动生成（plan 含 openQuestions 业务疑点与三方对账汇总）
 wl-skills-bd codegen validate wl-contract.json
 wl-skills-bd codegen plan wl-contract.json --json
-wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm
+wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm   # 含阻断性疑点时另需 --questions-reviewed
+
+# 数据库三方对账复核（文档/契约/线上快照）与快照导出辅助
+wl-skills-bd db review wl-contract.json --snapshot snapshot.json --output reports/db-review.md
+wl-skills-bd db snapshot-template --database mysql --output docs/db-snapshot-guide.md
 ```
 
 这条链路不依赖 `wl-skills-design` 或 `wl-skills-kit`。它们存在时可提供稳定 ID、页面契约和交叉验证；不存在时，bd 仍从已评审需求独立形成 `wl-contract.json` 并完成后端生成、检查和验证。
@@ -234,7 +248,7 @@ DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。�
 |---|---|---|
 | `customOperations[]` | 强类型命令 DTO + 前置校验 + `ID/COMPANY_ID/IS_DELETE/REVISION` 原子写；batch 返回 successCount/failureCount/failures | submit/approve/reject/withdraw/changeStatus/convert/release/close/cancel/batchXxx |
 | `relations[]` | 主 Controller 的 queryXxxByParentId 接口；manifest 暴露关联契约 | 订单/明细、配置/子项、主从表 |
-| `alter{}` | `phase=expand` 只允许可空 add/显式 widening modify；`phase=contract` 只允许带审批单的 drop | 加字段、扩长度、审批后删废弃字段 |
+| `alter{}` | `phase=expand` 只允许可空 add/显式 widening modify；`phase=contract` 只允许带审批单的 drop；Catalog 未配置时必须登记 `impactRef` 影响分析结论 | 加字段、扩长度、审批后删废弃字段 |
 | `indexes[]` | 渲染到 migration（唯一索引/普通索引） | 业务唯一键、查询性能索引 |
 | `api.permissions.export` | GET /export Controller + Service 骨架 | 列表导出 |
 | `externalId`（顶层/字段/操作/关联） | 写入 manifest 供 wl-skills-design design-model 跨包追溯 | 稳定 ID 桥接 |
@@ -264,6 +278,7 @@ wl-skills-bd contract diff wl-contract.json \
 **事实源链条**：需求文档镜像（`docs/db-spec/*.json`）↔ 契约（wl-contract.json）↔ Flyway 迁移 ↔ 线上库快照。
 
 - **B31 精确门禁**：文档表必须同名复用；字段名称与大小写、顺序、类型、可空性、默认值、注释逐项对账。受管项目缺少 `docs/db-spec` 时，codegen 和 db preview 零写入阻断。
+- **正向复核（v0.26）**：`db review` 输出文档/契约/(可选)线上快照的逐字段对账表，apply 前人工评审不再靠肉眼比 diff；ALTER 的 DDL 预览附变更前只读证据采集 SQL，出问题可快速回溯。
 - **扩展有依据**：基线不足先在原表末尾追加；新表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、需求/上游来源、审批人和审批号。旧 naming waiver 不再允许长期掩盖表改名。
 - **生成链同门**：B31、`codegen validate/plan/apply`、`db preview` 使用同一校验，文档/治理 fingerprint 进入 planHash；MySQL 生成器只接受并生成 `lower_snake_case`，Oracle 保持 `UPPER_SNAKE_CASE`。
 - **`wl-skills-bd db drift --snapshot <file>`**：推荐快照携带列序、类型、可空性、默认值和注释，精确对账文档与契约；无源表/字段或属性漂移均 error。

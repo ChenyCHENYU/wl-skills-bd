@@ -6,6 +6,25 @@
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-16（业务闭环与数据库复核）
+
+### Added
+
+- 新增状态机闭环校验：契约校验把 customOperations（stateTransition/command/batch）的状态前置与 patch 组合成转移图，从 initialValue 做可达性分析；不可达枚举值与永不可触发的空集前置为 error，无终态循环流程为 warn 交人工确认。
+- 新增 codegen `openQuestions` 业务疑点确认门：plan 机器枚举契约未声明的边界（空批语义、状态并发、命令防重、导出边界、关联空口径、ALTER 存量数据、交付级别），确定性生成并计入 planHash；阻断性疑点未确认时 apply 零写入，需 `--questions-reviewed`（MCP `questionsReviewed`）。
+- 新增 `wl-skills-bd db review <contract> [--snapshot] [--output]`：文档镜像/契约/线上快照逐字段正向对账报告（类型含长度/可空/默认值/注释）；codegen plan 的 `databaseSource.reconciliation` 暴露同一汇总。
+- 新增 `wl-skills-bd db snapshot-template [--database] [--output]`：DBA 快照导出 SQL（MySQL information_schema / Oracle USER_TAB_COLUMNS）与 JSON 格式指南。
+- ALTER 的 DDL 预览报告自动附"变更前证据采集 SQL"（只读结构 + 行数留底），支撑出问题后的快速回溯恢复。
+
+### Changed
+
+- ALTER 影响分析升级为机器硬门：配置 Catalog 的项目由 codegen 自动执行逐列 `impact` 分析并留 reportHash 证据；未配置 Catalog 时必须登记 `alter.impactRef`（人工 impact field 结论/工单），否则 plan 直接阻断。contract.schema.json 同步登记 `impactRef`。
+- `codegen plan` 文本输出增加 ALTER 影响摘要与待确认疑点清单；apply 失败输出 hint 与疑点明细。
+
+### Fixed
+
+- 状态机字段此前只校验"枚举 + 初始值"，无法发现业务闭环漏洞（死状态、缺终态、不可触发操作）；字段长度/类型对账此前只有"违规才报"的 B31 列表，缺少 apply 前的正向逐字段复核产物。
+
 ## [0.25.0] - 2026-09-16（AI 精准接入：能力清单、Pre-flight 证据与入口防漂移）
 
 ### Added

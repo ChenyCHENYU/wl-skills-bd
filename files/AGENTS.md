@@ -10,8 +10,8 @@
 
 1. 分层与租户：Controller → 直接 Service → Mapper；租户来自 AuthUtil，SQL 显式 COMPANY_ID（除非有 doctor 可验证的统一拦截器证据）；`companyId` 不得来自请求。
 2. 软删事实源：受管 profile + 未受管 `profile.local` 合并为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`；受管更新用 `ID + COMPANY_ID + 有效标记 + REVISION` 原子 SQL，详情返回 revision。
-3. 数据库事实源：涉及表结构先对账 `docs/db-spec` 与 standards/29——文档表同名复用、字段全属性/顺序一致、扩展有依据且末尾追加；ALTER 分 expand/contract；Flyway 版本不可变；DDL 只生成，永不由工具执行。
-4. 契约先行：codegen 只接受机器契约，先 plan 后 apply；apply 必须携带同一 planHash 与显式确认；增量接口/字段/业务命令必须先更新 `wl-contract.json`，禁止字符串拼接旁路 patch。
+3. 数据库事实源：涉及表结构先对账 `docs/db-spec` 与 standards/29——文档表同名复用、字段全属性/顺序一致、扩展有依据且末尾追加；用 `db review` 做逐字段正向复核（可选线上快照三方对账）；ALTER 必须通过机器影响分析或登记 `alter.impactRef`，执行前按 DDL 预览留底证据；ALTER 分 expand/contract；Flyway 版本不可变；DDL 只生成，永不由工具执行。
+4. 契约先行：codegen 只接受机器契约，先 plan 后 apply；apply 必须携带同一 planHash 与显式确认；plan 含阻断性 `openQuestions`（空批语义、状态并发、命令防重等业务闭环疑点）时必须逐项人工评审后携带 `--questions-reviewed`；增量接口/字段/业务命令必须先更新 `wl-contract.json`，禁止字符串拼接旁路 patch。
 5. 统一写链：所有工程写入必须 preview → planHash → confirm → 原子写 → 复验 → 可回滚；pre/prod/production 默认零写入，显式授权后仍保留确认链；MCP 不执行数据库写入。
 6. 修复白名单：自动修复仅限 B3/B5 严格前置条件与项目批准的单次精确替换（evidenceRefs 内、字面 before 恰好命中一次）；写后强制复扫；权限、租户、SQL、MQ 语义与业务算法保持人工卡口。
 7. 验证收口：每步之后跑对应验证，error 未清零不得宣称完成；最终交付执行完整 `review run`（quick/staged/changed 是 partial，不能冒充 full）与 `mvn verify -Pwl-quality`（J1~J5/J8；J6/J7 不冒充硬门）。

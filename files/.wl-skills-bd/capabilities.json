@@ -313,7 +313,7 @@
       },
       {
         "name": "wls_be_codegen",
-        "description": "契约驱动的 validate/plan/apply。apply 必须携带预览 planHash 与 confirmApply=true；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "description": "契约驱动的 validate/plan/apply。plan 返回 openQuestions 业务疑点清单与三方字段对账汇总；apply 必须携带预览 planHash 与 confirmApply=true（含疑点时另需 questionsReviewed=true）；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
         "write": "gated"
       },
       {
@@ -433,7 +433,7 @@
       },
       {
         "name": "db",
-        "summary": "数据库治理 preview/drift/executed/ledger（DDL 只生成不执行）",
+        "summary": "数据库治理 preview/review（三方对账）/drift/executed/ledger/snapshot-template（DDL 只生成不执行）",
         "write": "gated"
       },
       {

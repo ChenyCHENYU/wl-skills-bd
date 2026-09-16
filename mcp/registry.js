@@ -92,7 +92,7 @@ const doctorTool = {
 
 const codegenTool = {
   name: "wls_be_codegen",
-  description: "契约驱动的 validate/plan/apply。apply 必须携带预览 planHash 与 confirmApply=true；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。",
+  description: "契约驱动的 validate/plan/apply。plan 返回 openQuestions 业务疑点清单与三方字段对账汇总；apply 必须携带预览 planHash 与 confirmApply=true（含疑点时另需 questionsReviewed=true）；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。",
   inputSchema: {
     type: "object",
     required: ["mode", "contract"],
@@ -103,6 +103,7 @@ const codegenTool = {
       planHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
       force: { type: "boolean", description: "发生本地修改冲突时备份后覆盖" },
       requireComplete: { type: "boolean", description: "拒绝 apply completion=draft 的可编译业务骨架" },
+      questionsReviewed: { type: "boolean", description: "plan 含 openQuestions 业务疑点时，确认已逐项人工评审" },
       allowProductionWrites: { type: "boolean", description: "生产环境经人工授权后显式放行本地文件写入" },
     },
     additionalProperties: false,

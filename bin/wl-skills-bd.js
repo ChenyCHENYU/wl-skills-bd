@@ -88,6 +88,18 @@ function printCodegenPlan(plan) {
     console.log(`${labels[item.action] || item.action}  ${item.rel}${item.reason ? ` (${item.reason})` : ""}`);
   }
   for (const warning of plan.warnings || []) console.warn(`⚠ Profile 提示：${warning}`);
+  if (plan.alterImpact) {
+    const impact = plan.alterImpact;
+    if (impact.mode === "machine") {
+      console.log(`\nALTER 影响分析（机器）：${impact.columns.map((column) => `${column.column}（引用 ${column.references}，发现 ${column.errors}e/${column.warnings}w）`).join("；")}`);
+    } else if (impact.mode === "manual-ref") {
+      console.log(`\nALTER 影响分析（人工登记）：${impact.impactRef}`);
+    }
+  }
+  if ((plan.openQuestions || []).length > 0) {
+    console.log(`\n❓ 待人工确认的业务疑点（${plan.openQuestions.length} 项，apply 需 --questions-reviewed）：`);
+    for (const question of plan.openQuestions) console.log(`  [${question.id}] ${question.question}`);
+  }
   console.log(`\nplanHash: ${plan.planHash}`);
   console.log(`汇总：${JSON.stringify(plan.summary)}`);
 }
@@ -233,6 +245,7 @@ function commandCodegen(args) {
     confirm: has(allArgs, "--confirm"),
     force: has(allArgs, "--force"),
     requireComplete: has(allArgs, "--require-complete"),
+    questionsReviewed: has(allArgs, "--questions-reviewed"),
     planHash: option(allArgs, "--plan-hash"),
   });
   if (has(allArgs, "--json")) printJson(result);
@@ -240,6 +253,8 @@ function commandCodegen(args) {
   else {
     console.error(`代码生成未写入：${result.reason || "契约校验失败"}`);
     if (result.expectedPlanHash) console.error(`当前 planHash: ${result.expectedPlanHash}`);
+    if (result.hint) console.error(`提示：${result.hint}`);
+    for (const question of result.openQuestions || []) console.error(`  ❓ [${question.id}] ${question.question}`);
     for (const item of (result.completion && result.completion.openQuestions) || []) console.error(`  未完成：${item}`);
     for (const item of result.blocked || []) console.error(`  冲突：${item.rel}`);
   }
@@ -507,6 +522,72 @@ function commandDb(args) {
   const [subcommand = "preview", contractArg, ...rest] = args;
   const allArgs = contractArg === undefined ? rest : [contractArg, ...rest];
   const root = targetRoot(allArgs);
+
+  if (subcommand === "review") {
+    if (!contractArg || contractArg.startsWith("-")) {
+      console.error("db review 需要契约文件路径：wl-skills-bd db review wl-contract.json [--snapshot <file>] [--json]");
+      return 1;
+    }
+    const dbSpec = require("../lib/db-spec");
+    const loaded = loadContract(contractArg, { projectRoot: root });
+    if (!loaded.ok) {
+      for (const error of loaded.errors || []) console.error(`${error.path}: ${error.message}`);
+      return 1;
+    }
+    let snapshotTables = null;
+    const snapshot = option(allArgs, "--snapshot");
+    if (snapshot) {
+      const snapshotResult = require("../lib/db-drift").loadSnapshot(resolveWithin(root, snapshot));
+      if (!snapshotResult.ok) {
+        for (const error of snapshotResult.errors || []) console.error(`❌ ${error}`);
+        return 1;
+      }
+      snapshotTables = snapshotResult.tables;
+    }
+    const reconciliation = dbSpec.reconcileContract(root, loaded.contract, {
+      source: loaded.file,
+      profile: loaded.profile,
+      snapshotTables,
+    });
+    if (has(allArgs, "--json")) printJson(reconciliation);
+    else {
+      console.log(`表 ${reconciliation.table}（${reconciliation.database}）三方字段对账：文档${reconciliation.specConfigured ? "✅" : "❌未配置"} / 契约 / 快照${reconciliation.snapshotProvided ? "✅" : "—未提供"}`);
+      console.log(`汇总：${JSON.stringify(reconciliation.summary)}`);
+      console.log("\n字段 | 来源 | 文档类型 | 契约类型 | 快照类型 | 对账");
+      for (const row of reconciliation.rows) {
+        const mark = row.issues.some((issue) => issue.severity === "error") ? "❌"
+          : row.issues.length > 0 ? "⚠️ " : "✅";
+        console.log(`${mark} ${row.field} | ${row.origin} | ${(row.doc && row.doc.dbType) || "—"} | ${(row.contract && row.contract.dbType) || "—"} | ${(row.snapshot && row.snapshot.dbType) || "—"} | ${row.issues.length === 0 ? "一致" : row.issues.map((issue) => issue.message).join("；")}`);
+      }
+    }
+    const output = option(allArgs, "--output");
+    if (output) {
+      const lines = [
+        `# 数据库字段对账报告：${reconciliation.table}`,
+        "",
+        `- 数据库：${reconciliation.database}；快照：${reconciliation.snapshotProvided ? "已提供" : "未提供"}`,
+        `- 汇总：${JSON.stringify(reconciliation.summary)}`,
+        "",
+        "| 字段 | 来源 | 文档类型 | 契约类型 | 快照类型 | 对账 |",
+        "|---|---|---|---|---|---|",
+        ...reconciliation.rows.map((row) => `| ${row.field} | ${row.origin} | ${(row.doc && row.doc.dbType) || "—"} | ${(row.contract && row.contract.dbType) || "—"} | ${(row.snapshot && row.snapshot.dbType) || "—"} | ${row.issues.length === 0 ? "一致" : row.issues.map((issue) => issue.message).join("；").replace(/\|/g, "\\|")} |`),
+      ];
+      writeTextAtomic(resolveWithin(root, output), `${lines.join("\n")}\n`);
+      console.log(`\n报告已写入：${output}`);
+    }
+    return reconciliation.ok ? 0 : 1;
+  }
+
+  if (subcommand === "snapshot-template") {
+    const drift = require("../lib/db-drift");
+    const text = drift.snapshotTemplate(option(allArgs, "--database", "oracle"));
+    const output = option(allArgs, "--output");
+    if (output) {
+      writeTextAtomic(resolveWithin(root, output), `${text}\n`);
+      console.log(`快照导出指南已写入：${output}`);
+    } else console.log(text);
+    return 0;
+  }
 
   if (subcommand === "drift") {
     const snapshot = option(allArgs, "--snapshot");
@@ -993,7 +1074,7 @@ function help() {
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     契约治理：seed / inspect / migrate / show / diff
-  db           数据库治理：preview / drift / executed / ledger（DDL 只生成不执行）
+  db           数据库治理：preview / review（三方对账）/ drift / executed / ledger / snapshot-template（DDL 只生成不执行）
   permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
   catalog      项目目录：plan / apply / show / check（默认仅当前模块）
   context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
@@ -1025,8 +1106,8 @@ function help() {
 
 codegen 示例：
   wl-skills-bd codegen validate wl-contract.json
-  wl-skills-bd codegen plan wl-contract.json --json
-  wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm [--require-complete]
+  wl-skills-bd codegen plan wl-contract.json --json          # 含 openQuestions 业务疑点清单与三方对账汇总
+  wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm [--questions-reviewed] [--require-complete]
 
 contract 示例：
   wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
@@ -1039,6 +1120,9 @@ contract 示例：
 
 db 示例：
   wl-skills-bd db preview wl-contract.json
+  wl-skills-bd db review wl-contract.json                    # 文档/契约/(可选)快照三方字段对账报告
+  wl-skills-bd db review wl-contract.json --snapshot snapshot.json --output reports/db-review.md
+  wl-skills-bd db snapshot-template --database mysql --output docs/db-snapshot-guide.md
   wl-skills-bd db drift --snapshot db-snapshot.json [--prefix <table-prefix>]
   wl-skills-bd db executed --table <table> --column <column> --ddl-plan-hash <ddl-sha256> --migration-hash <file-sha256> --approval-ref <ref> --source-ref <ref> --executed-at <ISO> --json
   wl-skills-bd db executed --table <table> --column <column> --ddl-plan-hash <ddl-sha256> --migration-hash <file-sha256> --approval-ref <ref> --source-ref <ref> --executed-at <ISO> --plan-hash <ledger-plan-sha256> --confirm

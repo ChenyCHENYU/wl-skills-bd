@@ -113,6 +113,10 @@ Review 把事实、策略、动作分层：Git/源码/POM/JaCoCo 是事实，`qu
 
 `capabilities.json`（schemaVersion 2）是 AI 接入的单一机器 manifest：Skill 触发词/状态/风险/安装路径（`installedPath`，目标项目相对）、MCP 工具（含写入分级）、CLI 命令与读取顺序，全部由 `sync-capabilities` 从 SKILL.md/registry/bin 生成，入口文档（AGENTS/CLAUDE/copilot-instructions/_registry）只做指针。`verify-version` 校验 manifest 与 registry/bin 分发一致，`verify-doc-sync` 扫描文档工具计数与编号断档，`lint-skills` 强制 triggers 与 standards 引用可解析。`task` 输出 Pre-flight 证据（必读 standards/skill 文件 sha256 + `preflightHash`），把"宣称已读"变成可对账事实。
 
+### 业务闭环与数据库复核（v0.26）
+
+契约校验把 customOperations 的状态前置/patch 组合成转移图做可达性分析（不可达枚举、空集前置为 error，无终态为 warn），死状态不再静默通过。`codegen plan` 机器枚举 `openQuestions`（空批语义/状态并发/命令防重/导出边界/关联空口径/ALTER 存量数据），确定性生成并计入 planHash；阻断性疑点 apply 需 `--questions-reviewed`——"业务闭环漏洞跟人确认"落为结构化产物而非口头流程。数据库侧：`db review` 提供文档/契约/快照逐字段正向对账，ALTER 影响分析升级为硬门（Catalog 机器分析或 `alter.impactRef` 人工登记），DDL 预览附变更前只读证据 SQL 支撑快速恢复。
+
 ### 执行节点粗细固定在可验证边界
 
 标准链使用 discover/context/validate/plan/approval/apply/verify。节点不能细到每个正则或文件写入，避免调度和 token 开销；也不能粗到一个节点同时计划、确认和写入。只读节点允许有界重试/超时；写节点必须显式确认且禁止自动重试。节点输入/输出契约、状态、耗时和 hash 是可回放证据。

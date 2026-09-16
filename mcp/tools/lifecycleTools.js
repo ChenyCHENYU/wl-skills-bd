@@ -68,12 +68,14 @@ function handleCodegen(args) {
     planHash: args.planHash,
     force: args.force === true,
     requireComplete: args.requireComplete === true,
+    questionsReviewed: args.questionsReviewed === true,
     allowProductionWrites: args.allowProductionWrites === true,
   });
   if (!result.ok) {
-    return blockedResult(`代码生成零写入：${result.reason}`, result.reason, {
+    return blockedResult(`代码生成零写入：${result.reason}${result.hint ? `\n${result.hint}` : ""}`, result.reason, {
       currentPlanHash: result.expectedPlanHash || plan.planHash,
       conflicts: (result.blocked || []).map((item) => item.rel),
+      openQuestions: result.openQuestions,
       completion: result.completion,
     });
   }
