@@ -31,7 +31,7 @@
     { "id": "B28", "source": ["07", "14", "28"], "scope": "spring-extension-bean", "severity": "error", "executor": "be-rules", "fix": "manual", "title": "平台扩展点出现重复 Bean、直接替换平台语义或缺少容器级回归" },
     { "id": "B29", "source": ["09", "13"], "scope": "java-page-dto", "severity": "error", "executor": "be-rules", "fix": "manual", "title": "分页 DTO 与项目交付 Profile 的默认值或最大页大小不一致" },
     { "id": "B30", "source": ["04", "13", "14"], "scope": "controller-endpoint", "severity": "error", "executor": "be-rules", "fix": "manual", "title": "Controller 的 HTTP 方法与完整路径重复；同时输出真实代码端点清单用于前后端闭环" },
-    { "id": "B31", "source": ["12", "29"], "scope": "db-contract", "severity": "error", "executor": "be-rules", "fix": "manual", "title": "数据库事实源不一致：文档基线未原名复用、字段名称/顺序/属性/注释漂移、扩展未登记，或代码仍引用未登记/已退役表" },
+    { "id": "B31", "source": ["12", "29"], "scope": "db-contract", "severity": "error", "executor": "be-rules", "fix": "manual", "title": "数据库事实源不一致：文档含禁用 is_ 字段、基线未原名复用、字段名称/顺序/属性/注释漂移、扩展未登记，或代码仍引用未登记/已退役表" },
     { "id": "J1", "source": ["02"], "scope": "java-bytecode", "severity": "error", "executor": "archunit", "fix": "manual", "title": "分层和依赖方向" },
     { "id": "J2", "source": ["03", "15"], "scope": "java-source", "severity": "error", "executor": "checkstyle", "fix": "safe-or-suggested", "title": "命名、import、Javadoc 与规模" },
     { "id": "J3", "source": ["15", "16", "17"], "scope": "java-source", "severity": "error", "executor": "pmd", "fix": "suggested", "title": "坏味道、复杂度和性能" },

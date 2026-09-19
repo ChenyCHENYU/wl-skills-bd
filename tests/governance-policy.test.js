@@ -22,11 +22,11 @@ const baseContract = {
 };
 
 function softDeleteValueOf(sql, activeValue, deletedValue) {
-  // 从 DDL 提取 is_delete 列定义，确认 DEFAULT 值和注释
+  // 从 DDL 提取 delete_flag 列定义，确认 DEFAULT 值和注释
   return {
-    defaultIs: sql.includes(`is_delete TINYINT(1) NOT NULL DEFAULT ${activeValue}`),
+    defaultIs: sql.includes(`delete_flag TINYINT(1) NOT NULL DEFAULT ${activeValue}`),
     commentHas: sql.includes(`有效标记：${activeValue}=有效，${deletedValue}=已删除`),
-    indexUsesIsDelete: sql.includes("(company_id, is_delete)"),
+    indexUsesDeleteFlag: sql.includes("(company_id, delete_flag)"),
   };
 }
 
@@ -38,7 +38,7 @@ function fail(label, msg) { throw new Error("❌ " + label + ": " + msg); }
 console.log("=== 1. 默认值兜底（无 profile，等价历史行为）===");
 {
   const mysql = renderMysqlMigration(baseContract);
-  assert.ok(mysql.includes("is_delete TINYINT(1) NOT NULL DEFAULT 1"), "默认应为 1有效");
+  assert.ok(mysql.includes("delete_flag TINYINT(1) NOT NULL DEFAULT 1"), "默认应为 1有效");
   assert.ok(mysql.includes("有效标记：1=有效，0=已删除"), "默认注释应为 1/0");
   assert.ok(mysql.includes("create_date_time VARCHAR(19)"), "默认时间应为 VARCHAR(19)");
   assert.ok(mysql.includes("create_user_no VARCHAR(64) NOT NULL"), "创建人必须由平台写入且不可为空");
@@ -46,7 +46,7 @@ console.log("=== 1. 默认值兜底（无 profile，等价历史行为）===");
   ok("MySQL 默认 1有效/0删除 + VARCHAR(19) 兜底");
 
   const oracle = renderOracleMigration(baseContract);
-  assert.ok(oracle.includes("IS_DELETE NUMBER(1) DEFAULT 1"), "Oracle 默认应为 1有效");
+  assert.ok(oracle.includes("DELETE_FLAG NUMBER(1) DEFAULT 1"), "Oracle 默认应为 1有效");
   assert.ok(oracle.includes("CREATE_DATE_TIME VARCHAR2(19 CHAR)"), "Oracle 默认 VARCHAR2(19 CHAR)");
   ok("Oracle 默认兜底");
 
@@ -60,13 +60,13 @@ console.log("\n=== 2. 华新策略 0有效/4删除（codegen）===");
 {
   const walsinProfile = { softDelete: { activeValue: 0, deletedValue: 4 } };
   const mysql = renderMysqlMigration(baseContract, walsinProfile);
-  assert.ok(mysql.includes("is_delete TINYINT(1) NOT NULL DEFAULT 0"), "华新默认应为 0有效");
+  assert.ok(mysql.includes("delete_flag TINYINT(1) NOT NULL DEFAULT 0"), "华新默认应为 0有效");
   assert.ok(mysql.includes("有效标记：0=有效，4=已删除"), "华新注释应为 0/4");
-  assert.ok(mysql.includes("(company_id, is_delete)"), "索引仍用 is_delete");
+  assert.ok(mysql.includes("(company_id, delete_flag)"), "索引仍用 delete_flag");
   ok("MySQL 0有效/4删除 + 正确注释 + 索引");
 
   const oracle = renderOracleMigration(baseContract, walsinProfile);
-  assert.ok(oracle.includes("IS_DELETE NUMBER(1) DEFAULT 0"), "Oracle 华新默认 0");
+  assert.ok(oracle.includes("DELETE_FLAG NUMBER(1) DEFAULT 0"), "Oracle 华新默认 0");
   ok("Oracle 华新 0/4 策略");
 }
 
@@ -101,13 +101,13 @@ function runWithSoftDelete(softDelete) {
 }
 {
   const defMsgs = runWithSoftDelete(null);
-  assert.ok(defMsgs.some((m) => m.includes("IS_DELETE=0")), "无配置时提示应含 IS_DELETE=0（默认删除值0）");
-  ok("无配置 B17 提示 IS_DELETE=0（默认兜底）");
+  assert.ok(defMsgs.some((m) => m.includes("DELETE_FLAG=0")), "无配置时提示应含 DELETE_FLAG=0（默认删除值0）");
+  ok("无配置 B17 提示 DELETE_FLAG=0（默认兜底）");
 
   const walsinMsgs = runWithSoftDelete({ activeValue: 0, deletedValue: 4 });
-  assert.ok(walsinMsgs.some((m) => m.includes("IS_DELETE=4")), "华新策略提示应含 IS_DELETE=4（删除值4）");
-  assert.ok(!walsinMsgs.some((m) => m.includes("IS_DELETE=0")), "华新策略不应再误报 IS_DELETE=0 为删除");
-  ok("华新 0/4 策略 B17 提示正确变为 IS_DELETE=4（不再误报 0 为删除）");
+  assert.ok(walsinMsgs.some((m) => m.includes("DELETE_FLAG=4")), "华新策略提示应含 DELETE_FLAG=4（删除值4）");
+  assert.ok(!walsinMsgs.some((m) => m.includes("DELETE_FLAG=0")), "华新策略不应再误报 DELETE_FLAG=0 为删除");
+  ok("华新 0/4 策略 B17 提示正确变为 DELETE_FLAG=4（不再误报 0 为删除）");
 }
 
 // ===== 5. rules.local.json softDelete 校验 =====
@@ -162,10 +162,10 @@ console.log("\n=== 6. Java/XML 模板治理值全链路 ===");
   const renderedService = render(fs.readFileSync(path.join(templateDir, "Service.java.tmpl"), "utf8"), context);
   const renderedMapper = render(fs.readFileSync(path.join(templateDir, "Mapper.xml.tmpl"), "utf8"), context);
   assert.match(renderedEntity, /@TableLogic\(value = "0", delval = "4"\)/);
-  assert.match(renderedService, /setIsDelete\(0\)/);
-  assert.match(renderedMapper, /AND t\.IS_DELETE = 0/);
-  assert.match(renderedMapper, /SET IS_DELETE = 4/);
-  assert.doesNotMatch(renderedMapper.replace(/<!--[\s\S]*?-->/g, ""), /IS_DELETE\s*=\s*1/);
+  assert.match(renderedService, /setDeleteFlag\(0\)/);
+  assert.match(renderedMapper, /AND t\.DELETE_FLAG = 0/);
+  assert.match(renderedMapper, /SET DELETE_FLAG = 4/);
+  assert.doesNotMatch(renderedMapper.replace(/<!--[\s\S]*?-->/g, ""), /DELETE_FLAG\s*=\s*1/);
   ok("华新 0/4 从 profile 贯穿 Entity、Service、Mapper XML");
 }
 
@@ -173,13 +173,17 @@ console.log("\n=== 6. Java/XML 模板治理值全链路 ===");
 console.log("\n=== 7. profile 治理值 fail-closed 校验 ===");
 {
   assert.strictEqual(validateGovernance({ softDelete: { activeValue: 1, deletedValue: 1 } }).ok, false);
-  assert.strictEqual(validateGovernance({ softDelete: { column: "IS_DELETE;DROP" } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { column: "DELETE_FLAG;DROP" } }).ok, false);
+  const legacyColumn = validateGovernance({ softDelete: { column: "IS_DELETE" } });
+  assert.strictEqual(legacyColumn.ok, false);
+  assert.ok(legacyColumn.errors.some((message) => message.includes("DELETE_FLAG")));
   assert.strictEqual(validateGovernance({ auditTime: { mysqlType: "DATETIME(3) DEFAULT NOW()" } }).ok, false);
+  assert.strictEqual(validateGovernance({ softDelete: { javaField: "isDelete" } }).ok, false);
   assert.strictEqual(validateGovernance({ softDelete: { javaField: "deleted" } }).ok, false);
   assert.strictEqual(validateGovernance({ softDelete: "0/4" }).ok, false);
   assert.strictEqual(validateGovernance({ softDelete: { activeValue: 0 } }).ok, false);
   assert.strictEqual(validateGovernance({ softDelete: { activeValue: 0, deletedValue: 4, extra: true } }).ok, false);
-  ok("相同治理值、危险列名/类型和不兼容 Java 字段均被拒绝");
+  ok("相同治理值、危险类型、is_ 数据库列和 isXxx Java 字段均被拒绝");
 }
 
 // ===== 8. doctor 对 profile / rules / 运行时三点校验 =====

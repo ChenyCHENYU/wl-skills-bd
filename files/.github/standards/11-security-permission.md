@@ -127,14 +127,14 @@ public MybatisPlusInterceptor mybatisPlusInterceptor() {
 
 若团队未启用并经过 doctor 验证的多租户插件，所有 SELECT/UPDATE/DELETE **必须显式**带 COMPANY_ID 条件：
 
-下例采用默认 profile 的 `IS_DELETE = 1`；项目覆盖软删值后必须使用该 profile 的有效值。
+下例采用默认 profile 的 `DELETE_FLAG = 1`；项目覆盖软删值后必须使用该 profile 的有效值。
 
 ```xml
 <select id="queryPage" resultType="...PageVO">
     SELECT <include refid="BaseColumns"/>
     FROM MDM_FEATURE_CATEGORY t
     <where>
-        AND t.IS_DELETE = 1
+        AND t.DELETE_FLAG = 1
         AND t.COMPANY_ID = #{companyId}                <!-- 独立 @Param，由 Service 从 AuthUtil 动态取 -->
     </where>
 </select>
@@ -236,9 +236,9 @@ if (!tokenService.verify(dto.getConfirmToken(), "batchDelete:" + dto.getOperateA
 
 ```xml
 <!-- 以下有效标记采用默认 profile；项目覆盖时由生成器替换 -->
-✅ <where> AND t.IS_DELETE = 1 AND t.COMPANY_ID = #{companyId} </where>
+✅ <where> AND t.DELETE_FLAG = 1 AND t.COMPANY_ID = #{companyId} </where>
 
-❌ <where> AND t.IS_DELETE = 1 </where>                  <!-- 缺 COMPANY_ID（B7）-->
+❌ <where> AND t.DELETE_FLAG = 1 </where>                  <!-- 缺 COMPANY_ID（B7）-->
 ```
 
 ## 变更记录

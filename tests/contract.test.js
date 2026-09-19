@@ -25,7 +25,9 @@ assert.strictEqual(context.createFields.length, 3);
 assert.strictEqual(context.queryFields.length, 2);
 assert.strictEqual(context.pagePermission, example.api.permissions.page);
 assert.ok(context.createImports.includes("javax.validation.constraints.NotBlank"));
-assert.strictEqual(context.softDeleteColumn, "IS_DELETE");
+assert.strictEqual(context.softDeleteColumn, "DELETE_FLAG");
+assert.strictEqual(context.softDeleteJavaField, "deleteFlag");
+assert.strictEqual(context.softDeleteJavaFieldUpper, "DeleteFlag");
 assert.strictEqual(context.softDeleteActiveValue, 1);
 assert.strictEqual(context.softDeleteDeletedValue, 0);
 
@@ -57,6 +59,18 @@ badReserved.fields[0].column = "COMPANY_ID";
 const reservedResult = validateContract(badReserved, { projectRoot: ROOT });
 assert.strictEqual(reservedResult.ok, false);
 assert.ok(reservedResult.errors.some((error) => /治理字段/.test(error.message)));
+
+const forbiddenIsColumn = structuredClone(example);
+forbiddenIsColumn.fields[0].column = "IS_ENABLED";
+const forbiddenIsColumnResult = validateContract(forbiddenIsColumn, { projectRoot: ROOT });
+assert.strictEqual(forbiddenIsColumnResult.ok, false);
+assert.ok(forbiddenIsColumnResult.errors.some((error) => /禁止 is_ 前缀/.test(error.message) && /ENABLED_FLAG/.test(error.message)));
+
+const forbiddenIsJava = structuredClone(example);
+forbiddenIsJava.fields[0].name = "isEnabled";
+const forbiddenIsJavaResult = validateContract(forbiddenIsJava, { projectRoot: ROOT });
+assert.strictEqual(forbiddenIsJavaResult.ok, false);
+assert.ok(forbiddenIsJavaResult.errors.some((error) => /禁止 isXxx/.test(error.message) && /enabledFlag/.test(error.message)));
 
 const badPath = structuredClone(example);
 badPath.output = { modelJava: "../outside" };

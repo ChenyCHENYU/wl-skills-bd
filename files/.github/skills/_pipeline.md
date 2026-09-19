@@ -68,7 +68,7 @@ wl-skills-bd context plan --module <module> --task "<任务>" --json
 wl-skills-bd codegen validate wl-contract.json
 ```
 
-不允许从自然语言直接生成代码；不允许省略 `externalBasePath` 后猜网关前缀；不允许把 `companyId/isDelete/审计字段` 作为普通业务字段。
+不允许从自然语言直接生成代码；不允许省略 `externalBasePath` 后猜网关前缀；不允许把 `companyId/deleteFlag/审计字段` 作为普通业务字段。
 
 ## ② 确定性生成
 

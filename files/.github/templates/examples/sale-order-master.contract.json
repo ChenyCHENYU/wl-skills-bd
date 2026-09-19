@@ -95,7 +95,7 @@
   ],
   "indexes": [
     { "name": "UK_ORDER_NO", "columns": ["COMPANY_ID", "ORDER_NO"], "unique": true },
-    { "name": "IDX_ORDER_STATUS", "columns": ["COMPANY_ID", "IS_DELETE", "STATUS"] }
+    { "name": "IDX_ORDER_STATUS", "columns": ["COMPANY_ID", "DELETE_FLAG", "STATUS"] }
   ],
   "customOperations": [
     {

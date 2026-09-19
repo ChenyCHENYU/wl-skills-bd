@@ -66,7 +66,7 @@ wl-skills-bd codegen apply wl-contract.json \
 - 每个顶层业务字段必须显式声明 `writable`；命令请求字段必须由 patch.fromRequest 或已确认实现消费。
 - PageDTO 的 JSON body 同时承载 current/size 与查询条件；命令统一使用 OperationRequestDTO，不生成散落 RequestParam。
 - VO/PageVO 不继承 Entity；返回字段只能来自契约白名单。详情 VO 固定返回 revision，完成乐观锁读写闭环。
-- Service 从 `AuthUtil` 取租户；更新/软删走显式原子 SQL，同时限定 ID、COMPANY_ID、IS_DELETE=1、REVISION 并检查影响行数。
+- Service 从 `AuthUtil` 取租户；更新/软删走显式原子 SQL，同时限定 ID、COMPANY_ID、DELETE_FLAG=1、REVISION 并检查影响行数。
 - 自定义 batch 单次最多 1000 条，先完成全量存在性/前置条件校验，再在同一事务更新，避免捕获异常后提交半批数据。
 - Mapper XML 显式列名、显式租户条件、常驻软删除条件和稳定排序。
 - Flyway 只生成正向版本迁移；ALTER 强制 expand/contract 分阶段，版本不可变；恢复说明必须经 DBA/发布审批，不生成自动执行的 `U` 或反向 `V` 脚本。

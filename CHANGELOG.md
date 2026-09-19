@@ -6,6 +6,22 @@
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-09-19（数据库字段命名治理）
+
+### Added
+
+- 新增数据库 `is_` 与 Java `isXxx` 字段禁令：需求镜像由 B31 明确告警，受管契约、ALTER 新增字段和代码生成强阻断，并给出 `*_flag`/`xxxFlag` 建议。
+
+### Changed
+
+- 默认软删治理字段统一为 `DELETE_FLAG/deleteFlag`，同步 Profile、Schema、模板、规则、Skills、Standards 与示例。
+- contract migration 仍可显式删除旧 `is_` 列，保证存量字段可按分阶段迁移安全退役。
+
+### Fixed
+
+- 修复需求文档含 `is_` 字段时仍可能被照抄建表，以及生成代码 getter/setter 与序列化属性存在歧义的风险。
+- 修复 Java 质量 Maven 夹具未携带“业务疑点已评审”标志而被自身生成门禁误拦的问题；生产生成门保持不变。
+
 ## [0.26.0] - 2026-09-16（业务闭环与数据库复核）
 
 ### Added

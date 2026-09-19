@@ -10,7 +10,7 @@
 | 写 Redis 缓存 | 20 §1~§4 | B13（TTL）/B14（锁）/B15（禁令）/B16（序列化） |
 | 实现分布式锁 | 20 §3 | B14（必须 Redisson RLock；长 TTL>10min 需 watchdog） |
 | 批量写库 | 21 §2 | B19（≤1000）/分批游标 |
-| 删除数据 | 21 §3 | B17（禁物理删，软删 IS_DELETE=0） |
+| 删除数据 | 21 §3 | B17（禁物理删，软删 DELETE_FLAG=0） |
 | 写 Mapper XML | 06 + 21 §4 | B18（update/delete 必有 WHERE） |
 | 事务内发消息/HTTP | 10 §7 + 22 | **B20 error**（移出事务或用事务消息 + afterCommit） |
 | 调用其他服务 | 22 §1~§7 | B21（HttpUtil/RestTemplate 必须超时）+ Feign 熔断 + 降级 |
@@ -176,7 +176,7 @@ wl-skills-bd troubleshoot --list                          # 列出所有诊断�
 | B14 | `setnx 自实现锁` / `setIfAbsent 1 HOURS 长 TTL` | 改用 Redisson `RLock` + watchdog |
 | B15 | `禁用 Redis 命令 KEYS *` | 改用 `SCAN` |
 | B16 | `JdkSerializationRedisSerializer` | 改 Jackson + JavaTimeModule |
-| B17 | `deleteById()：业务代码禁止物理删除` | 改软删 IS_DELETE=0 |
+| B17 | `deleteById()：业务代码禁止物理删除` | 改软删 DELETE_FLAG=0 |
 | B18 | `<update> 缺少 WHERE` | 加 WHERE + COMPANY_ID 谓词 |
 | B19 | `saveBatch(list, 5000) 超过 1000` | 移除显式大小或分批 |
 | B20 | `@Transactional 内调 rocketMQTemplate/HttpUtil` | 移出事务或用事务消息 + afterCommit |

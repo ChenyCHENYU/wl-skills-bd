@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.26.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.27.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -26,6 +26,7 @@
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
+| 数据库命名治理（v0.27） | 禁止新增 `is_` 数据库列和 `isXxx` Java 属性；需求镜像先告警，受管契约/ALTER/代码生成强阻断；统一使用 `*_flag`/`xxxFlag` |
 | 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
 | 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
 | 变更审查（v0.24） | Git 新增问题与历史基线分离；B 规则、项目断言、平台适配、供应链、JaCoCo 全量/变更行覆盖率汇总到同一质量门 |
@@ -40,6 +41,13 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.27.0 数据库 `is_` 命名禁令
+
+- **统一口径**：数据库标志列使用 `*_flag`，Java 属性使用 `xxxFlag`；默认软删字段由 `IS_DELETE/isDelete` 收敛为 `DELETE_FLAG/deleteFlag`。
+- **文档先拦截**：`docs/db-spec/*.json` 一旦出现 `is_` 字段，B31 会明确提示 Java Bean get/set 与序列化映射风险，并给出 `*_flag` 建议。未安装项目为迁移告警，受管项目阻断生成。
+- **生成零扩散**：CRUD 业务字段、自定义命令字段及 ALTER 新增字段同时禁止 `is_`/`isXxx`；Profile 也不能把软删列覆盖回违规名称。
+- **允许安全退役**：规则不阻断 contract migration 显式删除旧 `is_` 列。存量治理仍须按 expand → backfill → switch → contract 执行，不能直接改列制造兼容风险。
 
 ### v0.26.0 业务闭环与数据库复核
 
@@ -246,7 +254,7 @@ DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。�
 
 | 扩展字段 | 生成内容 | 典型场景 |
 |---|---|---|
-| `customOperations[]` | 强类型命令 DTO + 前置校验 + `ID/COMPANY_ID/IS_DELETE/REVISION` 原子写；batch 返回 successCount/failureCount/failures | submit/approve/reject/withdraw/changeStatus/convert/release/close/cancel/batchXxx |
+| `customOperations[]` | 强类型命令 DTO + 前置校验 + `ID/COMPANY_ID/DELETE_FLAG/REVISION` 原子写；batch 返回 successCount/failureCount/failures | submit/approve/reject/withdraw/changeStatus/convert/release/close/cancel/batchXxx |
 | `relations[]` | 主 Controller 的 queryXxxByParentId 接口；manifest 暴露关联契约 | 订单/明细、配置/子项、主从表 |
 | `alter{}` | `phase=expand` 只允许可空 add/显式 widening modify；`phase=contract` 只允许带审批单的 drop；Catalog 未配置时必须登记 `impactRef` 影响分析结论 | 加字段、扩长度、审批后删废弃字段 |
 | `indexes[]` | 渲染到 migration（唯一索引/普通索引） | 业务唯一键、查询性能索引 |
@@ -465,7 +473,7 @@ scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 
 | 分布式锁 | setnx 自实现 | Redisson RLock | B14 error |
 | Redis 命令 | KEYS \*/FLUSHDB/FLUSHALL | SCAN | B15 error |
 | Redis 序列化 | JDK 序列化 | Jackson + JavaTimeModule | B16 warn |
-| 删除数据 | deleteBatchIds/TRUNCATE/DROP | 使用当前 profile 的软删列/删除值（默认 IS_DELETE=0） | B17 error |
+| 删除数据 | deleteBatchIds/TRUNCATE/DROP | 使用当前 profile 的软删列/删除值（默认 DELETE_FLAG=0） | B17 error |
 | 全表写 | update/delete 无 WHERE | WHERE + COMPANY_ID 谓词 | B18 error |
 | 批量写 | saveBatch > 1000 | ≤1000 或分批游标 | B19 warn |
 

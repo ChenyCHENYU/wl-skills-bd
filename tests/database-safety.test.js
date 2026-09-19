@@ -20,8 +20,8 @@ unknownIndex.indexes = [{ name: "IDX_UNKNOWN", columns: ["COMPANY_ID", "MISSING_
 assert.strictEqual(validate(unknownIndex).ok, false, "索引不得引用不存在列");
 
 const unsafeSoftDeleteUnique = structuredClone(example);
-unsafeSoftDeleteUnique.indexes = [{ name: "UK_CATEGORY", columns: ["COMPANY_ID", "IS_DELETE", "CATEGORY_CODE"], unique: true }];
-assert.strictEqual(validate(unsafeSoftDeleteUnique).ok, false, "唯一索引不得使用会在重复删除时冲突的 IS_DELETE");
+unsafeSoftDeleteUnique.indexes = [{ name: "UK_CATEGORY", columns: ["COMPANY_ID", "DELETE_FLAG", "CATEGORY_CODE"], unique: true }];
+assert.strictEqual(validate(unsafeSoftDeleteUnique).ok, false, "唯一索引不得使用会在重复删除时冲突的 DELETE_FLAG");
 
 const unsafeVerification = structuredClone(example);
 unsafeVerification.migration.verificationSql = ["SELECT * FROM MDM_FEATURE_CATEGORY FOR UPDATE"];
@@ -36,6 +36,14 @@ const alter = JSON.parse(fs.readFileSync(alterFile, "utf8"));
 const notNullAdd = structuredClone(alter);
 notNullAdd.alter.operations[0].field.requiredOnCreate = true;
 assert.strictEqual(validate(notNullAdd).ok, false, "expand 新增列必须先允许 NULL");
+
+const forbiddenIsAdd = structuredClone(alter);
+forbiddenIsAdd.alter.operations[0].field.name = "isEnabled";
+forbiddenIsAdd.alter.operations[0].field.column = "IS_ENABLED";
+const forbiddenIsAddResult = validate(forbiddenIsAdd);
+assert.strictEqual(forbiddenIsAddResult.ok, false, "ALTER 新增字段禁止 is_/isXxx 命名");
+assert.ok(forbiddenIsAddResult.errors.some((error) => /禁止 is_ 前缀/.test(error.message)));
+assert.ok(forbiddenIsAddResult.errors.some((error) => /禁止 isXxx/.test(error.message)));
 
 const mixedDrop = structuredClone(alter);
 mixedDrop.alter.operations.push({ type: "drop", column: "LEGACY_FIELD" });

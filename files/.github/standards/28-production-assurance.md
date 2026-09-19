@@ -35,7 +35,7 @@ document-meta:
 ## 3. 安全与权限
 
 1. Controller 的权限码必须唯一并使用 `@PreAuthorize`；Spring Boot 2 项目必须存在 `@EnableGlobalMethodSecurity(prePostEnabled = true)`。仅写注解但未启用方法安全视为越权风险（B24）。
-2. 租户 ID 只能来自可信登录上下文。详情、批量加载、更新和软删除都必须在 Mapper SQL 中显式限制 `COMPANY_ID` 与 `IS_DELETE`。
+2. 租户 ID 只能来自可信登录上下文。详情、批量加载、更新和软删除都必须在 Mapper SQL 中显式限制 `COMPANY_ID` 与 `DELETE_FLAG`。
 3. 写操作必须同时验证存在性、租户归属、前置状态和 revision；禁止把客户端传入的 companyId、审计字段、删除标记直接复制到 Entity。
 4. confidential/restricted 字段必须声明脱敏和日志排除策略；Lombok `@ToString` 必须用 `@ToString.Exclude` 排除敏感字段（B25）。密码、令牌、证件号、密钥和完整个人信息不得写日志。
 5. 高风险动作必须保留操作者、时间、对象、结果、失败原因和 traceId；审计日志不得保存 secret 原文。

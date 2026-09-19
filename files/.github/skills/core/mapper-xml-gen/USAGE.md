@@ -19,7 +19,7 @@
 用户：帮我生成 特征量分类 的 Mapper 和分页查询
 AI：  → 读 Entity 字段 → 展开 BaseColumns
       → 按 PageDTO 字段生成 <where><if> 动态条件
-      → 软删除常驻 AND IS_DELETE = 1
+      → 软删除常驻 AND DELETE_FLAG = 1
 ```
 
 ### 场景 B：联表查询（JOIN）
@@ -34,7 +34,7 @@ AI：  → 读 Entity 字段 → 展开 BaseColumns
     FROM MDM_FEATURE_CATEGORY t
     LEFT JOIN MDM_FEATURE_DESIGN d ON t.DESIGN_ID = d.ID
     <where>
-        AND t.IS_DELETE = 1
+        AND t.DELETE_FLAG = 1
         <if test="param.categoryName != null and param.categoryName != ''">
             AND t.CATEGORY_NAME LIKE CONCAT(CONCAT('%', #{param.categoryName}), '%')
         </if>
@@ -51,7 +51,7 @@ AI：  → 读 Entity 字段 → 展开 BaseColumns
 <select id="selectByIds" resultType="...MdmFeatureCategory">
     SELECT <include refid="BaseColumns"/>
     FROM MDM_FEATURE_CATEGORY t
-    WHERE t.IS_DELETE = 1
+    WHERE t.DELETE_FLAG = 1
     AND t.ID IN
     <foreach collection="ids" item="id" open="(" separator="," close=")">
         #{id}
@@ -67,7 +67,7 @@ AI：  → 读 Entity 字段 → 展开 BaseColumns
 default MdmFeatureCategory getByCode(String code) {
     return selectOne(Wrappers.<MdmFeatureCategory>lambdaQuery()
             .eq(MdmFeatureCategory::getCategoryCode, code)
-            .eq(MdmFeatureCategory::getIsDelete, 1));
+            .eq(MdmFeatureCategory::getDeleteFlag, 1));
 }
 ```
 
@@ -105,8 +105,8 @@ default MdmFeatureCategory getByCode(String code) {
 
 ## FAQ
 
-**Q：BaseColumns 要不要包含审计字段（COMPANY_ID/IS_DELETE 等）？**
-A：要。分页查询通常需要显示创建时间、创建人。IS_DELETE 在 where 条件常驻，不在 select 列也行，但建议列出。
+**Q：BaseColumns 要不要包含审计字段（COMPANY_ID/DELETE_FLAG 等）？**
+A：要。分页查询通常需要显示创建时间、创建人。DELETE_FLAG 在 where 条件常驻，不在 select 列也行，但建议列出。
 
 **Q：namespace 写什么？**
 A：Mapper.java 的全限定名，必须完全一致，否则 MyBatis 绑定失败。

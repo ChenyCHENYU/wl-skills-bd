@@ -33,6 +33,8 @@
 - Oracle 默认 `UPPER_SNAKE_CASE`。
 - MySQL 默认 `lower_snake_case`；若存量库使用大写，必须在 Profile 覆盖，禁止同一 Schema 混用。
 - 表名包含稳定业务前缀；字段名禁止缩写歧义。
+- **数据库列禁止 `is_` 前缀，Java 属性禁止 `isXxx`。** 这类命名会让 Java Bean 的 getter/setter、MyBatis/Lombok 与序列化框架产生属性歧义。布尔/标志字段统一使用含义明确的 `*_FLAG`/`*_flag`，Java 使用 `xxxFlag`，例如 `DELETE_FLAG/delete_flag` ↔ `deleteFlag`。
+- 需求或数据库设计文档出现 `is_` 字段时，不得照抄建表：必须在 DDL 生成前明确警告并暂停，先由业务/数据负责人确认替代名并同步文档、机器镜像和契约。存量 `is_` 只允许通过独立 expand/backfill/switch/contract 迁移退役，禁止在新表或新增列中继续扩散。
 
 ## 3. 业务表基础字段
 
@@ -40,7 +42,7 @@
 |---|---|---|
 | ID | String 对应的 VARCHAR/VARCHAR2 | 主键，EntityUtil 生成 |
 | COMPANY_ID | VARCHAR/VARCHAR2 | NOT NULL，租户隔离 |
-| profile.softDelete.column（默认 IS_DELETE） | profile 方言类型 | NOT NULL；有效值/删除值由 profile 声明，默认 1/0 |
+| profile.softDelete.column（默认 DELETE_FLAG） | profile 方言类型 | NOT NULL；有效值/删除值由 profile 声明，默认 1/0 |
 | REVISION | INTEGER/NUMBER | NOT NULL，默认 0 |
 | CREATE_USER_NO | VARCHAR/VARCHAR2 | NOT NULL |
 | CREATE_DATE_TIME | VARCHAR/VARCHAR2 或 Profile 时间类型 | NOT NULL |
@@ -52,9 +54,9 @@
 ## 4. 索引与软删除唯一性
 
 - 主键自动有索引，不重复创建。
-- 根据真实查询谓词建立联合索引，避免只为低选择性 `IS_DELETE` 建独立索引。
-- 租户业务查询通常从 `(COMPANY_ID, IS_DELETE, business_columns...)` 开始设计，并用执行计划验证。
-- 禁止简单使用 `(business_key, COMPANY_ID, IS_DELETE)` 解决可重复软删：第二次删除/重建仍可能冲突。
+- 根据真实查询谓词建立联合索引，避免只为低选择性 `DELETE_FLAG` 建独立索引。
+- 租户业务查询通常从 `(COMPANY_ID, DELETE_FLAG, business_columns...)` 开始设计，并用执行计划验证。
+- 禁止简单使用 `(business_key, COMPANY_ID, DELETE_FLAG)` 解决可重复软删：第二次删除/重建仍可能冲突。
 
 可选策略必须由数据库 Profile 明确选择：
 

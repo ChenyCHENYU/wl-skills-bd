@@ -28,7 +28,7 @@ metadata:
 
 - `profile/rootPackage/module/entity/database/fields` 已明确；
 - 每个业务字段的 Java 类型、DB 类型、中文含义和可写/查询/响应白名单已确认；
-- `companyId/isDelete/revision` 和六个 CoreEntity 字段不在普通业务 `fields` 中重复声明；
+- `companyId/deleteFlag/revision` 和六个 CoreEntity 字段不在普通业务 `fields` 中重复声明；
 - 类型只使用当前 Schema 白名单；未知类型先扩 Schema/Profile/模板和测试，不在单个资源临时拼代码。
 
 ## 执行
@@ -44,8 +44,8 @@ wl-skills-bd codegen plan wl-contract.json --json
 
 | 产物 | 输入/输出 | 治理字段 |
 |---|---|---|
-| Entity | 持久化 | 继承 CoreEntity 六字段，显式 `isDelete/revision` |
-| CreateDTO | 新增请求 | 禁止 id/companyId/isDelete/revision/审计字段 |
+| Entity | 持久化 | 继承 CoreEntity 六字段，显式 `deleteFlag/revision` |
+| CreateDTO | 新增请求 | 禁止 id/companyId/deleteFlag/revision/审计字段 |
 | UpdateDTO | 修改请求 | 强制 id/revision；业务字段采用 Patch 语义 |
 | PageDTO | 查询请求 | 只含 `queryMode != none` 的字段，全部可选 |
 | VO | 详情响应 | 业务 `detail=true` 字段 + id/revision |

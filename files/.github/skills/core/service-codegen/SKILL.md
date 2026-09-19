@@ -93,7 +93,7 @@ preconditions 支持六种操作符：equals/notEquals/in/notIn/isNull/notNull�
 未声明 `customOperations` 时，按**四段式**手工追加业务方法；当前 CRUD codegen 不会从字段名猜状态机：
 
 ```
-① 校验存在：Entity entity = lambdaQuery().eq(id).eq(companyId).eq(isDelete, 1).one();
+① 校验存在：Entity entity = lambdaQuery().eq(id).eq(companyId).eq(deleteFlag, 1).one();
              ServiceAssert.isNotNull(entity, "xxx不存在");
 ② 校验状态：ServiceAssert.isTrue("DRAFT".equals(entity.getStatus()), "仅待提交可操作");
 ③ 构造 patch：entity.setStatus("APPROVED");

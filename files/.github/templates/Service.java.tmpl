@@ -87,7 +87,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         entity.set{{Field}}({{value}});
 {{/initialValueAssignments}}
         EntityUtil.setCreateProp(entity);
-        entity.setIsDelete({{softDeleteActiveValue}});
+        entity.set{{softDeleteJavaFieldUpper}}({{softDeleteActiveValue}});
         entity.setRevision(0);
         int inserted = baseMapper.insert(entity);
         ServiceAssert.isTrue(inserted == 1, "新增{{apiDesc}}失败");
@@ -116,7 +116,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
                         .setIgnoreProperties(
                                 "id",
                                 "companyId",
-                                "isDelete",
+                                "{{softDeleteJavaField}}",
                                 "revision",
                                 "createUserNo",
                                 "createDateTime"));

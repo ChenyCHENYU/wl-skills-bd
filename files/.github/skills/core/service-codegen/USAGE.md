@@ -137,7 +137,7 @@ A：**禁止**。ArchUnit（J1）会卡：`controller.. ✗→ mapper..`。必�
 A：`@RequiredArgsConstructor` + `private final OtherService otherService`。**禁止**注入其他 Service 的 Mapper。
 
 **Q：软删除还是物理删除？**
-A：团队基线用软删除（`IS_DELETE = 0`）。deleteById 只调用 `softDeleteAtomic(entity, companyId)`；SQL 同时限定租户、有效标记和 revision，不调用 MP 物理删，也不使用通用 updateById。
+A：团队基线用软删除（`DELETE_FLAG = 0`）。deleteById 只调用 `softDeleteAtomic(entity, companyId)`；SQL 同时限定租户、有效标记和 revision，不调用 MP 物理删，也不使用通用 updateById。
 
 ## 变更记录
 

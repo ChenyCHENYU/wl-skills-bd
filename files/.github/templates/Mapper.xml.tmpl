@@ -14,7 +14,7 @@
         t.{{COLUMN}}            AS {{field}},
         {{/columns}}
         t.{{companyIdColumn}}       AS companyId,
-        t.{{softDeleteColumn}}        AS isDelete,
+        t.{{softDeleteColumn}}        AS {{softDeleteJavaField}},
         t.{{revisionColumn}}         AS revision,
         t.{{createUserNoColumn}}   AS createUserNo,
         t.{{createDateTimeColumn}} AS createDateTime,

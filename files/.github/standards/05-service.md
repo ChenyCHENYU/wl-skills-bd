@@ -10,7 +10,7 @@ Service 是用例编排和事务边界，负责权限之后的数据归属校验
 
 - 分页参数使用 `JhPage<XxxPageVO>`，禁止 raw type。
 - 详情和列表查询必须带租户条件；租户值由 `AuthUtil.getLoginCompanyId()` 获取，禁止从 DTO 接收。
-- `getById` 不是仅按主键查询，而是按 `id + companyId + isDelete` 数据归属查询。
+- `getById` 不是仅按主键查询，而是按 `id + companyId + deleteFlag` 数据归属查询。
 
 ## 3. 新增
 
@@ -20,7 +20,7 @@ public String save(XxxCreateDTO dto) {
     Xxx entity = new Xxx();
     BeanUtil.copyProperties(dto, entity);
     EntityUtil.setCreateProp(entity);
-    entity.setIsDelete(1);
+    entity.setDeleteFlag(1);
     entity.setRevision(0);
     ServiceAssert.isTrue(baseMapper.insert(entity) == 1, "新增失败");
     return entity.getId();
@@ -35,13 +35,13 @@ public String save(XxxCreateDTO dto) {
 
 - UpdateDTO 必须含 id/revision；`@Version` 只保留模型语义，受管写必须使用显式原子 SQL 校验 revision。
 - 先按当前租户查询，再复制允许修改的白名单字段。
-- 禁止覆盖 id、companyId、isDelete、createUserNo、createDateTime。
+- 禁止覆盖 id、companyId、deleteFlag、createUserNo、createDateTime。
 - Patch 语义忽略 null；PUT 全量替换必须由契约明确声明。
 - 更新影响行数为 0 时提示并发更新或记录不存在。
 
 ## 5. 删除
 
-- 默认只允许软删除：`IS_DELETE` 从 1 变为 0，并填充更新审计字段。
+- 默认只允许软删除：`DELETE_FLAG` 从 1 变为 0，并填充更新审计字段。
 - 默认模板不生成 `deleteBatchIds` 等物理删除入口。
 - 物理删除只能由单独的运维/数据治理契约生成，必须预览 SQL、人工确认和审计。
 
@@ -71,7 +71,7 @@ public String save(XxxCreateDTO dto) {
 1. **校验存在**：按 id + companyId 查询，ServiceAssert.isNotNull
 2. **校验前置**：按 preconditions（equals/notEquals/in/notIn/isNull/notNull）逐条 ServiceAssert
 3. **构造 patch**：按 patch 字段列表逐字段 setXxx
-4. **持久化**：`EntityUtil.setUpdateProp` + `updateAtomic(entity, companyId, expectedRevision)` + 影响行数校验；SQL 必须同时限定 `ID + COMPANY_ID + IS_DELETE=1 + REVISION` 并原子递增版本
+4. **持久化**：`EntityUtil.setUpdateProp` + `updateAtomic(entity, companyId, expectedRevision)` + 影响行数校验；SQL 必须同时限定 `ID + COMPANY_ID + DELETE_FLAG=1 + REVISION` 并原子递增版本
 
 `kind=batch` 时由独立 OperationRequestDTO 接收 `ids` 与业务参数。Service 先去重并限制单批最多 1000 条，再一次性按租户加载全部有效记录、校验数量与前置条件，最后逐条执行原子版本写。任一项失败必须抛异常并回滚整批；成功响应固定为 `{successCount, failureCount: 0, failures: []}`，禁止用“部分成功”掩盖未知事务状态。
 

@@ -6,11 +6,11 @@
 
 - Entity 继承 `CoreEntity`，复用实际存在的六个字段：`id/companyId/createUserNo/updateUserNo/createDateTime/updateDateTime`。
 - 当前基类的时间字段是 String，新模板必须保持兼容；新平台 Profile 可选择 `LocalDateTime`，但不可在同一模块混用。
-- `CoreEntity` 不含 `isDelete/revision`，业务 Entity 必须显式声明：
+- `CoreEntity` 不含 `deleteFlag/revision`，业务 Entity 必须显式声明：
 
 ```java
 @TableLogic(value = "1", delval = "0")
-private Integer isDelete;
+private Integer deleteFlag;
 
 @Version
 private Integer revision;
@@ -23,7 +23,7 @@ private Integer revision;
 
 确定性 codegen 默认生成：
 
-- `XxxCreateDTO`：不含 id、companyId、isDelete、revision、审计字段。
+- `XxxCreateDTO`：不含 id、companyId、deleteFlag、revision、审计字段。
 - `XxxUpdateDTO`：必须含 String id 和 Integer revision，只包含可修改字段。
 - `XxxPageDTO`：含受校验的 `current/size` 和可选查询条件，不含可信租户字段；
   默认值和上限读取生效 Delivery Profile，无项目覆盖时基线为 `current=1,size=10,maxSize=200`。请求不传分页值时仍使用默认值，
@@ -49,7 +49,7 @@ private Integer revision;
 
 - `XxxVO` 和 `XxxPageVO` 独立声明契约白名单字段。
 - 禁止 Entity/DTO/VO 相互 extends。
-- 默认不返回 companyId、isDelete 和内部审计账号；详情 VO 必须返回 revision，供 UpdateDTO 完成乐观锁闭环。PageVO 仅在列表直接编辑且契约明确时返回 revision。
+- 默认不返回 companyId、deleteFlag 和内部审计账号；详情 VO 必须返回 revision，供 UpdateDTO 完成乐观锁闭环。PageVO 仅在列表直接编辑且契约明确时返回 revision。
 - PageVO 只含列表展示字段，DetailVO 可含关联名称和子列表。
 
 ## 4. 类型映射

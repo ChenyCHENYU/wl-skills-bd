@@ -16,7 +16,7 @@ import {{.}};
 /**
  * {{apiDesc}}({{Entity}})表实体类。
  * <p>映射数据库表 {{table}}，继承 CoreEntity 复用 id、companyId、创建人与更新人、创建与更新时间六个基础字段。
- * <p>jh4j-cloud 3.1.0 的 CoreEntity 不含 isDelete/revision，因此本类显式声明软删除与乐观锁字段。
+ * <p>jh4j-cloud 3.1.0 的 CoreEntity 不含 {{softDeleteJavaField}}/revision，因此本类显式声明软删除与乐观锁字段。
  *
  * @author wl-skills-bd codegen
  * @since 1.0.0
@@ -31,7 +31,7 @@ public class {{Entity}} extends CoreEntity {
     @TableField("{{softDeleteColumn}}")
     @TableLogic(value = "{{softDeleteActiveValue}}", delval = "{{softDeleteDeletedValue}}")
     @Schema(description = "{{softDeleteComment}}")
-    private Integer isDelete;
+    private Integer {{softDeleteJavaField}};
 
     @Version
     @TableField("{{revisionColumn}}")

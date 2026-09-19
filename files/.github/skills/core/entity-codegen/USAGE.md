@@ -27,7 +27,7 @@ wl-skills-bd codegen plan wl-contract.json --json
 }
 ```
 
-该字段会进入 Entity/CreateDTO/UpdateDTO/PageDTO/VO/PageVO，但验证、Patch、查询与响应注解按各模型职责不同。`companyId/isDelete/revision` 不按普通字段这样填写。
+该字段会进入 Entity/CreateDTO/UpdateDTO/PageDTO/VO/PageVO，但验证、Patch、查询与响应注解按各模型职责不同。`companyId/deleteFlag/revision` 不按普通字段这样填写。
 
 ## 常见边界
 

@@ -30,8 +30,8 @@
     "requestSupplied": false
   },
   "softDelete": {
-    "column": "IS_DELETE",
-    "javaField": "isDelete",
+    "column": "DELETE_FLAG",
+    "javaField": "deleteFlag",
     "activeValue": 1,
     "deletedValue": 0,
     "mysqlType": "TINYINT(1)",

@@ -66,7 +66,7 @@ default {Entity} getByCode(String code) {
     t.CATEGORY_CODE    AS categoryCode,      <!-- 按 Entity 字段逐个映射 -->
     t.CATEGORY_NAME    AS categoryName,
     t.COMPANY_ID       AS companyId,          <!-- 审计字段也显式列出 -->
-    t.IS_DELETE        AS isDelete,
+    t.DELETE_FLAG        AS deleteFlag,
     ...
 </sql>
 ```
@@ -91,7 +91,7 @@ default {Entity} getByCode(String code) {
 
 ```xml
 <where>
-    AND t.IS_DELETE = 1          <!-- 1=有效，0=删除，常驻 -->
+    AND t.DELETE_FLAG = 1          <!-- 1=有效，0=删除，常驻 -->
     <if test="param.categoryCode != null and param.categoryCode != ''">
         AND t.CATEGORY_CODE LIKE CONCAT(CONCAT('%', #{param.categoryCode}), '%')
     </if>
@@ -162,12 +162,12 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 ```
 ✅ <include refid="BaseColumns"/>           显式字段片段
    <where>
-     AND t.IS_DELETE = 1                    默认 profile 的软删常驻示例
+     AND t.DELETE_FLAG = 1                    默认 profile 的软删常驻示例
      AND t.NAME LIKE CONCAT(CONCAT('%', #{param.name}), '%')   #{} 安全
 
 ❌ SELECT * FROM table                      B3 error（禁星号）
    WHERE name LIKE '%${name}%'              B4 error（美元符注入）
-   （无 IS_DELETE 条件）                     B7 软删遗漏
+   （无 DELETE_FLAG 条件）                     B7 软删遗漏
 ```
 
 ---

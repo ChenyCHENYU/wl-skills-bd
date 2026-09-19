@@ -65,7 +65,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
         FEATURE_FIELD AS featureField,
         COMPANY_ID AS companyId,
         REVISION AS revision,
-        IS_DELETE AS isDelete,
+        DELETE_FLAG AS deleteFlag,
         CREATE_USER_NO AS createUserNo,
         CREATE_DATE_TIME AS createDateTime,
         UPDATE_USER_NO AS updateUserNo,
@@ -77,7 +77,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
         SELECT <include refid="BaseColumns"/>
         FROM MDM_FEATURE_CATEGORY
         <where>
-            AND IS_DELETE = 1
+            AND DELETE_FLAG = 1
             AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
             <if test="param != null">
                 <if test="param.categoryCode != null and param.categoryCode != ''">
@@ -98,7 +98,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
     <select id="selectByIds" resultType="com.jhict.mdm.api.entity.feature.MdmFeatureCategory">
         SELECT <include refid="BaseColumns"/>
         FROM MDM_FEATURE_CATEGORY
-        WHERE IS_DELETE = 1
+        WHERE DELETE_FLAG = 1
           AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
           AND ID IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
@@ -109,12 +109,12 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
     <!-- ============ Oracle 环境：TopN 用 ROWNUM 包裹，不用 LIMIT ============ -->
     <select id="selectTopN" resultType="com.jhict.mdm.api.entity.feature.MdmFeatureCategory">
         SELECT id, categoryCode, categoryName, parentId, featureKey, featureTable,
-               featureField, companyId, revision, isDelete, createUserNo,
+               featureField, companyId, revision, deleteFlag, createUserNo,
                createDateTime, updateUserNo, updateDateTime
         FROM (
             SELECT <include refid="BaseColumns"/>
             FROM MDM_FEATURE_CATEGORY
-            WHERE IS_DELETE = 1
+            WHERE DELETE_FLAG = 1
               AND COMPANY_ID = #{companyId,jdbcType=VARCHAR}
             ORDER BY UPDATE_DATE_TIME DESC NULLS LAST
         ) WHERE ROWNUM &lt;= #{limit,jdbcType=INTEGER}
@@ -125,7 +125,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
     <select id="selectTopN" resultType="...">
         SELECT <include refid="BaseColumns"/>
         FROM feature_category
-        WHERE is_delete = 1
+        WHERE delete_flag = 1
         ORDER BY update_date_time IS NULL, update_date_time DESC
         LIMIT #{limit,jdbcType=INTEGER}
     </select>
@@ -148,7 +148,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 6. **分页必须稳定排序**：默认使用契约声明的固定列并追加 ID；前端排序字段只能映射到服务端白名单，禁止 `${sortField}` 直拼
    - **Oracle**：`ORDER BY xxx DESC NULLS LAST`（`NULLS LAST` 为 Oracle 专有语法）
    - **MySQL**：`ORDER BY xxx IS NULL, xxx DESC`（用 IS NULL 表达将 NULL 排到末尾）
-7. **软删除与租户条件常驻**：所有业务 SELECT/UPDATE/DELETE 必须含当前 profile 声明的“软删列 = 有效值”和 `COMPANY_ID = #{companyId}`，或由 doctor 验证的统一插件注入；本文 SQL 示例使用默认 profile 的 `IS_DELETE = 1`
+7. **软删除与租户条件常驻**：所有业务 SELECT/UPDATE/DELETE 必须含当前 profile 声明的“软删列 = 有效值”和 `COMPANY_ID = #{companyId}`，或由 doctor 验证的统一插件注入；本文 SQL 示例使用默认 profile 的 `DELETE_FLAG = 1`
 8. **IN 查询**用 `<foreach>`，不用字符串拼接
 9. **批量 UPDATE / INSERT** 必须限定租户、检查影响行数，并维护 `REVISION/UPDATE_*`；物理删除不进入默认模板
 10. **受管 UPDATE/软删必须原子化**：WHERE 同时包含 `ID`、`COMPANY_ID`、profile 有效标记、`REVISION = expectedRevision`，SET 中执行 `REVISION = REVISION + 1`；影响行数不是 1 即视为越权/已删除/并发冲突
@@ -167,7 +167,7 @@ public interface MdmFeatureCategoryMapper extends JhBaseMapper<MdmFeatureCategor
 | 主键        | 雪花 ID（String）                       | Oracle 序列 + 触发器                      |
 | 乐观锁       | `REVISION` + `@Version`，写操作强制检查影响行数 | `OBJECT_VERSION_NUMBER` + `@VersionAudit` |
 | 审计字段     | 自定义 `CREATE_DATE_TIME` 等            | `AuditDomain` 标配 `CREATION_DATE` 等     |
-| 软删除       | profile 驱动（默认 `IS_DELETE = 1/0`） | 不强制（业务自定）                        |
+| 软删除       | profile 驱动（默认 `DELETE_FLAG = 1/0`） | 不强制（业务自定）                        |
 
 ---
 

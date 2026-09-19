@@ -29,6 +29,7 @@ metadata:
 - [ ] Entity 已存在（建表场景）或字段映射已明确（ALTER 场景）
 - [ ] `docs/db-spec/*.json` 已从已评审文档提取，目标表名、表注释和有序字段完整
 - [ ] 文档表已优先同名复用；扩展字段位于末尾且已登记，新增表已说明原表为何不能承载
+- [ ] 文档、镜像和契约均不存在 `is_` 数据库列或 `isXxx` Java 属性；若发现则先警告并暂停，业务确认改为 `*_flag`/`xxxFlag` 后再生成
 - [ ] 业务唯一键已确认（用于建唯一索引）
 - [ ] database/dbCluster/Flyway version/verificationSql/rollbackStrategy 已明确
 - [ ] ALTER 已选择 `phase=expand|contract`；contract 已取得可追溯 approvalRef
@@ -48,7 +49,7 @@ reports/DDL_PREVIEW_{yyyymmdd_HHmm}.md                    ← 人工确认材料
 **CREATE TABLE 必含**：
 
 - 业务字段
-- ID 加七个治理字段：`COMPANY_ID / IS_DELETE / REVISION / CREATE_USER_NO / CREATE_DATE_TIME / UPDATE_USER_NO / UPDATE_DATE_TIME`
+- ID 加七个治理字段：`COMPANY_ID / DELETE_FLAG / REVISION / CREATE_USER_NO / CREATE_DATE_TIME / UPDATE_USER_NO / UPDATE_DATE_TIME`
 - 主键约束
 - 索引：按真实查询谓词设计联合索引；软删唯一性必须使用 Profile 声明的 delete-token/部分索引/恢复策略
 - 每列 `COMMENT ON COLUMN`
@@ -94,9 +95,10 @@ AI 不会直接执行任何 DDL。
 
 - 一切 DDL 必有恢复/roll-forward 方案；禁止把反向 SQL 命名为 Flyway `V...__rollback.sql`
 - 文档表不得改名或被同义扩展表架空；字段名/大小写/顺序/类型/可空性/默认值/注释必须与镜像一致
+- 新表与新增列禁止 `is_` 前缀，Java 属性禁止 `isXxx`；禁止照抄含违规字段的需求文档，必须先确认并同步改名为 `*_flag`/`xxxFlag`
 - 新字段只能在文档字段末尾追加，新表/字段必须在 db-governance 中登记用途、来源和审批
 - verificationSql 只允许单条无注释、无锁、无副作用的 SELECT；禁止分号、FOR UPDATE、SLEEP/BENCHMARK 和序列取值
-- 唯一索引不得把 `IS_DELETE` 当作重复软删解决方案；索引列必须存在且不得重复
+- 唯一索引不得把 `DELETE_FLAG` 当作重复软删解决方案；索引列必须存在且不得重复
 - VARCHAR2 必用 `CHAR` 语义
 - 索引名 `IDX_{T}_xxx` / `UK_{T}_xxx`，不允许默认名
 - 触发器 / 序列 / 外键由 DBA 评审后决定（团队基线**不推荐**外键约束）

@@ -246,7 +246,11 @@ class CoverageTest {
     const contractFile = path.join(ROOT, "files", ".github", "templates", "examples", "sale-order-master.contract.json");
     const plan = buildPlan(contractFile, { projectRoot: generatedRoot });
     assert.strictEqual(plan.ok, true, JSON.stringify(plan.errors));
-    assert.strictEqual(applyPlan(plan, { confirm: true, planHash: plan.planHash }).ok, true);
+    assert.strictEqual(applyPlan(plan, {
+      confirm: true,
+      planHash: plan.planHash,
+      questionsReviewed: true,
+    }).ok, true);
     const generatedProfile = profileMatch[0]
       .replace("<includeTestSourceDirectory>false</includeTestSourceDirectory>", "<includeTestSourceDirectory>true</includeTestSourceDirectory>")
       .replace("<linkXRef>false</linkXRef>", "<linkXRef>false</linkXRef><includeTests>true</includeTests>");

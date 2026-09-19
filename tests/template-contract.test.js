@@ -36,7 +36,7 @@ for (const name of required) {
 
 const entity = read("Entity.java.tmpl");
 assert.match(entity, /extends CoreEntity/);
-assert.match(entity, /@TableLogic[\s\S]*private Integer isDelete/);
+assert.match(entity, /@TableLogic[\s\S]*private Integer \{\{softDeleteJavaField\}\}/);
 assert.match(entity, /@TableField\("\{\{softDeleteColumn\}\}"\)/);
 assert.match(entity, /value = "\{\{softDeleteActiveValue\}\}"/);
 assert.match(entity, /delval = "\{\{softDeleteDeletedValue\}\}"/);
@@ -68,8 +68,8 @@ assert.match(service, /updated == 1/);
 assert.doesNotMatch(service, /baseMapper\.updateById/, "写操作不得依赖未验证的插件式乐观锁");
 assert.match(service, /<wl-custom name="export">/);
 assert.match(service, /<wl-custom name="relation:\{\{name\}\}">/);
-assert.match(service, /setIsDelete\(\{\{softDeleteActiveValue\}\}\)/);
-assert.doesNotMatch(service, /setIsDelete\(1\)/, "Service 软删除初始值禁止硬编码");
+assert.match(service, /set\{\{softDeleteJavaFieldUpper\}\}\(\{\{softDeleteActiveValue\}\}\)/);
+assert.doesNotMatch(service, /setDeleteFlag\(1\)/, "Service 软删除初始值禁止硬编码");
 
 const serviceTest = read("ServiceTest.java.tmpl");
 assert.match(serviceTest, /<wl-custom name="tests">/);
@@ -82,7 +82,8 @@ const mapperXml = read("Mapper.xml.tmpl");
 assert.match(mapperXml, /\{\{companyIdColumn\}\}\s*=\s*#\{companyId\}/);
 assert.match(mapperXml, /AND \{\{softDeleteColumn\}\} = \{\{softDeleteActiveValue\}\}[\s\S]*AND \{\{revisionColumn\}\} = #\{expectedRevision\}/, "原子更新必须同时约束 profile 有效标记和版本");
 assert.match(mapperXml, /SET \{\{softDeleteColumn\}\} = \{\{softDeleteDeletedValue\}\}/);
-assert.doesNotMatch(mapperXml, /IS_DELETE\s*=\s*[01]/, "Mapper 软删除值禁止硬编码");
+assert.match(mapperXml, /AS \{\{softDeleteJavaField\}\}/);
+assert.doesNotMatch(mapperXml, /DELETE_FLAG\s*=\s*[01]/, "Mapper 软删除值禁止硬编码");
 const executableMapperXml = mapperXml.replace(/<!--[\s\S]*?-->/g, "");
 assert.doesNotMatch(executableMapperXml, /SELECT\s+\*/i);
 

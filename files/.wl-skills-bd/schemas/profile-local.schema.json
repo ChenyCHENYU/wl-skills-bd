@@ -18,8 +18,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "column": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,62}$" },
-        "javaField": { "const": "isDelete" },
+        "column": { "type": "string", "pattern": "^(?!IS_)[A-Z][A-Z0-9_]{0,62}$" },
+        "javaField": { "const": "deleteFlag" },
         "activeValue": { "type": "integer" },
         "deletedValue": { "type": "integer" },
         "mysqlType": { "enum": ["TINYINT(1)", "INT"] },

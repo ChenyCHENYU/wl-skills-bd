@@ -319,7 +319,7 @@ function handleDbPreview(args) {
     ...(args.detail === "full" ? ["```sql", migrationSql, "```"] : ["SQL 正文已保留在 structuredContent.migrationSql；需要文本正文时传 detail=full。"]),
     "",
     `Expand-Contract 阶段：${expandContractPhases.map((p) => `${p.phase}(${p.operations.length})`).join(" → ") || "不适用"}`,
-    indexes.length > 0 ? `自定义索引：${indexes.length} 个` : "无自定义索引（仅默认 COMPANY_ID+IS_DELETE 联合索引）",
+    indexes.length > 0 ? `自定义索引：${indexes.length} 个` : "无自定义索引（仅默认 COMPANY_ID+DELETE_FLAG 联合索引）",
     "",
     "本预览只读；写入仍需通过 wls_be_codegen plan/apply 携带 planHash 与 confirmApply。",
   ];

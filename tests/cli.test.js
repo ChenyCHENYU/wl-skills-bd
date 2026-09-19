@@ -46,7 +46,7 @@ try {
         { name: "CATEGORY_NAME", dbType: "VARCHAR2(200 CHAR)", comment: "分类名称" },
         { name: "SORT_ORDER", dbType: "NUMBER(10)", comment: "排序号" },
         { name: "COMPANY_ID", dbType: "VARCHAR2(64 CHAR)", comment: "公司/租户ID" },
-        { name: "IS_DELETE", dbType: "NUMBER(1)", comment: "有效标记：1=有效，0=已删除" },
+        { name: "DELETE_FLAG", dbType: "NUMBER(1)", comment: "有效标记：1=有效，0=已删除" },
         { name: "REVISION", dbType: "NUMBER(10)", comment: "乐观锁版本号" },
         { name: "CREATE_USER_NO", dbType: "VARCHAR2(64 CHAR)", comment: "创建人工号" },
         { name: "UPDATE_USER_NO", dbType: "VARCHAR2(64 CHAR)", comment: "更新人工号" },

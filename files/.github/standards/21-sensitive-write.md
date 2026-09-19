@@ -55,8 +55,8 @@ jdbcTemplate.execute("TRUNCATE TABLE X");
 jdbcTemplate.execute("DROP TABLE X");
 mapper.deletePhysical(id);
 
-// ✅ 默认 profile 示例：软删（IS_DELETE = 0）；项目覆盖后使用 profile.deletedValue
-entity.setIsDelete(0);
+// ✅ 默认 profile 示例：软删（DELETE_FLAG = 0）；项目覆盖后使用 profile.deletedValue
+entity.setDeleteFlag(0);
 EntityUtil.setUpdateProp(entity);
 int affected = baseMapper.updateAtomic(entity, companyId, expectedRevision);
 ServiceAssert.isTrue(affected == 1, "写入失败：记录不存在、无权限或版本冲突");
@@ -64,7 +64,7 @@ ServiceAssert.isTrue(affected == 1, "写入失败：记录不存在、无权限�
 
 | 操作 | 团队基线 | 例外 |
 |---|---|---|
-| 业务删除 | 使用 profile 声明的软删删除值（默认 IS_DELETE = 0） | 无 |
+| 业务删除 | 使用 profile 声明的软删删除值（默认 DELETE_FLAG = 0） | 无 |
 | 批量删除 | 软删 + 批量影响行数校验 | 无 |
 | 物理删除 | **禁止** | 独立运维契约 + DBA 双签 |
 | TRUNCATE | **禁止** | 独立运维契约 + DBA 双签 |
@@ -84,7 +84,7 @@ ServiceAssert.isTrue(affected == 1, "写入失败：记录不存在、无权限�
 <!-- ✅ 必须有 WHERE + 租户谓词；以下为默认 profile 的有效值示例 -->
 <update id="resetByIds">
     UPDATE T SET STATUS = 'X'
-    WHERE IS_DELETE = 1 AND COMPANY_ID = #{companyId} AND ID IN
+    WHERE DELETE_FLAG = 1 AND COMPANY_ID = #{companyId} AND ID IN
     <foreach collection="ids" item="id" open="(" close=")" separator=",">#{id}</foreach>
 </update>
 ```
@@ -214,7 +214,7 @@ public ApiResult<Void> batchDelete(@RequestBody @Validated BatchDeleteDTO dto) {
 public void deleteById(String id) {
     Entity e = lambdaQuery().eq(Entity::getId, id).eq(Entity::getCompanyId, AuthUtil.getLoginCompanyId()).one();
     ServiceAssert.isNotNull(e, "记录不存在");
-    e.setIsDelete(0);
+    e.setDeleteFlag(0);
     EntityUtil.setUpdateProp(e);
     int affected = baseMapper.softDeleteAtomic(e, AuthUtil.getLoginCompanyId());
     ServiceAssert.isTrue(affected == 1, "删除失败");

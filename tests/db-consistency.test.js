@@ -28,7 +28,7 @@ function makeProject() {
         { name: "heat_id", dbType: "varchar(64)", nullable: false, comment: "炉次ID" },
         { name: "start_time", dbType: "datetime(3)", nullable: true, comment: "开始时间" },
         { name: "company_id", dbType: "varchar(64)", nullable: false, comment: "公司/租户ID" },
-        { name: "is_delete", dbType: "tinyint(1)", nullable: false, defaultValue: 1, comment: "有效标记：1=有效，0=已删除" },
+        { name: "delete_flag", dbType: "tinyint(1)", nullable: false, defaultValue: 1, comment: "有效标记：1=有效，0=已删除" },
         { name: "revision", dbType: "int", nullable: false, defaultValue: 0, comment: "乐观锁版本号" },
         { name: "create_user_no", dbType: "varchar(64)", nullable: false, comment: "创建人工号" },
         { name: "update_user_no", dbType: "varchar(64)", nullable: true, comment: "更新人工号" },
@@ -49,6 +49,24 @@ function contract(fields = [
     entity: { table: "pl_charge", description: "进程跟踪" },
     fields,
   };
+}
+
+// 需求/设计文档出现 is_ 字段时必须先告警；受管项目必须阻断建表。
+{
+  const root = makeProject();
+  const specFile = path.join(root, "docs", "db-spec", "produce.json");
+  const source = JSON.parse(fs.readFileSync(specFile, "utf8"));
+  source.tables[0].fields.push({
+    name: "is_enabled", dbType: "tinyint(1)", nullable: false, defaultValue: 0, comment: "启用标志",
+  });
+  writeJson(specFile, source);
+  const audit = dbSpec.checkContractAgainstDbSpec(root, contract(), { strictMissing: false });
+  assert.strictEqual(audit.ok, true);
+  assert.ok(audit.issues.some((issue) => issue.severity === "warn"
+    && /is_enabled/.test(issue.message) && /enabled_flag/.test(issue.message)));
+  const managed = dbSpec.checkContractAgainstDbSpec(root, contract(), { strictMissing: true });
+  assert.strictEqual(managed.ok, false);
+  assert.ok(managed.issues.some((issue) => issue.severity === "error" && /禁止据此建表/.test(issue.message)));
 }
 
 // 精确匹配：表名、顺序、类型、nullable、注释全部通过。
@@ -92,7 +110,7 @@ function contract(fields = [
   const sourceTable = dbSpec.loadDbSpec(root).tables.get("pl_charge");
   const ddl = renderMysqlMigration({ ...extended, contractId: "PL-CHARGE" }, undefined, sourceTable);
   const orderedColumns = [
-    "id", "heat_id", "start_time", "company_id", "is_delete", "revision",
+    "id", "heat_id", "start_time", "company_id", "delete_flag", "revision",
     "create_user_no", "update_user_no", "create_date_time", "update_date_time", "route_code",
   ];
   for (let index = 1; index < orderedColumns.length; index += 1) {
