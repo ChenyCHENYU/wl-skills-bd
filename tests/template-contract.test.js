@@ -44,6 +44,8 @@ assert.match(entity, /@Version[\s\S]*private Integer revision/);
 
 const vo = read("VO.java.tmpl");
 const pageVo = read("PageVO.java.tmpl");
+assert.match(vo, /@NoArgsConstructor/, "VO 必须显式保留 Jackson 无参构造入口");
+assert.match(pageVo, /@NoArgsConstructor/, "PageVO 必须显式保留 Jackson 无参构造入口");
 const pageDto = read("PageDTO.java.tmpl");
 assert.doesNotMatch(vo, /extends\s+\{\{Entity\}\}/, "VO 禁止继承 Entity");
 assert.doesNotMatch(pageVo, /extends\s+\{\{Entity\}\}/, "PageVO 禁止继承 Entity");

@@ -17,7 +17,7 @@ wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
 
 1. `doctor` 检查 Java/Maven/Profile/质量配置和租户证据；
 2. `review run` 汇总变更规则、平台适配、项目断言、供应链与覆盖率；
-3. `validate` 按任务路由运行规则子集；全量审计跑 B1~B31；
+3. `validate` 按任务路由运行规则子集；全量审计跑 B1~B32；
 4. `mvn verify -Pwl-quality` 跑 J1~J5/J8；
 5. 如需 P3C 存量报告，单独激活 `wl-p3c-legacy`，不得和 PMD 7 profile 同时运行；
 6. 核对运行时 OpenAPI/权限/前端契约；

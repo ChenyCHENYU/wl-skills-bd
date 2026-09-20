@@ -1,7 +1,7 @@
 ---
 name: code-fix-be
 description: |
-  根据 review/B1~B31/项目断言建立分级修复计划。只有满足确定性前置条件的 B3/B5，或项目批准的单次精确替换可自动修改；
+  根据 review/B1~B32/项目断言建立分级修复计划。只有满足确定性前置条件的 B3/B5，或项目批准的单次精确替换可自动修改；
   建议补丁和业务语义项不自动应用。所有写入必须 planHash + 显式确认 + 备份 + 强制复扫/失败回滚。
   典型触发：「修复规范问题」「按审计报告改」「修违规」「批量整改」
 metadata:
@@ -74,7 +74,7 @@ MCP 对应工具为 `wls_be_safe_fix`：默认预览；正式写入传 `confirmA
 3. 写前重新扫描，任何漂移使 plan 失效；
 4. 所有目标先备份到 `.wl-skills-bd/.state/fix-backups/`；
 5. 多文件写入失败时从备份回滚；
-6. 写后强制执行同范围规则复扫；全量审计范围为 B1~B31；
+6. 写后强制执行同范围规则复扫；全量审计范围为 B1~B32；
 7. 生成确定性的 `reports/FIX_BE_<planHash前12位>.md`；
 8. 报告给出 before/after/fixed/remaining/regressions。`remaining` 或 `regressions` 非零时不得宣称闭环完成。
 

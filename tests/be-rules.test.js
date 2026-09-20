@@ -166,7 +166,7 @@ withFixture({}, (root) => {
   assert.strictEqual(result.stats.total, result.stats.error + result.stats.warn + result.stats.info);
 });
 
-console.log("✅ be-rules：B1~B31、独立豁免、租户证据、误报保护和路径边界通过");
+console.log("✅ be-rules：B1~B32、独立豁免、租户证据、误报保护和路径边界通过");
 
 // ─── B13~B19 数据安全规则（v0.10）───
 
@@ -782,3 +782,77 @@ public class QueryController {
 });
 
 console.log("✅ be-rules v0.18.2：Controller 完整路由清单与重复端点门禁通过");
+
+withFixture({
+  "src/main/java/demo/dto/response/MpsPlanReceiveResultVO.java": `package demo.dto.response;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+@Getter
+@AllArgsConstructor
+public class MpsPlanReceiveResultVO {
+  private final String planNo;
+  private final int detailCount;
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root, { rules: ["B32"] }), "B32"),
+  1,
+  "只有全参构造和 final 字段的跨服务返回 VO 必须被 B32 阻断",
+));
+
+withFixture({
+  "src/main/java/demo/dto/response/MpsPlanReceiveResultVO.java": `package demo.dto.response;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class MpsPlanReceiveResultVO {
+  private String planNo;
+  private int detailCount;
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root, { rules: ["B32"] }), "B32"),
+  0,
+  "无参构造和可写属性组成的 JavaBean DTO 必须通过 B32",
+));
+
+withFixture({
+  "src/main/java/demo/dto/response/ImmutableResultVO.java": `package demo.dto.response;
+public class ImmutableResultVO {
+  private final String id;
+  @JsonCreator
+  public ImmutableResultVO(@JsonProperty("id") String id) { this.id = id; }
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root, { rules: ["B32"] }), "B32"),
+  0,
+  "显式 JsonCreator 的不可变 DTO 必须通过 B32",
+));
+
+withFixture({
+  "src/main/java/demo/internal/InternalValue.java": `package demo.internal;
+@Value
+public class InternalValue { String id; }`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root, { rules: ["B32"] }), "B32"),
+  0,
+  "非传输层值对象不能被 B32 误报",
+));
+
+withFixture({
+  "src/main/java/demo/dto/request/ReceiveRequestDTO.java": `package demo.dto.request;
+@Data
+public class ReceiveRequestDTO implements java.io.Serializable {
+  private static final long serialVersionUID = 1L;
+  private String planNo;
+}`,
+}, (root) => assert.strictEqual(
+  count(runBeRules(root, { rules: ["B32"] }), "B32"),
+  0,
+  "@Data 的 static final serialVersionUID 不能被误判为必参构造字段",
+));
+
+console.log("✅ be-rules v0.28：跨服务 JSON DTO 反序列化构造契约门禁通过");

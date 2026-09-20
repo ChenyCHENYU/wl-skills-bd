@@ -6,7 +6,7 @@
 
 | 编号 | 实现 | 默认门禁 | 说明 |
 |---|---|:---:|---|
-| B1~B31 | `lib/be-rule-plan.js` + `scan-context.js` + `be-rules.js` | 按 severity | 规则前置短路、最小文件读取、执行/缓存证据、Controller 端点及 SARIF/Markdown/JSON；B31 复用两级缓存 Source Index |
+| B1~B32 | `lib/be-rule-plan.js` + `scan-context.js` + `be-rules.js` | 按 severity | 规则前置短路、最小文件读取、执行/缓存证据、Controller 端点及 SARIF/Markdown/JSON；B31 复用两级缓存 Source Index，B32 校验跨服务 DTO 反序列化入口 |
 | J1 | ArchUnit | 是 | 分层依赖 |
 | J2 | Checkstyle | 是 | 命名、Javadoc、import、规模 |
 | J3 | PMD 7 | 是 | 缺陷、复杂度、性能 |

@@ -64,6 +64,7 @@ const commonStubs = {
   "io/swagger/v3/oas/annotations/Parameters.java": `package io.swagger.v3.oas.annotations; public @interface Parameters { Parameter[] value(); }`,
   "io/swagger/v3/oas/annotations/tags/Tag.java": `package io.swagger.v3.oas.annotations.tags; public @interface Tag { String name(); }`,
   "lombok/Getter.java": `package lombok; public @interface Getter {}`,
+  "lombok/NoArgsConstructor.java": `package lombok; public @interface NoArgsConstructor {}`,
   "lombok/Setter.java": `package lombok; public @interface Setter {}`,
   "lombok/ToString.java": `package lombok; public @interface ToString { public @interface Exclude {} }`,
   "lombok/RequiredArgsConstructor.java": `package lombok; public @interface RequiredArgsConstructor {}`,

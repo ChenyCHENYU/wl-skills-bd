@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.27.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.28.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -27,6 +27,7 @@
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
 | 数据库命名治理（v0.27） | 禁止新增 `is_` 数据库列和 `isXxx` Java 属性；需求镜像先告警，受管契约/ALTER/代码生成强阻断；统一使用 `*_flag`/`xxxFlag` |
+| 跨服务 JSON 契约（v0.28） | B32 阻断只有有参构造且缺少无参构造/`@JsonCreator` 的 request/response DTO；生成 VO 显式保留无参构造，要求真实 ObjectMapper 往返测试 |
 | 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
 | 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
 | 变更审查（v0.24） | Git 新增问题与历史基线分离；B 规则、项目断言、平台适配、供应链、JaCoCo 全量/变更行覆盖率汇总到同一质量门 |
@@ -35,12 +36,19 @@
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
 | 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
-| 快速审计 | B1~B31；指定规则会在发现/读取/检查前真实短路，返回执行组、扫描字节、缓存与 complete/partial coverage；text/JSON/Markdown/SARIF |
+| 快速审计 | B1~B32；指定规则会在发现/读取/检查前真实短路，返回执行组、扫描字节、缓存与 complete/partial coverage；text/JSON/Markdown/SARIF |
 | Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.28.0 跨服务 JSON DTO 反序列化门禁
+
+- **机器阻断**：新增 B32，扫描跨服务 request/response DTO；只有 Lombok 全参/必参构造或显式有参构造、却没有无参构造或 `@JsonCreator` 时直接报错。
+- **默认安全模板**：生成的 VO/PageVO 显式带 `@NoArgsConstructor`，配合非 `final` 字段和 setter，确保 Feign/Jackson 调用方可以还原响应对象。
+- **真实回归**：跨服务模型必须按实际命名策略执行 ObjectMapper 序列化→反序列化往返并逐字段断言，避免“提供方已提交、调用方解析失败并误重试”。
+- **低误报**：B32 仅覆盖传输模型路径/命名，显式 `@JsonCreator`、`@Jacksonized` 或 builder 反序列化配置放行，不干扰内部不可变值对象。
 
 ### v0.27.0 数据库 `is_` 命名禁令
 
@@ -396,7 +404,7 @@ mvn verify -Pwl-quality
 | 工具 | 写入 | 作用 |
 |---|:---:|---|
 | `wls_be_capabilities` | 否 | AI 首次接入的单一能力清单：Skill 触发词/状态/安装路径、规则范围、MCP 工具、CLI 命令与读取顺序 |
-| `wls_be_validate` | 否 | B1~B31 扫描；结果含 Controller `endpoints[]` 清单 |
+| `wls_be_validate` | 否 | B1~B32 扫描；结果含 Controller `endpoints[]` 清单 |
 | `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
 | `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
 | `wls_be_contract` | 条件 | seed/inspect/migrate/show/diff/impact/integration-inspect；仅 migrate 写入且保留计划确认门 |
@@ -538,13 +546,13 @@ bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点�
 
 | 任务 | 模式 | 触发词 | 规则子集 |
 |---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B31 子集 + J |
-| add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31 |
+| new-service | full | 新开发/全套CRUD | B1-B32 子集 + J |
+| add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31/B32 |
 | add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26/B31 |
 | add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26/B31 |
-| fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31 |
-| refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30/B31 |
-| audit | readonly | 审计/体检 | B1-B31 |
+| fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31/B32 |
+| refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30/B31/B32 |
+| audit | readonly | 审计/体检 | B1-B32 |
 | config-op | config | 配置/连不上 | config-doctor |
 
 **路由与安全写链**：

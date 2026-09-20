@@ -29,7 +29,7 @@ L3 CLI 适配              L3 MCP 适配
 L4 工程产物  Java/XML/DDL/tests/contracts/catalog/docs + standards/skills/quality config
                     │
                     ▼
-L5 验证  B1~B31 + J1~J8 + changed-lines + platform evidence + supply chain + package self-check
+L5 验证  B1~B32 + J1~J8 + changed-lines + platform evidence + supply chain + package self-check
                     │
                     ▼
 L6 人工卡口  DDL/数据、权限发布、环境部署、破坏性 API、业务重构
@@ -48,7 +48,7 @@ CLI 与 MCP 只能适配同一个 `lib/` 核心，禁止复制业务逻辑形成
 | `lib/contract-seed.js` | 从 DB Spec 抽取可证明的契约种子并显式列出未决项 | 猜测 API、权限、写策略或业务语义 |
 | `lib/codegen.js` | 17+N 产物、planHash、业务保护区、Flyway 不可变、冲突、事务回滚与完成度证据 | 执行 DDL |
 | `lib/collaboration.js` | manifest 渲染，前端/OpenAPI/权限差异 | 修改前端或权限平台 |
-| `lib/be-rule-plan.js` / `scan-context.js` / `be-rules.js` | B1~B31 前置执行计划、最小文件发现、共享内容缓存、端点与问题证据 | 先跑全量再过滤或自动修复 |
+| `lib/be-rule-plan.js` / `scan-context.js` / `be-rules.js` | B1~B32 前置执行计划、最小文件发现、共享内容缓存、端点与问题证据 | 先跑全量再过滤或自动修复 |
 | `lib/source-index.js` | 契约/迁移显式根的统一事实索引、内存/持久化缓存与指纹失效 | 扫描整个项目、信任损坏缓存或猜测业务表 |
 | `lib/db-drift.js` | 快照双向漂移、缺表/缺列、精确列审批回执、事务化幂等账本 | 连接数据库或执行 DDL |
 | `lib/safe-fix.js` | B3/B5 条件安全修复、备份、恢复、复扫 | 业务语义重构 |

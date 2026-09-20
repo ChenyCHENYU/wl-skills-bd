@@ -6,6 +6,22 @@
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-20（跨服务 JSON DTO 反序列化门禁）
+
+### Added
+
+- 新增 B32：跨服务 request/response DTO 只有有参构造且缺少无参构造、`@JsonCreator` 或 Jackson builder 配置时阻断。
+- 新增危险全参不可变 DTO、JavaBean DTO、显式 `@JsonCreator` 和内部值对象四类正反回归，并纳入准确率基准。
+
+### Changed
+
+- VO/PageVO 模板显式增加 `@NoArgsConstructor`；实体生成与测试 Skill 要求真实 ObjectMapper 序列化→反序列化往返验证。
+- add-api、fix-bug、new-service、refactor 与 audit 任务纳入 B32，能力清单升级为 B1~B32。
+
+### Fixed
+
+- 防止提供方事务已提交并返回 JSON、调用方却因 DTO 无 Jackson 构造入口解析失败，继而误报失败和重复重试。
+
 ## [0.27.0] - 2026-09-19（数据库字段命名治理）
 
 ### Added

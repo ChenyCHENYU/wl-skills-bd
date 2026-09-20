@@ -4,7 +4,7 @@
 
 任务路由优先 `wl-skills-bd task "<描述>" --json`：输出规则子集、安全写链和 Pre-flight 证据（必读 standards/skill 文件 sha256 清单）；宣称"已读取"必须与该清单对得上。
 
-核心流程：已评审需求/数据库设计 → `docs/db-spec` → `wl-contract.json` → codegen plan → 用户评审 planHash → apply → `wl-api-contract` strict diff → B1~B31 → `mvn verify -Pwl-quality`。数据库表必须优先复用文档基线，扩展有依据且字段末尾追加（standards/29）。生产契约还必须满足 standards/28 的证据链；design/kit 都不是 bd 的硬依赖。
+核心流程：已评审需求/数据库设计 → `docs/db-spec` → `wl-contract.json` → codegen plan → 用户评审 planHash → apply → `wl-api-contract` strict diff → B1~B32 → `mvn verify -Pwl-quality`。数据库表必须优先复用文档基线，扩展有依据且字段末尾追加（standards/29）。生产契约还必须满足 standards/28 的证据链；design/kit 都不是 bd 的硬依赖。
 
 存量契约先 `contract inspect` 分流；只有 crud 可 codegen。字段变更先用限定模块的 `impact field` 核对容量、所有权、迁移链和源码证据；跨系统集成先用 `integration inspect/audit` 校验逻辑 ID 与投递闭环，再按项目 `integration-adapters.json` 验证平台真实依赖、API、配置、测试和运行证据。未配置适配器时不得猜 MQ SDK 或自动激活平台规则。
 

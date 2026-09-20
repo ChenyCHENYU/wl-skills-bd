@@ -11,7 +11,7 @@ const { clearScanContextCache } = require("../lib/scan-context");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-rule-execution-"));
 try {
   const registeredRules = new Set(Object.values(GROUPS).flatMap((group) => group.rules));
-  assert.deepStrictEqual([...registeredRules].sort((left, right) => Number(left.slice(1)) - Number(right.slice(1))), RULE_IDS, "B1~B31 必须全部登记执行组");
+  assert.deepStrictEqual([...registeredRules].sort((left, right) => Number(left.slice(1)) - Number(right.slice(1))), RULE_IDS, "B1~B32 必须全部登记执行组");
   fs.mkdirSync(path.join(root, "src", "mapper"), { recursive: true });
   fs.writeFileSync(path.join(root, "src", "CacheService.java"), [
     "class CacheService {",

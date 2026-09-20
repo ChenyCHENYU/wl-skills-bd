@@ -16,4 +16,4 @@
 
 ## 当前版本
 
-- 当前基线：30 条 standards、13 个 Skill（含触发词/安装路径的 capabilities manifest v2）、16 个模板/17+N 个生成产物、7 个配置模板、B1~B31、J1~J8、18 个 MCP 工具；能力目录、三类契约/Profile、多模块根、源码 API、字段影响、变更审查、平台适配、项目断言、供应链、Source Index 缓存、MCP/Catalog 输出预算、事务写链、标准 Pipeline、Pre-flight 证据与准确率/性能/token CI 门禁共同驱动，不绑定具体业务模块或 MQ SDK。
+- 当前基线：30 条 standards、13 个 Skill（含触发词/安装路径的 capabilities manifest v2）、16 个模板/17+N 个生成产物、7 个配置模板、B1~B32、J1~J8、18 个 MCP 工具；能力目录、三类契约/Profile、多模块根、源码 API、字段影响、变更审查、平台适配、项目断言、供应链、Source Index 缓存、MCP/Catalog 输出预算、事务写链、标准 Pipeline、Pre-flight 证据与准确率/性能/token CI 门禁共同驱动，不绑定具体业务模块或 MQ SDK。

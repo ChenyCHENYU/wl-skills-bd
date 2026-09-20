@@ -94,5 +94,23 @@
     "rules": ["B25"],
     "files": { "src/User.java": "@ToString\nclass User {\n  @ToString.Exclude\n  private String password;\n}\n" },
     "expectedRules": []
+  },
+  {
+    "id": "B32-response-dto-without-json-creator",
+    "rules": ["B32"],
+    "files": { "src/main/java/demo/dto/response/ReceiveResultVO.java": "@Getter\n@AllArgsConstructor\nclass ReceiveResultVO {\n  private final String planNo;\n}\n" },
+    "expectedRules": ["B32"]
+  },
+  {
+    "id": "B32-response-dto-java-bean",
+    "rules": ["B32"],
+    "files": { "src/main/java/demo/dto/response/ReceiveResultVO.java": "@Getter\n@Setter\n@NoArgsConstructor\n@AllArgsConstructor\nclass ReceiveResultVO {\n  private String planNo;\n}\n" },
+    "expectedRules": []
+  },
+  {
+    "id": "B32-data-dto-with-serial-version",
+    "rules": ["B32"],
+    "files": { "src/main/java/demo/dto/request/ReceiveRequestDTO.java": "@Data\nclass ReceiveRequestDTO implements java.io.Serializable {\n  private static final long serialVersionUID = 1L;\n  private String planNo;\n}\n" },
+    "expectedRules": []
   }
 ]

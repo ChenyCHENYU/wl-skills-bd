@@ -38,7 +38,7 @@
     "latest": "30"
   },
   "backendRules": {
-    "count": 31,
+    "count": 32,
     "ids": [
       "B1",
       "B2",
@@ -70,10 +70,11 @@
       "B28",
       "B29",
       "B30",
-      "B31"
+      "B31",
+      "B32"
     ],
-    "latest": "B31",
-    "displayRange": "B1~B31",
+    "latest": "B32",
+    "displayRange": "B1~B32",
     "catalog": ".wl-skills-bd/rules/catalog.json"
   },
   "skills": {
@@ -293,12 +294,12 @@
     "items": [
       {
         "name": "wls_be_capabilities",
-        "description": "AI 首次接入的单一能力清单（只读）：13 个 Skill（触发词/状态/安装路径）、B1~B31 规则范围、30 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "description": "AI 首次接入的单一能力清单（只读）：13 个 Skill（触发词/状态/安装路径）、B1~B32 规则范围、30 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
         "write": "readonly"
       },
       {
         "name": "wls_be_validate",
-        "description": "只读扫描后端工程 B1~B31；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "description": "只读扫描后端工程 B1~B32；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
         "write": "readonly"
       },
       {

@@ -1,7 +1,7 @@
 ---
 name: convention-audit-be
 description: |
-  后端工程只读审计：统一 Git 变更、B1~B31、Java 质量门、平台适配、项目断言、供应链、覆盖率和生产 assurance。
+  后端工程只读审计：统一 Git 变更、B1~B32、Java 质量门、平台适配、项目断言、供应链、覆盖率和生产 assurance。
   支持 review/full/quick/staged/规则子集，明确新增/基线/豁免、覆盖缺口、执行证据和修复分流。
   典型触发：「规范审计」「代码体检」「全量扫描」「检查代码」「代码质量」「复扫验证」
 metadata:
@@ -31,7 +31,7 @@ metadata:
 # 变更级总控：新增/基线/豁免 + 平台适配 + 供应链 + 覆盖率
 wl-skills-bd review run --base origin/main --module <module> --json
 
-# 全量 B1~B31
+# 全量 B1~B32
 wl-skills-bd validate <范围> --strict
 
 # 跳过 B9~B12 设计级慢规则，适合快速反馈
@@ -55,8 +55,8 @@ MCP 默认使用统一 `response.mode=summary`。只有定位时提高 `maxItems
 
 | 层 | 执行器 | 重点 |
 |---|---|---|
-| 变更总控 | review | B1~B31、平台适配、项目断言、供应链、JaCoCo 全量/变更行、基线和豁免 |
-| 快速规则 | B1~B31 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性/方法安全/敏感日志/Mapper 绑定/数据库事实源一致性 |
+| 变更总控 | review | B1~B32、平台适配、项目断言、供应链、JaCoCo 全量/变更行、基线和豁免 |
+| 快速规则 | B1~B32 | 权限/OpenAPI/SQL/事务/租户/异常/规模/复杂度/Javadoc/Redis/敏感写/稳定性/方法安全/敏感日志/Mapper 绑定/数据库事实源一致性/跨服务 DTO 反序列化 |
 | 架构 | ArchUnit J1 | Controller→Mapper、层依赖、循环依赖 |
 | 规范 | Checkstyle J2 | 命名、import、Javadoc、文件结构 |
 | 代码问题 | PMD7 J3 | Java 规则主门禁 |

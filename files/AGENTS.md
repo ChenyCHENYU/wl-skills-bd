@@ -2,7 +2,7 @@
 
 ## 唯一入口（先读这里）
 
-1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B31 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
+1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B32 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
 2. `.github/skills/_registry.md`：触发词 → Skill 路由；`.github/standards/index.md`：任务类型 → 必读规范（懒加载，不一次读全 30 条）。
 3. 任务路由优先 `wl-skills-bd task "<描述>"`（只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。宣称"已读取"必须能与该清单对上。
 
@@ -36,7 +36,7 @@ wl-skills-bd contract inspect <contract.json> --json   # 先分流：仅 crud �
 wl-skills-bd impact field --module <module> --field <field> --table <table> --json
 wl-skills-bd review run --module <module> --json        # 交付前 full 门禁
 wl-skills-bd fix advise --module <module> --json
-wl-skills-bd validate . --strict          # B1~B31（含真实端点与数据库事实源）
+wl-skills-bd validate . --strict          # B1~B32（含真实端点、数据库事实源与跨服务 DTO）
 wl-skills-bd test gen wl-contract.json    # 行为契约测试
 ```
 

@@ -52,6 +52,14 @@ private Integer revision;
 - 默认不返回 companyId、deleteFlag 和内部审计账号；详情 VO 必须返回 revision，供 UpdateDTO 完成乐观锁闭环。PageVO 仅在列表直接编辑且契约明确时返回 revision。
 - PageVO 只含列表展示字段，DetailVO 可含关联名称和子列表。
 
+### 3.1 跨服务 JSON 构造契约
+
+- Feign/HTTP 使用的 request、response、DTO、VO 必须同时满足“可序列化”和“可反序列化”，提供方能返回 JSON 不代表调用方一定能还原对象。
+- 可变模型统一使用非 `final` 字段、公共无参构造（推荐显式 `@NoArgsConstructor`）和 setter；`@AllArgsConstructor` 可以保留，但不能作为唯一构造入口。
+- 不可变模型必须使用 `@JsonCreator(mode = JsonCreator.Mode.PROPERTIES)`，并为每个参数显式声明 `@JsonProperty`；仅有 `@Getter + @AllArgsConstructor + final` 禁止用于跨服务传输。
+- 跨服务模型变更必须使用真实 `ObjectMapper` 按实际命名策略执行“对象 → JSON → 同类型对象”往返测试；只断言 JSON 输出或只测试提供方 Controller 均不充分。
+- B32 对跨服务传输模型的危险构造方式执行阻断，修复时必须同时检查同一接口包中的同型 request/response 模型。
+
 ## 4. 类型映射
 
 | 数据含义 | Java 类型 | API 规则 |

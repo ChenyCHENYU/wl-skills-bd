@@ -53,6 +53,8 @@ wl-skills-bd codegen plan wl-contract.json --json
 
 VO/PageVO 不继承 Entity，避免租户、软删和内部审计字段意外出现在 API。`revision` 只在详情→更新并发闭环中暴露。
 
+跨服务 request/response 模型必须具备 Jackson 反序列化入口。默认生成的 VO/PageVO 使用非 `final` 字段、setter 和显式 `@NoArgsConstructor`；不可变模型只有在逐参数声明 `@JsonCreator/@JsonProperty` 并通过真实 `ObjectMapper` 往返测试后才允许使用。`@AllArgsConstructor` 不能单独充当反序列化契约（B32）。
+
 ## 字段规则
 
 - String 创建必填用 `@NotBlank`，非 String 用 `@NotNull`；`maxLength` 生成 `@Size`；
