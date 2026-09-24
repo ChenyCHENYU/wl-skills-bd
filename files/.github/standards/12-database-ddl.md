@@ -79,6 +79,7 @@ db/migration/
 - 使用支持 Undo 的版本时按 Flyway 规则命名 `U...__description.sql`；否则回退脚本放 `db/rollback-manual/`，只供审批后的人工处置。
 - 已发布并应用的 migration 不得修改；修复必须新增版本。
 - CI 必跑 `flyway validate`，测试环境实际 migrate。
+- Flyway 是受管 schema 的唯一迁移写入者。禁止先手工 ALTER/DML 再通过 Flyway “补录”履历；若库已发生计划外变化，必须停止、取证并用新的前向协调迁移处理，不能把漂移包装成正常 migrate。
 
 ## 6. Expand-Contract
 
@@ -135,6 +136,7 @@ db/migration/
 - flyway validate + 测试库 migrate。
 - SQL 方言 fixture：Oracle/MySQL 分别验证。
 - contract/schema diff：Entity、迁移和契约字段一致。
+- 扩容迁移必须验证 DTO/API/文档边界同步变化，并冻结前后行数、状态分布、索引和非目标列；只验证目标列类型不足以证明零副作用。
 
 ## 10. 源头一致性与漂移对账（v0.20，B31）
 

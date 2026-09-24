@@ -64,6 +64,7 @@ VO/PageVO 不继承 Entity，避免租户、软删和内部审计字段意外出
 - Java 8 使用 `javax.validation` 和当前 Profile 声明的 OpenAPI 3 注解。
 - `@TableField/@TableLogic` 的列名、有效值和删除值必须由当前 profile 渲染；项目覆盖不得只改 DDL。
 - 项目差异只写 `.wl-skills-bd/profile.local.json`；禁止编辑受管 `profiles/*.json`，否则 installer 会正确报告漂移。
+- 字段长度调整必须同步 `constraints/maxLength`、DB 类型、Create/Update DTO、协作契约与业务文档；扩大数据库列但保留旧 `@Size`，或只放开 DTO 但数据库仍窄，均应阻断。查询 DTO 仍只采用显式 `queryConstraints`，不得机械继承写入长度。
 
 ## 验证
 

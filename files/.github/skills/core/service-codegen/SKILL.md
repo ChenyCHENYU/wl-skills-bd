@@ -88,6 +88,10 @@ deleteById → 租户归属查询 + softDeleteAtomic
 - `kind=command`：同 stateTransition 但可不声明 preconditions
 - `kind=batch`：RequestDTO 接收 ids；去重/上限→一次性租户查询→全量前置校验→逐条原子写，任一失败整批回滚；成功返回 `{successCount, failureCount: 0, failures: []}`
 
+批量合并/统合存在跨记录规则时必须声明 `batchPolicy`：生成器只加载和校验请求 ids 对应记录（`selectionScope=selected-only`），再校验 `minItems`、`sameFields` 和 `distinct(field,count)`。禁止扩展查询同组未选记录后参与一致性判断。
+
+契约声明 `businessKeys[]` 时，生成器在新增/修改中统一执行 exact/trim 归一化、当前租户+有效数据重复检查，并在更新时排除自身 ID。提示必须直接写业务对象（如“料号已存在，请勿重复添加”），禁止“业务唯一键/constraint/duplicate key”。`databaseConstraintRef` 必须指向已评审的数据库并发唯一性与软删重建方案；Service 校验不能替代数据库竞态保护。
+
 preconditions 支持六种操作符：equals/notEquals/in/notIn/isNull/notNull。patch 支持类型安全常量或 `fromRequest`。每个 requestField 必须被明确消费，且由独立 RequestDTO 执行 Bean Validation。
 
 未声明 `customOperations` 时，按**四段式**手工追加业务方法；当前 CRUD codegen 不会从字段名猜状态机：

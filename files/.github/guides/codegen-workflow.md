@@ -20,6 +20,8 @@
 
 已评审需求、前端 `api.md`、可选 design-model 和数据库设计都属于契约的上游依据，不能直接替代机器契约。bd 不依赖 design 或 kit 的产物：没有上游机器文件时，也必须能从评审事实独立形成并验证 `wl-contract.json`。多来源有差异时先评审并修正契约，再生成代码。
 
+需求含去重、合并/统合、字段扩容或现场迁移时，同时遵守 [业务生成与交付闭环](business-closure-playbook.md)：用 `businessKeys`/`batchPolicy` 固化业务语义，Flyway 作为唯一迁移写入者，并在部署前后保留同一份身份、数据和制品证据。
+
 ## 2. 生成前模块门
 
 项目存在 `.wl-skills-bd/catalog.config.json` 时，先确认当前模块快照新鲜并生成有界上下文：

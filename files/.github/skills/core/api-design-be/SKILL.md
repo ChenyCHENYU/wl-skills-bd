@@ -79,6 +79,9 @@ wl-skills-bd codegen plan wl-contract.json --json
 - 跨系统逻辑 ID 必须声明来源字段、算法/版本、规范化、字符集与最大长度；出站/双向集成必须声明排序键、载荷版本、重试/确认/死信/重放并引用已登记错误码
 - 使用 `integration inspect <contract>` 验证单契约完备性；使用 `integration audit --module <module>` 检查 StableBusinessId/PayloadHash 重复或漂移，不让 AI 主观判断算法是否一致
 - 当 transport 由平台 MQ/HTTP 封装承载时，业务契约只声明方向、参与方、载荷、身份、排序和投递语义；具体依赖、注解、调用方法与配置键进入项目 `integration-adapters.json`，由 `integration-adapter-be` 对账，禁止把某个平台 API 固化进通用契约
+- 需求含“唯一/不得重复”时必须建立 `businessKeys[]`，明确真实业务字段、create/update、归一化、直观提示与数据库约束引用；不得沿用历史索引组合或输出“业务唯一键”。
+- 合并/统合/批处理含跨记录校验时必须建立 `batchPolicy`，选择范围固定为 `selected-only`，再声明一致字段和分组数量；不允许把未选中的同组数据纳入校验。
+- 任何字段长度变更必须附需求/API/DTO/数据库/文档五方影响矩阵；直到新应用与数据库都部署验证完成前不得宣称闭环。
 
 ## 完成摘要
 

@@ -83,6 +83,7 @@ private Integer revision;
 3. 跨字段起止时间必须通过 `validationRules.chronology` 声明并生成对象级校验，不能只校验单字段格式。
 4. `contextSource=server` 的公司、用户、组织等可信上下文不得进入请求 DTO；`client` 上下文只允许出现在契约声明的操作中。
 4. 新增任何框架 SPI/扩展点 Bean 时，除单元行为测试外，必须增加最小 Spring 容器测试：真实注册平台 Bean 与业务 Bean，并按接口类型 `getBean(...)`，证明上下文可启动且唯一候选正确。仅直接 `new` 业务实现的测试不能发现 Bean 冲突。
+5. 字段长度变更必须同时更新需求/接口契约、Create/Update DTO、数据库类型、协作文档与边界测试。数据库扩宽但 DTO `@Size` 未变、或 DTO 放宽但物理列未扩，均为阻断性漂移。
 
 ## 7. 机器门禁
 

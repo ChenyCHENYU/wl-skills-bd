@@ -105,6 +105,9 @@ AI 不会直接执行任何 DDL。
 - 生产数据迁移必须使用稳定游标/主键范围循环、批次进度、幂等和总量校验；禁止单次 `ROWNUM <= 1000` 后误报完成
 - `contract` 阶段前必须存在可追溯的 expand 与 backfill；`impact field` 报告有 error 时不得继续生成破坏性迁移
 - 存量契约格式收敛只使用 `contract migrate` 的 preview → planHash → confirm → 备份/回滚链；所有权等未知事实不得自动填充
+- **Flyway 单写者**：受管 schema 的 DDL/DML 迁移只能由冻结的 Flyway migration 执行。禁止先手工 ALTER/UPDATE 再“补录”Flyway 履历；现场若已变化必须停止并按漂移事件制定新的前向协调迁移，不得伪造成功链。
+- 字段扩容必须提供需求/API/DTO/DB/文档影响矩阵和非目标字段断言；仅数据库改宽、DTO 仍保留旧 `@Size` 不算闭环。
+- 内外网执行单必须一次性包含文件 SHA-256、环境门禁、停止条件、pre/post SQL、备份恢复、部署制品哈希和正负冒烟，不在执行途中零散追加关键条件。
 
 ## 完成摘要
 

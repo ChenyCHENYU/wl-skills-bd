@@ -75,6 +75,10 @@ public String save(XxxCreateDTO dto) {
 
 `kind=batch` 时由独立 OperationRequestDTO 接收 `ids` 与业务参数。Service 先去重并限制单批最多 1000 条，再一次性按租户加载全部有效记录、校验数量与前置条件，最后逐条执行原子版本写。任一项失败必须抛异常并回滚整批；成功响应固定为 `{successCount, failureCount: 0, failures: []}`，禁止用“部分成功”掩盖未知事务状态。
 
+合并/统合类批量命令必须声明 `batchPolicy`，所有一致性与分组校验仅作用于请求 ids 对应的 `selected-only` 集合。不得为了复用旧逻辑加载同浇次/同批次的未选记录并参与判断。
+
+新增/修改的业务去重由 `businessKeys[]` 驱动：字段组合以业务确认口径为准，统一归一化、限定当前租户和有效数据，更新排除自身。异常消息必须直观指出业务对象；Service 预检负责用户体验，`databaseConstraintRef` 指向的数据库策略负责并发竞态，两者缺一不可。
+
 业务命令命名规范与 wl-skills-kit api-contract 对齐；B5 规则识别全部业务命令前缀，确保 `@Transactional` 覆盖。请求字段必须由独立 OperationRequestDTO 承载并执行 Bean Validation；契约声明的每个请求字段必须被 `patch.fromRequest` 或其他已确认实现消费，防止“接口收了参数但业务未使用”。
 
 ## 9. 机器门禁

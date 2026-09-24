@@ -16,6 +16,16 @@
     "externalId": { "$ref": "#/$defs/stableId", "description": "可选，对应 wl-skills-design 的 design-model.json entity.id，用于跨包稳定 ID 追溯" },
     "environment": { "enum": ["dev", "sit", "uat", "pre", "prod"], "description": "可选，声明契约适用的环境；不声明则环境无关。声明 prod 时 codegen apply 默认阻断（详见 standards/24 §6）" },
     "dbCluster": { "enum": ["cx", "non_cx", "pt"], "description": "可选，数据库集群归属：cx=产销库 / non_cx=非产销库 / pt=平台库；doctor 校验与 datasource profile 一致（standards/24 §3.3）" },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "可选，只记录契约生成来源，不改变业务语义；路径必须为安全的项目相对路径。",
+      "properties": {
+        "source": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "schemaSnapshot": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "phase": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
     "assurance": {
       "type": "object",
       "additionalProperties": false,
@@ -242,6 +252,13 @@
       "maxItems": 100,
       "description": "可选，业务命令/状态机。请求字段必须被 patch.fromRequest 显式消费，写入使用租户+有效标记+版本原子 SQL。",
       "items": { "$ref": "#/$defs/customOperation" }
+    },
+    "businessKeys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "description": "业务去重契约；生成 create/update 的租户+有效数据校验和直观业务提示。数据库并发唯一性仍须由 databaseConstraintRef 指向已评审方案。",
+      "items": { "$ref": "#/$defs/businessKey" }
     },
     "relations": {
       "type": "array",
@@ -480,7 +497,58 @@
         "requestFields": { "type": "array", "items": { "$ref": "#/$defs/customField" }, "description": "可选额外请求字段，如 approve 的 opinion" },
         "preconditions": { "type": "array", "items": { "$ref": "#/$defs/precondition" }, "description": "四段式②：校验前置状态" },
         "patch": { "type": "array", "items": { "$ref": "#/$defs/patch" }, "description": "四段式③：构造字段变更" },
+        "batchPolicy": { "$ref": "#/$defs/batchPolicy", "description": "批量操作对已选记录的业务一致性与分组数量门禁；仅 kind=batch 可用" },
         "externalId": { "$ref": "#/$defs/stableId" }
+      }
+    },
+    "businessKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "fields", "operations", "normalization", "message", "source", "databaseConstraintRef"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$", "minLength": 2, "maxLength": 50 },
+        "fields": { "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } },
+        "scopeFields": { "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } },
+        "operations": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["create", "update"] } },
+        "normalization": { "enum": ["exact", "trim"] },
+        "message": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "databaseConstraintRef": { "type": "string", "minLength": 1, "maxLength": 300, "description": "数据库并发唯一性/软删重建策略的迁移、索引或评审引用" }
+      }
+    },
+    "batchPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selectionScope", "minItems", "sameFields", "distinct", "messages", "source"],
+      "properties": {
+        "selectionScope": { "const": "selected-only" },
+        "minItems": { "type": "integer", "minimum": 2, "maximum": 1000 },
+        "sameFields": { "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } },
+        "distinct": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "count"],
+            "properties": {
+              "field": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+              "count": { "type": "integer", "minimum": 1, "maximum": 1000 }
+            }
+          }
+        },
+        "messages": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minItems", "sameFields", "distinct"],
+          "properties": {
+            "minItems": { "type": "string", "minLength": 2, "maxLength": 100 },
+            "sameFields": { "type": "string", "minLength": 2, "maxLength": 100 },
+            "distinct": { "type": "string", "minLength": 2, "maxLength": 100 }
+          }
+        },
+        "source": { "type": "string", "minLength": 1, "maxLength": 300 }
       }
     },
     "relation": {

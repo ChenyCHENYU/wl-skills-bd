@@ -83,9 +83,23 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     public String save({{Entity}}CreateDTO dto) {
         {{Entity}} entity = new {{Entity}}();
         BeanUtil.copyProperties(dto, entity, "id", "revision");
+{{#normalizationFields}}
+        entity.set{{Field}}(entity.get{{Field}}() == null ? null : entity.get{{Field}}().trim());
+{{/normalizationFields}}
 {{#initialValueAssignments}}
         entity.set{{Field}}({{value}});
 {{/initialValueAssignments}}
+{{#createBusinessKeys}}
+        // 业务去重来源：{{source}}；数据库并发约束：{{databaseConstraintRef}}
+        long duplicateCount{{Name}} = lambdaQuery()
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .eq({{Entity}}::get{{softDeleteJavaFieldUpper}}, {{softDeleteActiveValue}})
+{{#fields}}
+                .eq({{Entity}}::get{{Field}}, entity.get{{Field}}())
+{{/fields}}
+                .count();
+        ServiceAssert.isTrue(duplicateCount{{Name}} == 0, "{{message}}");
+{{/createBusinessKeys}}
         EntityUtil.setCreateProp(entity);
         entity.set{{softDeleteJavaFieldUpper}}({{softDeleteActiveValue}});
         entity.setRevision(0);
@@ -120,6 +134,21 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
                                 "revision",
                                 "createUserNo",
                                 "createDateTime"));
+{{#normalizationFields}}
+        entity.set{{Field}}(entity.get{{Field}}() == null ? null : entity.get{{Field}}().trim());
+{{/normalizationFields}}
+{{#updateBusinessKeys}}
+        // 业务去重来源：{{source}}；数据库并发约束：{{databaseConstraintRef}}
+        long duplicateCount{{Name}} = lambdaQuery()
+                .eq({{Entity}}::getCompanyId, AuthUtil.getLoginCompanyId())
+                .eq({{Entity}}::get{{softDeleteJavaFieldUpper}}, {{softDeleteActiveValue}})
+                .ne({{Entity}}::getId, dto.getId())
+{{#fields}}
+                .eq({{Entity}}::get{{Field}}, entity.get{{Field}}())
+{{/fields}}
+                .count();
+        ServiceAssert.isTrue(duplicateCount{{Name}} == 0, "{{message}}");
+{{/updateBusinessKeys}}
         EntityUtil.setUpdateProp(entity);
         int updated =
                 baseMapper.updateAtomic(entity, AuthUtil.getLoginCompanyId(), dto.getRevision());
@@ -196,10 +225,33 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
         java.util.List<String> ids =
                 new java.util.ArrayList<>(new java.util.LinkedHashSet<>({{idsExpression}}));
         ServiceAssert.isTrue(!ids.isEmpty(), "{{summary}}：ids 不能为空");
+{{#batchPolicyPresent}}
+        ServiceAssert.isTrue(ids.size() >= {{batchPolicy.minItems}}, "{{batchPolicy.minItemsMessage}}");
+{{/batchPolicyPresent}}
         ServiceAssert.isTrue(ids.size() <= MAX_BATCH_SIZE, "{{summary}}：去重后单批不能超过1000条");
         String companyId = AuthUtil.getLoginCompanyId();
         java.util.List<{{Entity}}> loaded = baseMapper.selectActiveByIds(ids, companyId);
         ServiceAssert.isTrue(loaded.size() == ids.size(), "{{summary}}失败：记录不存在、已删除或无权限");
+{{#batchPolicyPresent}}
+        // 只对请求 ids 对应的已选记录做业务校验；来源：{{batchPolicy.source}}
+{{#batchPolicySameFieldsPresent}}
+        {{Entity}} firstSelected = loaded.get(0);
+        for ({{Entity}} selected : loaded) {
+{{#batchPolicy.sameFields}}
+            ServiceAssert.isTrue(
+                    Objects.equals(firstSelected.get{{Field}}(), selected.get{{Field}}()),
+                    "{{batchPolicy.sameFieldsMessage}}");
+{{/batchPolicy.sameFields}}
+        }
+{{/batchPolicySameFieldsPresent}}
+{{#batchPolicy.distinct}}
+        java.util.Set<Object> {{variable}} = new java.util.HashSet<>();
+        for ({{Entity}} selected : loaded) {
+            {{variable}}.add(selected.get{{Field}}());
+        }
+        ServiceAssert.isTrue({{variable}}.size() == {{count}}, "{{batchPolicy.distinctMessage}}");
+{{/batchPolicy.distinct}}
+{{/batchPolicyPresent}}
         java.util.Map<String, {{Entity}}> byId = new java.util.HashMap<>();
         for ({{Entity}} item : loaded) {
             byId.put(item.getId(), item);

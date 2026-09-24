@@ -72,6 +72,8 @@ document-meta:
 
 发布前至少执行：契约校验与 strict diff、B1~B31、`mvn verify -Pwl-quality`、目标数据库集成测试、权限负向测试、并发/幂等测试、压测、迁移演练和恢复演练。quick/staged 结果若为 partial 不能替代 full。新增框架扩展点 Bean 时必须运行最小 Spring 容器装配测试，不能只运行直接实例化的单元测试。Controller 的真实端点清单必须与机器契约、前端调用和网关前缀对账；静态无法解析的常量路径由编译后契约测试/OpenAPI 补证。SAST、SCA、secret scan、SBOM、镜像/IaC 扫描属于 CI/安全平台职责；本包负责提醒和证据闭环，不伪装成已内置扫描器。
 
+部署证据必须绑定实际上传制品的路径、大小和 SHA-256。源码提交相同不代表 Spring Boot repackage 等构建产物字节相同；批准制品缺失或哈希不符时停止部署，不得用“同源码重构建”替换审批对象。内外网执行单应一次性冻结提交、制品、迁移、pre/post 校验、停止条件、备份恢复和冒烟矩阵。
+
 ## 7. 完成定义
 
 只有在实现、行为测试、协作契约、生产证据和外部评审全部闭环后，才允许把 `completion.contractStatus` 视为 `confirmed`。任何 `UnsupportedOperationException`、TODO/FIXME、空测试、未启用的方法安全、敏感日志、未渲染镜像标签或缺失恢复证据，都不能作为生产完成状态。

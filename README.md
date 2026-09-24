@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.28.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.29.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -15,6 +15,7 @@
 |---|---|
 | 工程资产生命周期 | `init/update/diff/check/clean`；manifest 增量更新、冲突零写入、强制覆盖前备份、安装中途失败自动回滚 |
 | 契约生成 | 严格 `wl-contract.json` → 15 个固定工程产物 + 按命令生成的请求 DTO + 2 个前后端协作产物 |
+| 业务规则生成（v0.29） | `businessKeys` 生成新增/修改归一化与有效数据去重；`batchPolicy` 生成 selected-only 合并门禁；`generation` 记录可追溯来源 |
 | 业务扩展（v0.9） | `customOperations` 业务命令/状态机、`relations` 主从关联、`alter` ALTER TABLE、`indexes` 自定义索引、可选 `export`、`externalId` 跨包桥接 |
 | 数据安全护栏（v0.10/v0.14） | B13~B19：Redis TTL/Redisson 锁/禁用命令、物理删禁令/全表写禁令/批量分批、受保护环境只读护栏、二次确认 |
 | 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
@@ -42,6 +43,15 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.29.0 业务生成与迁移执行闭环
+
+- **真实业务键进入生成器**：`businessKeys[]` 明确字段、create/update、exact/trim、业务化提示、来源与数据库并发约束引用；Service 自动归一化、按租户和有效数据查重，更新时排除自身 ID。
+- **批量校验仅看所选记录**：`customOperations[].batchPolicy` 固定 `selectionScope=selected-only`，生成最少条数、一致字段和恰好 N 个不同分组门禁，避免未选同组数据误拦合法统合。
+- **跨层容量一致**：字段长度变更必须同步 Java 校验、数据库列宽、接口契约、文档和 150/151 等边界测试，不允许只扩 DTO 或只改表。
+- **Flyway 单写入**：迁移只能由 Flyway 框架执行一次；禁止先手工 `ALTER` 再补写履历。执行包必须一次性包含预检、备份/恢复演练、停写、迁移、后检、部署和冒烟门禁。
+- **运行验收防伪**：测试前确认账号公司/租户，写后按返回 ID 和同租户读路径回查；查询覆盖命中、无命中、重置及 UI→DTO→Mapper 参数映射。
+- 完整口径见 [业务生成与交付闭环](files/.github/guides/business-closure-playbook.md)。
 
 ### v0.28.0 跨服务 JSON DTO 反序列化门禁
 

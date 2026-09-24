@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-24（业务生成与迁移执行闭环）
+
+### Added
+
+- 严格契约新增 `generation` 来源元数据、`businessKeys[]` 业务去重规则和批量操作 `batchPolicy`；Schema、语义校验、上下文和 Service 模板全链消费。
+- Service 生成新增/修改归一化、租户+有效数据查重、更新排除自身，以及 selected-only 的最少条数/一致字段/不同分组门禁。
+- 新增 `business-generation-policy` 回归测试和业务闭环手册，覆盖技术化提示、whole-group 范围、模板生成及失败路径。
+
+### Changed
+
+- service/entity/api-design/db-migration/unit-test Skills 与 05/07/12/14/28/29 Standards 统一字段长度、测试身份、查询三态、实际制品哈希和一次性内网执行包口径。
+- Flyway 明确为迁移唯一写入者；禁止手工 DDL 后补录 history，部署制品以实际文件 SHA-256 为准，不用“同源码”替代。
+
+### Fixed
+
+- 防止错误业务键、只校验新增不校验修改、批量操作扫描未选记录、软删除重建冲突和通用技术提示进入生成结果。
+- 防止无租户账号、错误读路径、缺少查询重置场景或非确定性重构建 jar 造成伪缺陷与错误放行。
+
 ## [0.28.0] - 2026-09-20（跨服务 JSON DTO 反序列化门禁）
 
 ### Added
