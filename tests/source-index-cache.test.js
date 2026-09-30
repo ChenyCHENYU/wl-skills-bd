@@ -24,6 +24,7 @@ try {
 
   const memory = sourceIndex.buildSourceIndex(root);
   assert.strictEqual(memory.cache.level, "memory");
+  assert.ok(sourceIndex.sourceIndexMemoryCacheStats().bytes <= sourceIndex.sourceIndexMemoryCacheStats().maxBytes);
   sourceIndex.clearSourceIndexMemoryCache();
   const persistent = sourceIndex.buildSourceIndex(root);
   assert.strictEqual(persistent.cache.level, "persistent");
@@ -41,6 +42,17 @@ try {
   const rebuilt = sourceIndex.buildSourceIndex(root);
   assert.strictEqual(rebuilt.cache.level, "miss", "缓存损坏必须安全重建");
   assert.ok(rebuilt.contracts[0].fields.has("name"));
+
+  for (let index = 0; index < 17; index += 1) {
+    const rel = `contracts/partition-${index}`;
+    fs.mkdirSync(path.join(root, rel), { recursive: true });
+    fs.writeFileSync(path.join(root, rel, "sample.json"), JSON.stringify({
+      entity: { table: `demo_${index}` }, fields: [{ column: "id" }],
+    }));
+    sourceIndex.buildSourceIndex(root, { contractsRel: rel });
+  }
+  assert.ok(sourceIndex.sourceIndexMemoryCacheStats().entries <= 16, "内存 Source Index 必须按条目数淘汰");
+  assert.ok(sourceIndex.sourceIndexMemoryCacheStats().bytes <= sourceIndex.sourceIndexMemoryCacheStats().maxBytes);
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

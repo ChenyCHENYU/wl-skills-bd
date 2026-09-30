@@ -21,10 +21,16 @@ try {
   const preview = run(["init", "--target", root, "--dry-run", "--json"]);
   assert.strictEqual(preview.status, 0, preview.stderr);
   assert.match(preview.stdout, /"action": "add"/);
+  const installPlan = JSON.parse(preview.stdout);
+  assert.match(installPlan.planHash, /^[a-f0-9]{64}$/);
   assert.strictEqual(fs.existsSync(path.join(root, ".wl-skills-bd-manifest.json")), false);
 
-  const init = run(["init", "--target", root]);
+  const installPreview = run(["init", "--target", root]);
+  assert.strictEqual(installPreview.status, 0, installPreview.stderr);
+  assert.strictEqual(fs.existsSync(path.join(root, ".wl-skills-bd-manifest.json")), false);
+  const init = run(["init", "--target", root, "--plan-hash", installPlan.planHash, "--confirm", "--json"]);
   assert.strictEqual(init.status, 0, init.stderr);
+  assert.strictEqual(JSON.parse(init.stdout).result.ok, true);
   assert.ok(fs.existsSync(path.join(root, ".wl-skills-bd-manifest.json")));
 
   const check = run(["check", "--target", root, "--json"]);

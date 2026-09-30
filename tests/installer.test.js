@@ -8,13 +8,15 @@ const installer = require("../lib/installer");
 const { resolveWithin } = require("../lib/manifest");
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-installer-"));
+const apply = (plan, options = {}) => installer.applyPlan(plan, { confirm: true, planHash: plan.planHash, ...options });
 
 try {
   const initialPlan = installer.buildPlan(root);
   assert.ok(initialPlan.actions.length > 20, "应发现待安装资产");
   assert.ok(initialPlan.actions.every((item) => item.action === "add"));
 
-  const installed = installer.applyPlan(initialPlan);
+  assert.strictEqual(installer.applyPlan(initialPlan).reason, "confirm-required");
+  const installed = apply(initialPlan);
   assert.strictEqual(installed.ok, true);
   assert.strictEqual(installer.check(root).ok, true);
 
@@ -49,11 +51,11 @@ try {
   const conflictPlan = installer.buildPlan(root);
   assert.ok(conflictPlan.actions.some((item) => item.rel === conflictRel && item.action === "conflict"));
   assert.ok(conflictPlan.actions.some((item) => item.rel === missingRel && item.action === "add"));
-  const blocked = installer.applyPlan(conflictPlan);
+  const blocked = apply(conflictPlan);
   assert.strictEqual(blocked.ok, false);
   assert.strictEqual(fs.existsSync(path.join(root, missingRel)), false, "冲突时必须零写入");
 
-  const forced = installer.applyPlan(conflictPlan, { force: true });
+  const forced = apply(conflictPlan, { force: true });
   assert.strictEqual(forced.ok, true);
   assert.strictEqual(installer.check(root).ok, true);
   assert.ok(
@@ -62,7 +64,9 @@ try {
   );
 
   fs.appendFileSync(conflictFile, "\nuser-owned\n", "utf8");
-  const cleaned = installer.clean(root);
+  const cleanPlan = installer.buildCleanPlan(root);
+  assert.strictEqual(installer.applyCleanPlan(cleanPlan).reason, "confirm-required");
+  const cleaned = installer.applyCleanPlan(cleanPlan, { confirm: true, planHash: cleanPlan.planHash });
   assert.strictEqual(cleaned.ok, true);
   assert.ok(cleaned.preserved.includes(conflictRel));
   assert.ok(fs.existsSync(conflictFile), "clean 必须保留被用户修改的文件");
@@ -76,15 +80,24 @@ try {
     fs.writeFileSync(path.join(sourceRoot, "a.txt"), "before-a\n");
     fs.writeFileSync(path.join(sourceRoot, "b.txt"), "before-b\n");
     assert.strictEqual(
-      installer.applyPlan(installer.buildPlan(rollbackRoot, { sourceRoot })).ok,
+      apply(installer.buildPlan(rollbackRoot, { sourceRoot })).ok,
       true,
     );
     const manifestBefore = fs.readFileSync(path.join(rollbackRoot, installer.MANIFEST_NAME));
     fs.writeFileSync(path.join(sourceRoot, "a.txt"), "after-a\n");
     fs.writeFileSync(path.join(sourceRoot, "b.txt"), "after-b\n");
     const failingPlan = installer.buildPlan(rollbackRoot, { sourceRoot });
-    fs.unlinkSync(path.join(sourceRoot, "b.txt"));
-    const rolledBack = installer.applyPlan(failingPlan);
+    const originalRename = fs.renameSync;
+    let injected = false;
+    fs.renameSync = (from, to) => {
+      if (to === path.join(rollbackRoot, "b.txt") && !injected) {
+        injected = true;
+        throw new Error("injected write failure");
+      }
+      return originalRename(from, to);
+    };
+    let rolledBack;
+    try { rolledBack = apply(failingPlan); } finally { fs.renameSync = originalRename; }
     assert.strictEqual(rolledBack.ok, false);
     assert.strictEqual(rolledBack.reason, "write-failed-rolled-back");
     assert.strictEqual(rolledBack.rolledBack, true);
@@ -102,6 +115,55 @@ try {
   } finally {
     fs.rmSync(rollbackRoot, { recursive: true, force: true });
     fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+  const driftRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-installer-drift-"));
+  const driftSource = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-installer-drift-source-"));
+  try {
+    fs.writeFileSync(path.join(driftSource, "a.txt"), "package\n");
+    const addPlan = installer.buildPlan(driftRoot, { sourceRoot: driftSource });
+    fs.writeFileSync(path.join(driftRoot, "a.txt"), "user\n");
+    assert.strictEqual(apply(addPlan).reason, "plan-changed");
+    assert.strictEqual(fs.readFileSync(path.join(driftRoot, "a.txt"), "utf8"), "user\n");
+    fs.unlinkSync(path.join(driftRoot, "a.txt"));
+    assert.strictEqual(apply(installer.buildPlan(driftRoot, { sourceRoot: driftSource })).ok, true);
+    const cleanPlan = installer.buildCleanPlan(driftRoot);
+    fs.appendFileSync(path.join(driftRoot, "a.txt"), "local\n");
+    assert.strictEqual(installer.applyCleanPlan(cleanPlan, { confirm: true, planHash: cleanPlan.planHash }).reason, "plan-changed");
+    assert.strictEqual(fs.existsSync(path.join(driftRoot, installer.MANIFEST_NAME)), true);
+  } finally {
+    fs.rmSync(driftRoot, { recursive: true, force: true });
+    fs.rmSync(driftSource, { recursive: true, force: true });
+  }
+  const cleanRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-clean-rollback-"));
+  const cleanSource = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-clean-source-"));
+  try {
+    fs.writeFileSync(path.join(cleanSource, "a.txt"), "a\n");
+    fs.writeFileSync(path.join(cleanSource, "b.txt"), "b\n");
+    assert.strictEqual(apply(installer.buildPlan(cleanRoot, { sourceRoot: cleanSource })).ok, true);
+    const cleanPlan = installer.buildCleanPlan(cleanRoot);
+    const originalUnlink = fs.unlinkSync;
+    let injected = false;
+    fs.unlinkSync = (file) => {
+      if (file === path.join(cleanRoot, "b.txt") && !injected) {
+        injected = true;
+        throw new Error("injected clean failure");
+      }
+      return originalUnlink(file);
+    };
+    let failedClean;
+    try { failedClean = installer.applyCleanPlan(cleanPlan, { confirm: true, planHash: cleanPlan.planHash }); }
+    finally { fs.unlinkSync = originalUnlink; }
+    assert.strictEqual(failedClean.reason, "write-failed-rolled-back");
+    assert.strictEqual(fs.readFileSync(path.join(cleanRoot, "a.txt"), "utf8"), "a\n");
+    assert.strictEqual(fs.readFileSync(path.join(cleanRoot, "b.txt"), "utf8"), "b\n");
+    assert.strictEqual(fs.existsSync(path.join(cleanRoot, installer.MANIFEST_NAME)), true);
+    const retryCleanPlan = installer.buildCleanPlan(cleanRoot);
+    const successfulClean = installer.applyCleanPlan(retryCleanPlan, { confirm: true, planHash: retryCleanPlan.planHash });
+    assert.strictEqual(successfulClean.ok, true);
+    assert.ok(fs.existsSync(path.join(cleanRoot, ".wl-skills-bd", ".state", "clean-backups", successfulClean.backupId, "a.txt")));
+  } finally {
+    fs.rmSync(cleanRoot, { recursive: true, force: true });
+    fs.rmSync(cleanSource, { recursive: true, force: true });
   }
   console.log("✅ installer：manifest、零写入冲突、备份、clean 保护、事务回滚与路径边界通过");
 } finally {

@@ -71,6 +71,8 @@ function verifyMcpToolCounts() {
     "files/.github/copilot-instructions.md",
     "files/.github/skills/_registry.md",
     "files/.github/guides/mcp-workflow.md",
+    "files/.github/guides/architecture.md",
+    "files/.github/guides/usage.md",
     "kit-internal/README.md",
     "kit-internal/architecture.md",
   ];
@@ -81,6 +83,7 @@ function verifyMcpToolCounts() {
         ...line.matchAll(/(\d+)\s*个(?:等价)?\s*MCP/g),
         ...line.matchAll(/MCP（(\d+)\s*个/g),
         ...line.matchAll(/暴露\s*(\d+)\s*个/g),
+        ...((/MCP|mcp\//i.test(line)) ? line.matchAll(/(\d+)\s*个(?:等价)?\s*工具/g) : []),
       ];
       for (const match of matches) {
         if (Number(match[1]) !== actual) {

@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "accuracy": {
     "minimumPrecision": 1,
-    "minimumRecall": 1
+    "minimumRecall": 1,
+    "minimumCoveredRules": 32
   },
   "performance": {
     "scopedP95Ms": 1500,

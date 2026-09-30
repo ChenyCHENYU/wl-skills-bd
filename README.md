@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.29.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.30.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -13,7 +13,7 @@
 
 | 能力 | 已落地内容 |
 |---|---|
-| 工程资产生命周期 | `init/update/diff/check/clean`；manifest 增量更新、冲突零写入、强制覆盖前备份、安装中途失败自动回滚 |
+| 工程资产生命周期 | `init/update/diff/check/clean`；预览 planHash、确认、写前重算、冲突零写入、备份和整批回滚 |
 | 契约生成 | 严格 `wl-contract.json` → 15 个固定工程产物 + 按命令生成的请求 DTO + 2 个前后端协作产物 |
 | 业务规则生成（v0.29） | `businessKeys` 生成新增/修改归一化与有效数据去重；`batchPolicy` 生成 selected-only 合并门禁；`generation` 记录可追溯来源 |
 | 业务扩展（v0.9） | `customOperations` 业务命令/状态机、`relations` 主从关联、`alter` ALTER TABLE、`indexes` 自定义索引、可选 `export`、`externalId` 跨包桥接 |
@@ -35,14 +35,21 @@
 | 平台适配（v0.24） | MQ/集成实现由项目登记真实依赖、API、配置、测试和运行证据；BD 只验证衔接与闭环，不选择 SDK、不连接 Broker、不覆盖平台封装 |
 | 项目策略（v0.24） | HTTP/幂等/并发等通用边界及 BOM/依赖/仓库门由项目显式激活；未配置时不做主观猜测、不新增阻断 |
 | 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
-| 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效 |
+| 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效；缓存有进程字节上限 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
-| 快速审计 | B1~B32；指定规则会在发现/读取/检查前真实短路，返回执行组、扫描字节、缓存与 complete/partial coverage；text/JSON/Markdown/SARIF |
+| 快速审计 | B1~B32；指定规则会在发现/读取/检查前真实短路；目录无法读取、文件过大或读取失败时报告诊断并标记 partial；text/JSON/Markdown/SARIF |
 | Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.30.0 写入安全与扫描完整性
+
+- Flyway 迁移文件一旦存在且内容不同，`codegen apply --force` 仍整批阻断；应创建新迁移版本。
+- `init/update/clean` 先输出计划和 `planHash`；携带相同哈希与 `--confirm` 才写入，执行前重新核对文件与 manifest。`clean` 成功后保留恢复备份，失败时整批回滚。
+- 规则扫描遇到目录/文件读取错误或文件超过扫描上限时返回错误诊断，并将覆盖标记为 `partial`；完整质量门不会把未读文件算作通过。
+- `wl-skills-bd mcp` 可直接启动 stdio 服务；扫描、Source Index 与 MCP 游标缓存都有进程总字节上限。
 
 ### v0.29.0 业务生成与迁移执行闭环
 
@@ -158,14 +165,14 @@
 
 ```bash
 # 要求 Node.js >= 22
-npx @agile-team/wl-skills-bd init --dry-run
-npx @agile-team/wl-skills-bd init
+npx @agile-team/wl-skills-bd init --json      # 读取 planHash；零写入
+npx @agile-team/wl-skills-bd init --plan-hash <hash> --confirm
 npx @agile-team/wl-skills-bd capabilities    # AI 单一能力清单（skills 触发词/工具/命令）
 npx @agile-team/wl-skills-bd doctor
 npx @agile-team/wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
 ```
 
-`init` 会写入受管 manifest。重复执行不会盲目覆盖本地修改；用 `diff` 查看漂移，用 `check` 验证安装完整性，用 `update` 增量升级，用 `clean --dry-run` 先预览可清理资产。冲突时零写入，中途 I/O 异常时自动回滚；只有显式 `--force` 才覆盖冲突并保留备份。
+`init/update/clean` 默认只预览。先取得计划的 `planHash`，评审后用同一命令加 `--plan-hash <hash> --confirm` 执行；写前会重新计算计划，漂移时零写入。`--json` 执行结果同时包含计划和 `result`（含备份编号）。用 `diff` 查看漂移、`check` 验证安装完整性；`clean` 只移除哈希未变的受管文件并保留恢复备份。冲突时整批零写入，显式 `--force` 仅允许覆盖安装资产或非迁移生成物，不能改写已有 Flyway 迁移。
 
 ## 大型工程模块目录与精准上下文
 

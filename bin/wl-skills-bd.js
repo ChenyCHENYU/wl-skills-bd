@@ -109,30 +109,58 @@ function commandInstall(command, args) {
   const dryRun = has(args, "--dry-run");
   const force = has(args, "--force");
   const plan = installer.buildPlan(root);
-  if (has(args, "--json")) printJson({ command, root, plan: plan.actions, summary: plan.summary });
-  else {
-    console.log(`[wl-skills-bd] ${command} → ${root}${dryRun ? " (dry-run)" : ""}\n`);
-    printPlan(plan);
+  const preview = command === "diff" || dryRun || !has(args, "--confirm");
+  if (preview) {
+    if (has(args, "--json")) printJson(installer.publicInstallPlan(plan));
+    else {
+      console.log(`[wl-skills-bd] ${command} → ${root} (preview)\n`);
+      printPlan(plan);
+      console.log(`planHash: ${plan.planHash}`);
+    }
   }
   if (command === "diff") {
     return plan.actions.some((item) => !["unchanged", "stale-missing"].includes(item.action)) ? 1 : 0;
   }
-  const result = installer.applyPlan(plan, { dryRun, force });
-  if (!has(args, "--json") && result.blocked.length) {
+  if (preview) return 0;
+  const result = installer.applyPlan(plan, {
+    confirm: true,
+    planHash: option(args, "--plan-hash"),
+    force,
+    allowProductionWrites: has(args, "--allow-production-writes"),
+  });
+  if (has(args, "--json")) printJson({ plan: installer.publicInstallPlan(plan), result });
+  else if (result.blocked && result.blocked.length) {
     console.error("\n存在本地修改冲突，本次零写入。请先处理 diff；确需覆盖时使用 --force，原文件会备份。");
-  } else if (!has(args, "--json") && !result.ok) {
+  } else if (!result.ok) {
     console.error(`\n安装写入失败：${result.reason}${result.message ? `；${result.message}` : ""}`);
     if (result.rolledBack) console.error("已自动恢复到执行前状态，没有保留半安装结果。");
+  } else {
+    console.log(`✅ 已按 planHash 写入/核对 ${result.applied.length} 个受管文件；备份编号 ${result.backupId}`);
   }
   return result.ok ? 0 : 2;
 }
 
 function commandClean(args) {
   const root = targetRoot(args);
-  const result = installer.clean(root, { dryRun: has(args, "--dry-run") });
-  if (has(args, "--json")) printJson(result);
+  const plan = installer.buildCleanPlan(root);
+  if (!plan.ok) {
+    if (has(args, "--json")) printJson(plan);
+    else console.error(`无法 clean：${plan.reason}`);
+    return 1;
+  }
+  if (has(args, "--dry-run") || !has(args, "--confirm")) {
+    if (has(args, "--json")) printJson(installer.publicCleanPlan(plan));
+    else console.log(`清理预览：${JSON.stringify(installer.publicCleanPlan(plan).summary)}\nplanHash: ${plan.planHash}`);
+    return 0;
+  }
+  const result = installer.applyCleanPlan(plan, {
+    confirm: true,
+    planHash: option(args, "--plan-hash"),
+    allowProductionWrites: has(args, "--allow-production-writes"),
+  });
+  if (has(args, "--json")) printJson({ plan: installer.publicCleanPlan(plan), result });
   else if (!result.ok) console.error(`无法 clean：${result.reason}`);
-  else console.log(`移除 ${result.removed.length} 个受管文件；保留 ${result.preserved.length} 个本地修改文件。`);
+  else console.log(`移除 ${result.removed.length} 个受管文件；保留 ${result.preserved.length} 个本地修改文件；备份编号 ${result.backupId}。`);
   return result.ok ? 0 : 1;
 }
 
@@ -1065,12 +1093,12 @@ function help() {
 
 用法：wl-skills-bd <command> [options]
 
-  init         安装受管资产；已有未受管同名文件会阻断
-  update       按 manifest 增量更新并保护本地修改
+  init         预览安装受管资产；携带 planHash + --confirm 后写入
+  update       预览 manifest 增量更新；写前重算并保护本地修改
   diff         查看包内容、manifest 与当前项目差异
-  clean        只清理未被修改的受管文件
+  clean        预览清理未被修改的受管文件；确认后事务化执行
   check        检查 manifest 和安装漂移
-  validate     执行 B1~B31 快速规则并输出 Controller 端点及数据库事实源差异
+  validate     执行 B1~B32 规则并输出 Controller 端点及数据库事实源差异
   doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
   codegen      契约驱动生成：validate / plan / apply
   contract     契约治理：seed / inspect / migrate / show / diff
@@ -1095,6 +1123,9 @@ function help() {
   --target <dir>  指定项目根目录
   --rules <B1,B2> 仅执行指定 B 规则（逗号分隔）
   --dry-run       只预览，不写盘
+  --plan-hash     执行预览所得的 64 位哈希
+  --confirm       确认当前计划后写入
+  --allow-production-writes  显式授权受保护环境的本地文件写入
   --json          输出结构化 JSON
   --force         发生安装冲突时备份后覆盖
   --require-complete  codegen apply 时拒绝写入含业务骨架的 draft 契约
@@ -1580,7 +1611,7 @@ function main(argv = process.argv.slice(2)) {
   if (command === "capabilities") return commandCapabilities(args);
   if (command === "task") return commandTask(args);
   if (command === "test") return commandTest(args);
-  if (command === "mcp") { require("../mcp/server"); return 0; }
+  if (command === "mcp") { require("../mcp/server").startServer(); return 0; }
   console.error(`未知命令：${command}`);
   help();
   return 1;

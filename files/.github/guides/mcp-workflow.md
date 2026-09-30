@@ -9,7 +9,7 @@
 | 工具 | 类型 | 作用 |
 |---|---|---|
 | `wls_be_capabilities` | 只读 | AI 首次接入的单一能力清单：skills 触发词/状态/安装路径、规则范围、MCP 工具、CLI 命令与读取顺序；支持 section 分区读取 |
-| `wls_be_validate` | 只读 | B1~B31 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status |
+| `wls_be_validate` | 只读 | B1~B32 扫描；默认摘要，支持 quick/staged/changed/rules/detail/maxItems/maxBytes，并返回 coverage/status；读取失败时 partial |
 | `wls_be_review` | 只读/受控写 | 变更审查、质量基线、平台适配、项目断言、供应链和分级修复；所有 apply 保留计划确认链 |
 | `wls_be_doctor` | 只读 | JDK/Maven/Profile/质量门/租户证据诊断 |
 | `wls_be_codegen` | 受控写 | contract validate/plan/apply，17+N 个受管产物 |
@@ -47,13 +47,13 @@
 
 - `summary` 用于判断状态与下一步，`compact/full` 只在需要定位或读取正文时启用；
 - 数组和字符串先按统一预算裁剪，响应声明 `originalBytes/returnedBytes/estimatedTokens/truncated`；
-- 超预算完整结果短期保留在 MCP 进程内，使用同一工具和 `{ "response": { "cursor": "<nextCursor>" } }` 续取，不重跑 handler；
+- 超预算结果短期保留在 MCP 进程内，使用同一工具和 `{ "response": { "cursor": "<nextCursor>" } }` 续取，不重跑 handler；单份最多保留 8 MB，进程总量最多 32 MB，超过单份上限会标记 `storedComplete=false`；
 - cursor 有期限、绑定原工具且不写项目目录，过期或跨工具使用时 fail-closed。
 - Catalog `show` 优先使用 `section/limit/cursor` 在执行核心内先裁剪；字段影响也使用自身证据 cursor，再叠加通用响应预算，避免重复全量扫描。
 
 ## 启动
 
-`wl-skills-bd init` 会释放 Cursor、VS Code 和 Kiro 配置；根 `.mcp.json` 可供兼容客户端使用。Server 从环境变量读取项目根：
+完成 `wl-skills-bd init` 的计划确认后，会释放 Cursor、VS Code 和 Kiro 配置；根 `.mcp.json` 可供兼容客户端使用。Server 从环境变量读取项目根，也可用 `wl-skills-bd mcp` 启动：
 
 ```json
 {
@@ -72,7 +72,7 @@
 1. 先调用 plan/预览，返回动作、冲突/人工项和 `planHash`，本次零写入；
 2. 用户评审后，再传 `confirmApply: true` 和同一 `planHash`；
 3. handler 在写前重新计算计划；源文件、模板、契约或状态变化会使旧 hash 失效；
-4. codegen 任一冲突默认整批零写入，显式 force 才会备份后覆盖；
+4. codegen 任一冲突默认整批零写入；显式 force 可备份后覆盖非迁移产物，已有 Flyway 迁移冲突始终阻断；
 5. codegen 的 `requireComplete=true` 会阻断含业务骨架的 draft；保护区补全后由 contract show/diff 验证完成度；
 6. safe-fix 不支持 force，任何漂移都必须重新预览；
 7. safe-fix 写前备份、失败回滚，写后强制复扫并生成 FIX_BE 报告；

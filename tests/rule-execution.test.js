@@ -42,6 +42,22 @@ try {
   const invalid = runBeRules(root, { rules: ["B999"] });
   assert.ok(invalid.issues.some((item) => item.rule === "WLS_CONFIG"));
   assert.deepStrictEqual(invalid.execution.unknownRules, ["B999"]);
+
+  const originalReaddir = fs.readdirSync;
+  fs.readdirSync = (directory, ...args) => {
+    if (path.resolve(directory) === path.join(root, "src")) {
+      const error = new Error("EACCES injected");
+      error.code = "EACCES";
+      throw error;
+    }
+    return originalReaddir(directory, ...args);
+  };
+  try {
+    const unreadable = runBeRules(root, { rules: ["B13"], workspace: false });
+    assert.strictEqual(unreadable.coverage.status, "partial", "目录无法读取时不得宣称完整覆盖");
+    assert.strictEqual(unreadable.coverage.scanComplete, false);
+    assert.ok(unreadable.issues.some((item) => item.rule === "WLS_CONFIG" && /目录读取失败/.test(item.message)));
+  } finally { fs.readdirSync = originalReaddir; }
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

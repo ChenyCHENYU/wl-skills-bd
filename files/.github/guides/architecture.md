@@ -39,7 +39,7 @@ L7  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 
 | `lib/task-router.js` / `lib/pipeline.js` | 任务路由、标准 DAG、节点状态、确认门与 pipelineHash |
 | `lib/safe-fix.js` | B3/B5 白名单计划、备份回滚和复扫 |
 | `lib/installer.js` / `doctor.js` | 资产生命周期与环境诊断 |
-| `mcp/` | 16 个工具的 schema、统一 response 预算/cursor 和 stdio 协议适配 |
+| `mcp/` | 18 个工具的 schema、统一 response 预算/cursor 和 stdio 协议适配 |
 
 ## 与 wl-skills-kit 的协作
 

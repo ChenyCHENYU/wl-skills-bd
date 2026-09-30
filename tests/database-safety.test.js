@@ -87,6 +87,10 @@ try {
   const migrationConflict = immutable.actions.find((item) => item.rel === migration.rel);
   assert.strictEqual(migrationConflict.action, "conflict");
   assert.match(migrationConflict.reason, /migration.*不可改写/i);
+  const forcedMigration = applyPlan(immutable, { confirm: true, force: true, planHash: immutable.planHash });
+  assert.strictEqual(forcedMigration.ok, false, "--force 不能覆盖已经存在的 Flyway 迁移");
+  assert.strictEqual(forcedMigration.reason, "conflict");
+  assert.match(fs.readFileSync(migration.destination, "utf8"), /forbidden rewrite/, "冲突时必须保留原迁移文件");
 
   fs.writeFileSync(migration.destination, migration.content, "utf8");
   const duplicate = path.join(tempRoot, example.output?.migration || "src/main/resources/db/migration", "V20260718_120000__other.sql");

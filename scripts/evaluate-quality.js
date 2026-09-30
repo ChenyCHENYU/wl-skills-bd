@@ -13,8 +13,12 @@ const { compactExecution, compactModuleEvidence } = require("../lib/review");
 const { applyResultBudget, clearResultStore } = require("../mcp/result-budget");
 
 const ROOT = path.resolve(__dirname, "..");
-const corpus = require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy.json"));
+const corpus = [
+  ...require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy.json")),
+  ...require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy-extra.js")),
+];
 const budgets = require(path.join(ROOT, "tests", "fixtures", "quality-budgets.json"));
+const ruleIds = require(path.join(ROOT, "files", ".wl-skills-bd", "capabilities.json")).backendRules.ids;
 
 function writeFixture(root, files) {
   for (const [rel, content] of Object.entries(files)) {
@@ -54,7 +58,9 @@ function evaluateAccuracy() {
   }
   const precision = truePositive / Math.max(1, truePositive + falsePositive);
   const recall = truePositive / Math.max(1, truePositive + falseNegative);
-  return { cases: corpus.length, truePositive, falsePositive, falseNegative, precision, recall, failures };
+  const coveredRuleIds = [...new Set(corpus.flatMap((testCase) => testCase.rules))].sort();
+  return { cases: corpus.length, coveredRuleIds, coveredRules: coveredRuleIds.length,
+    totalRules: ruleIds.length, truePositive, falsePositive, falseNegative, precision, recall, failures };
 }
 
 function evaluatePerformance() {
@@ -172,7 +178,7 @@ function evaluateCatalogBudget() {
 }
 
 function evaluateReviewBudget() {
-  const rules = Array.from({ length: 31 }, (_, index) => `B${index + 1}`);
+  const rules = ruleIds;
   const modules = Array.from({ length: 100 }, (_, index) => ({
     id: `module-${index}`,
     root: `services/module-${index}`,
@@ -215,6 +221,7 @@ const report = {
 
 assert.ok(report.accuracy.precision >= budgets.accuracy.minimumPrecision, `precision ${report.accuracy.precision} 低于 ${budgets.accuracy.minimumPrecision}: ${report.accuracy.failures.join("; ")}`);
 assert.ok(report.accuracy.recall >= budgets.accuracy.minimumRecall, `recall ${report.accuracy.recall} 低于 ${budgets.accuracy.minimumRecall}: ${report.accuracy.failures.join("; ")}`);
+assert.ok(report.accuracy.coveredRules >= budgets.accuracy.minimumCoveredRules, `准确率语料只覆盖 ${report.accuracy.coveredRules}/${report.accuracy.totalRules} 条规则`);
 assert.ok(report.performance.scopedP95Ms <= budgets.performance.scopedP95Ms, `scoped P95 ${report.performance.scopedP95Ms}ms 超预算`);
 assert.ok(report.performance.fullP95Ms <= budgets.performance.fullP95Ms, `full P95 ${report.performance.fullP95Ms}ms 超预算`);
 assert.ok(report.performance.scopedGroupRatio <= budgets.performance.maximumScopedGroupRatio, `规则短路比例 ${report.performance.scopedGroupRatio} 超预算`);
@@ -235,5 +242,5 @@ assert.strictEqual(report.review.returnedModuleItems, budgets.review.defaultModu
 
 if (process.argv.includes("--json")) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 else {
-  console.log(`✅ quality eval：precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog≈${report.catalog.summaryEstimatedTokens} tokens；Review≈${report.review.estimatedTokens} tokens/100 modules`);
+  console.log(`✅ quality eval：样本 ${report.accuracy.cases} 例/${report.accuracy.coveredRules} of ${report.accuracy.totalRules} rules，precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog≈${report.catalog.summaryEstimatedTokens} tokens；Review≈${report.review.estimatedTokens} tokens/100 modules`);
 }

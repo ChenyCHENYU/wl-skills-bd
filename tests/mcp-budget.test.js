@@ -2,7 +2,7 @@
 
 const assert = require("assert");
 const { HANDLERS, TOOLS } = require("../mcp/registry");
-const { applyResultBudget, clearResultStore, readCursor } = require("../mcp/result-budget");
+const { applyResultBudget, clearResultStore, readCursor, resultStoreStats } = require("../mcp/result-budget");
 const { validateSchema } = require("../mcp/schema-validator");
 
 clearResultStore();
@@ -38,4 +38,13 @@ assert.ok(chunks.includes("structuredContent"), "游标必须可续取原始结�
 const expired = readCursor("wls_be_standards", `${"f".repeat(32)}:0`, 4096);
 assert.strictEqual(expired.isError, true);
 
-console.log("✅ MCP budget：17 工具统一预算、token 估算、输入兼容、大结果游标与过期阻断通过");
+clearResultStore();
+const payload = "z".repeat(6 * 1024 * 1024);
+for (let index = 0; index < 6; index += 1) {
+  applyResultBudget("memory-budget", { maxBytes: 4096 }, { text: `${index}${payload}`, structuredContent: {} });
+  assert.ok(resultStoreStats().bytes <= resultStoreStats().maxBytes, "MCP 游标必须遵守进程总字节预算");
+}
+assert.ok(resultStoreStats().entries < 6, "超过总字节预算时应淘汰最旧结果");
+clearResultStore();
+
+console.log("✅ MCP budget：18 工具统一预算、token 估算、输入兼容、大结果游标、内存上限与过期阻断通过");

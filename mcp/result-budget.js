@@ -13,6 +13,7 @@ const DEFAULT_MAX_ITEMS = 20;
 const DEFAULT_MAX_BYTES = 20_000;
 const MAX_STORED_RESULTS = 32;
 const MAX_STORED_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_STORED_BYTES = 32 * 1024 * 1024;
 const RESULT_TTL_MS = 5 * 60 * 1000;
 const CURSOR_PATTERN = "^[a-f0-9]{32}:[0-9]+$";
 
@@ -28,24 +29,35 @@ const RESPONSE_SCHEMA = Object.freeze({
 });
 
 const resultStore = new Map();
+let resultStoreBytes = 0;
 
 function byteLength(value) {
   return Buffer.byteLength(typeof value === "string" ? value : JSON.stringify(value), "utf8");
 }
 
-function trimStore() {
+function deleteStored(id) {
+  const entry = resultStore.get(id);
+  if (!entry) return;
+  resultStoreBytes -= entry.data.length;
+  resultStore.delete(id);
+}
+
+function trimStore(incomingBytes = 0) {
   const now = Date.now();
-  for (const [id, entry] of resultStore) if (entry.expiresAt <= now) resultStore.delete(id);
-  while (resultStore.size >= MAX_STORED_RESULTS) resultStore.delete(resultStore.keys().next().value);
+  for (const [id, entry] of resultStore) if (entry.expiresAt <= now) deleteStored(id);
+  while (resultStore.size >= MAX_STORED_RESULTS || resultStoreBytes + incomingBytes > MAX_TOTAL_STORED_BYTES) {
+    deleteStored(resultStore.keys().next().value);
+  }
 }
 
 function putResult(toolName, result) {
-  trimStore();
   const id = crypto.randomBytes(16).toString("hex");
   const original = Buffer.from(JSON.stringify(result), "utf8");
   const complete = original.length <= MAX_STORED_BYTES;
   const data = complete ? original : original.subarray(0, MAX_STORED_BYTES);
+  trimStore(data.length);
   resultStore.set(id, { toolName, data, complete, expiresAt: Date.now() + RESULT_TTL_MS });
+  resultStoreBytes += data.length;
   return { cursor: `${id}:0`, bytes: data.length, complete };
 }
 
@@ -70,7 +82,7 @@ function readCursor(toolName, cursor, maxBytes = DEFAULT_MAX_BYTES) {
   while (end < entry.data.length && end > parsed.offset && (entry.data[end] & 0xc0) === 0x80) end -= 1;
   const chunk = entry.data.subarray(parsed.offset, end).toString("utf8");
   const nextCursor = end < entry.data.length ? `${parsed.id}:${end}` : null;
-  if (!nextCursor) resultStore.delete(parsed.id);
+  if (!nextCursor) deleteStored(parsed.id);
   return {
     text: chunk,
     structuredContent: {
@@ -218,6 +230,11 @@ function withResponseControls(tool) {
 
 function clearResultStore() {
   resultStore.clear();
+  resultStoreBytes = 0;
+}
+
+function resultStoreStats() {
+  return { entries: resultStore.size, bytes: resultStoreBytes, maxBytes: MAX_TOTAL_STORED_BYTES };
 }
 
 module.exports = {
@@ -226,5 +243,6 @@ module.exports = {
   clearResultStore,
   normalizeControls,
   readCursor,
+  resultStoreStats,
   withResponseControls,
 };

@@ -12,13 +12,13 @@ document-meta:
 
 ```bash
 npm install -D @agile-team/wl-skills-bd
-npx wl-skills-bd init --dry-run
-npx wl-skills-bd init
+npx wl-skills-bd init --json
+npx wl-skills-bd init --plan-hash <hash> --confirm
 npx wl-skills-bd check
 npx wl-skills-bd doctor
 ```
 
-`init/update` 遇到未受管或本地修改文件默认整批零写入；`--force` 会先备份。`clean` 只删除内容仍等于安装哈希的受管文件。
+`init/update/clean` 默认只预览并返回 `planHash`，评审后用同一命令加 `--plan-hash <hash> --confirm`。写前重新核对源资产、目标文件与 manifest；任何漂移都整批零写入。安装冲突可显式 `--force` 备份后覆盖；`clean` 只删除内容仍等于安装哈希的受管文件，成功后保留恢复备份，失败时回滚。
 
 建议在业务工程 `.gitignore` 加入：
 
@@ -105,7 +105,7 @@ wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
 
 项目断言只有项目明确登记 safeReplacement、指定文件中字面 before 恰好命中一次时才可 apply；复验失败自动恢复。其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
 
-单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed 都是 partial，最终交付仍需 full。
+单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed 和目录或文件无法完整读取的扫描都标记为 partial，最终交付仍需 full 且 `scanComplete=true`。
 
 ## 与前端协作
 
@@ -118,7 +118,7 @@ wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
 
 ## MCP
 
-`init` 会安装编辑器配置。17 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；`wls_be_review` 提供变更门禁、平台适配、项目断言、供应链和修复分级，`wls_be_contract` 提供 inspect/migrate/impact/integration-inspect，`wls_be_catalog` 提供分区读取和 integration-audit。不要把 MCP 当作绕过 planHash/人工评审的后门。
+`init` 会安装编辑器配置。18 个工具及写入确认协议见 `mcp-workflow.md`。CLI 与 MCP 共用同一实现；`wls_be_review` 提供变更门禁、平台适配、项目断言、供应链和修复分级，`wls_be_contract` 提供 inspect/migrate/impact/integration-inspect，`wls_be_catalog` 提供分区读取和 integration-audit。不要把 MCP 当作绕过 planHash/人工评审的后门。
 
 MCP 默认使用 `response.mode=summary` 和有界 `maxItems/maxBytes`；超预算结果从 `nextCursor` 续取，禁止为了获取正文反复执行同一全量工具。
 

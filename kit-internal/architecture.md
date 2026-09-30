@@ -1,6 +1,6 @@
 # wl-skills-bd Architecture Decision Record
 
-> 状态：accepted · 版本：0.24.0 · 日期：2026-08-31
+> 状态：accepted · 最近增补：0.30.0 · 日期：2026-09-30
 
 ## 目标
 
@@ -125,9 +125,17 @@ Review 把事实、策略、动作分层：Git/源码/POM/JaCoCo 是事实，`qu
 
 ScanContext 在同一进程按文件状态复用源码内容，Source Index 再提供原子持久化缓存。根配置或文件 dev/inode/size/mtime/ctime 变化立即失效；损坏、权限或只读环境只会触发真实重扫。缓存不是事实源，不得降低 complete/partial 覆盖门。
 
+v0.30.0 将扫描目录读取失败纳入错误诊断，覆盖状态降级为 `partial`，供 review 完整覆盖门阻断。ScanContext 以 64 MiB 总字节数和 2000 项共同约束缓存；Source Index 内存缓存以 32 MiB 和 16 项约束，磁盘缓存继续作为可失效加速层。
+
 ### MCP 统一预算
 
 所有工具默认摘要并共享数组/字节预算。Catalog 额外提供 section/cursor，在进入 MCP 通用预算前先裁剪事实。大结果仅在当前 MCP 进程短期保存，用绑定工具的 cursor 续取；不写项目、不重新执行 handler。响应报告原始/返回字节和 token 估算，CI 固定 MCP 与 Catalog 摘要输出上限。
+
+v0.30.0 增加游标存储 32 MiB 进程总预算（单项仍为 8 MiB），并验证 CLI `mcp` 与直接运行 server 的 stdio 行为一致。
+
+### 安装与清理复用确认链（v0.30.0）
+
+`init/update/clean` 默认只预览。计划哈希绑定项目根、源资产/manifest 哈希、目标文件动作与当前哈希；执行必须提供同一哈希和显式确认，写前重新计算，漂移时整批零写入。安装文件由通用原子写组件落盘；安装、代码生成和清理共享文件事务 journal/恢复基础能力。清理保留成功备份，失败恢复先前文件与 manifest。Flyway 迁移冲突不属于可强制覆盖的普通本地文件，`--force` 始终不能绕过不可变门。
 
 ### PMD 版本隔离
 
