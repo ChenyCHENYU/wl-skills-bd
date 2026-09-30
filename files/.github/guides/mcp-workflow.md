@@ -47,9 +47,11 @@
 
 - `summary` 用于判断状态与下一步，`compact/full` 只在需要定位或读取正文时启用；
 - 数组和字符串先按统一预算裁剪，响应声明 `originalBytes/returnedBytes/estimatedTokens/truncated`；
+- 最终 JSON 与游标页都受 `maxBytes` 严格约束；`detail=full` 的 Catalog 正文和生成测试源码分别只在 `structuredContent.catalog`、`structuredContent.content` 返回一次；
 - 超预算结果短期保留在 MCP 进程内，使用同一工具和 `{ "response": { "cursor": "<nextCursor>" } }` 续取，不重跑 handler；单份最多保留 8 MB，进程总量最多 32 MB，超过单份上限会标记 `storedComplete=false`；
 - cursor 有期限、绑定原工具且不写项目目录，过期或跨工具使用时 fail-closed。
 - Catalog `show` 优先使用 `section/limit/cursor` 在执行核心内先裁剪；字段影响也使用自身证据 cursor，再叠加通用响应预算，避免重复全量扫描。
+- `wls_be_validate` 的 `severity` 只筛选展示；`ok/status/error` 依据完整扫描，覆盖为 `partial` 时不得解释为通过。
 
 ## 启动
 

@@ -15,7 +15,8 @@
     "id": "B3-select-star",
     "rules": ["B3"],
     "files": { "src/main/resources/mapper/DemoMapper.xml": "<mapper namespace=\"DemoMapper\"><select id=\"list\">SELECT * FROM DEMO</select></mapper>\n" },
-    "expectedRules": ["B3"]
+    "expectedRules": ["B3"],
+    "expectedFindings": [{ "rule": "B3", "file": "src/main/resources/mapper/DemoMapper.xml", "line": 1, "severity": "error" }]
   },
   {
     "id": "B3-explicit-columns",
@@ -39,7 +40,8 @@
     "id": "B13-redis-without-ttl",
     "rules": ["B13"],
     "files": { "src/CacheService.java": "class CacheService {\n  RedisTemplate redis;\n  void put(String key, String value) { redis.opsForValue().set(key, value); }\n}\n" },
-    "expectedRules": ["B13"]
+    "expectedRules": ["B13"],
+    "expectedFindings": [{ "rule": "B13", "file": "src/CacheService.java", "line": 3, "severity": "error" }]
   },
   {
     "id": "B13-redis-with-ttl",

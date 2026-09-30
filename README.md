@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.30.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.30.1-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -43,6 +43,13 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.30.1 精准诊断与结果预算
+
+- B29 的分页 Profile 损坏、B31 的契约事实源不可读或 Catalog 配置损坏会输出配置诊断并标记 `partial`；数据库漂移对账遇到事实源缺失也会阻断。没有文件需求的规则不再遍历整个工程。
+- MCP 的 `severity` 只筛选展示，整体错误数和结论仍以完整扫描为准；`partial` 不再显示为 `passed`。畸形 MCP 请求会返回协议错误，后续请求仍可处理。
+- MCP 对最终 JSON 结果和游标页执行严格字节上限；Catalog 全文只在 `structuredContent.catalog` 返回一次。安装、清理、代码生成在逐文件写入前再次核对哈希，发现并发漂移时回滚。
+- 质量门采用 65 个规则样本（B1~B32 均有正反例，含定位/严重度断言），检查冷热缓存和实际文件读取；发布验证只执行一次带覆盖率的全量测试。
 
 ### v0.30.0 写入安全与扫描完整性
 
@@ -104,7 +111,7 @@
 - **真实目录**：Catalog 只把契约形状 JSON 当资源，接口以 Controller 源码观测为准；默认仅返回摘要，`--section/--limit/--cursor` 按需读取。
 - **字段影响**：`impact field` 在指定模块内关联契约字段、存储容量、Java 校验、所有权、Expand/Backfill/Contract 迁移链及精确文件行号，禁止隐式全仓扫描。
 - **集成治理**：契约可声明版本化逻辑 ID 和集成投递闭环；`integration inspect/audit` 检查缺项以及 StableBusinessId/PayloadHash 的重复或实现漂移。
-- **量化结果**：质量基准固定规则 precision/recall=1.0，并把 Catalog 默认摘要与分页加入 token 回退门禁；1000 资源夹具摘要约 118 tokens。
+- **量化结果**：质量基准的固定夹具覆盖 B1~B32 正反例，并把 Catalog 默认摘要与分页加入 token 回退门禁；夹具 precision/recall 不代表真实项目准确率，1000 资源夹具摘要约 118 tokens。
 
 ### v0.22.0 契约、安全写链与数据库证据闭环
 

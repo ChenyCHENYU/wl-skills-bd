@@ -38,6 +38,21 @@ assert.ok(chunks.includes("structuredContent"), "游标必须可续取原始结�
 const expired = readCursor("wls_be_standards", `${"f".repeat(32)}:0`, 4096);
 assert.strictEqual(expired.isError, true);
 
+const nested = applyResultBudget("nested-budget", { mode: "summary", maxBytes: 4096 }, {
+  text: "ok",
+  structuredContent: { coverage: { notes: Array.from({ length: 20 }, () => "x".repeat(5000)) } },
+});
+const nestedBytes = Buffer.byteLength(JSON.stringify({ text: nested.text, structuredContent: nested.structuredContent }));
+assert.ok(nestedBytes <= 4096, `深层 coverage 也必须遵守最终字节上限：${nestedBytes}`);
+assert.strictEqual(nested.structuredContent.response.returnedBytes, nestedBytes);
+const escaped = applyResultBudget("escaped-budget", { maxBytes: 4096 }, { text: "\\\n\"".repeat(10000), structuredContent: {} });
+const escapedPage = readCursor("escaped-budget", escaped.structuredContent.response.nextCursor, 4096);
+assert.ok(Buffer.byteLength(JSON.stringify(escapedPage)) <= 4096, "游标页也必须计算 JSON 转义后的真实字节");
+const utf8 = applyResultBudget("utf8-budget", { maxBytes: 4096 }, { text: "中".repeat(10000), structuredContent: {} });
+const cursorId = utf8.structuredContent.response.nextCursor.split(":")[0];
+assert.strictEqual(readCursor("utf8-budget", `${cursorId}:11`, 4096).isError, true,
+  "用户伪造的 UTF-8 字符中间偏移必须拒绝");
+
 clearResultStore();
 const payload = "z".repeat(6 * 1024 * 1024);
 for (let index = 0; index < 6; index += 1) {

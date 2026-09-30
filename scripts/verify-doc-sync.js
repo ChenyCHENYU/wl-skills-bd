@@ -40,6 +40,10 @@ function verifySkillRegistry() {
 
 function verifyActiveRuleRanges() {
   const currentFiles = [
+    "README.md",
+    "files/.github/standards/index.md",
+    "files/.github/guides/architecture.md",
+    "files/.github/guides/usage.md",
     "mcp/registry.js",
     "mcp/tools/beRulesTools.js",
     "kit-internal/architecture.md",
@@ -94,6 +98,14 @@ function verifyMcpToolCounts() {
   }
 }
 
+function verifyArchitectureCounts() {
+  const architecture = read("files/.github/guides/architecture.md");
+  const match = architecture.match(/(\d+) 条团队规范/);
+  if (!match || Number(match[1]) !== capabilities.standards.count) {
+    errors.push("guides/architecture.md 团队规范数量与 capabilities 不一致");
+  }
+}
+
 // AGENTS.md 有序列表编号必须严格递增（曾出现三个 8 的漂移）
 function verifyOrderedListNumbering() {
   for (const rel of ["files/AGENTS.md", "files/CLAUDE.md"]) {
@@ -117,6 +129,7 @@ verifyStandardsIndex();
 verifySkillRegistry();
 verifyActiveRuleRanges();
 verifyMcpToolCounts();
+verifyArchitectureCounts();
 verifyOrderedListNumbering();
 
 if (errors.length > 0) {

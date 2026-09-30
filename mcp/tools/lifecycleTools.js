@@ -508,7 +508,7 @@ function handleCatalog(args) {
         return toolResult(`Catalog 分区：${value.module.id}.${args.section}；${slice.items.length}/${slice.total}，nextCursor=${slice.nextCursor}`, slice);
       }
       if (args.detail !== "full") return toolResult(`Catalog 摘要：${value.module.id}，资源 ${summary.resources}，证据文件 ${summary.evidenceFiles}`, { ok: true, state: "read", detail: "summary", catalog: summary });
-      return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", detail: "full", catalog: value });
+      return toolResult(`Catalog 完整数据已放入 structuredContent.catalog：${value.module.id}`, { ok: true, state: "read", detail: "full", catalog: value });
     }
     const file = path.join(root, catalog.CATALOG_ROOT, "project-catalog.json");
     if (!fs.existsSync(file)) return blockedResult("项目目录快照不存在", "catalog-missing");
@@ -520,7 +520,7 @@ function handleCatalog(args) {
       modules: Array.isArray(value.modules) ? value.modules.length : Object.keys(value.modules || {}).length,
     };
     if (args.detail !== "full") return toolResult(`项目 Catalog 摘要：模块 ${summary.modules}`, { ok: true, state: "read", detail: "summary", catalog: summary });
-    return toolResult(JSON.stringify(value, null, 2), { ok: true, state: "read", detail: "full", catalog: value });
+    return toolResult("项目 Catalog 完整数据已放入 structuredContent.catalog", { ok: true, state: "read", detail: "full", catalog: value });
   }
   if (args.mode === "check") {
     if (!args.module) return blockedResult("catalog check 必须指定当前 module", "module-required");
@@ -601,7 +601,7 @@ function handleTest(args) {
   if (!result.ok) return blockedResult(`契约校验失败\n${validationText(result)}`, "invalid-contract", { errors: result.errors });
   const includeSource = args.includeSource === true || args.detail === "full";
   const text = includeSource
-    ? `✅ ${result.scenarioCount} 个测试场景（含 smoke + 业务行为契约）：\n${result.content}`
+    ? `✅ ${result.scenarioCount} 个测试场景；源码见 structuredContent.content。`
     : `✅ 已生成 ${result.scenarioCount} 个测试场景；需要源码时传 detail=full 或 includeSource=true。`;
   return toolResult(text, { ok: true, scenarioCount: result.scenarioCount, ...(includeSource ? { content: result.content } : {}) });
 }

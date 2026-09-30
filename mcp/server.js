@@ -109,10 +109,21 @@ function initialize(id, params) {
 }
 
 async function handleMessage(msg) {
-  const { id, method, params = {} } = msg;
-  if (id === undefined || id === null) return;
-  if (method === "initialize") return initialize(id, params);
+  if (!msg || typeof msg !== "object" || Array.isArray(msg) || msg.jsonrpc !== "2.0"
+    || typeof msg.method !== "string") {
+    sendError(msg && typeof msg === "object" && !Array.isArray(msg) ? msg.id ?? null : null,
+      -32600, "Invalid Request");
+    return;
+  }
+  const { id, method } = msg;
   if (method === "notifications/initialized") return; // ack，无需响应
+  if (id === undefined || id === null) return;
+  const params = msg.params === undefined ? {} : msg.params;
+  if (!params || typeof params !== "object" || Array.isArray(params)) {
+    sendError(id, -32602, "params 必须是对象");
+    return;
+  }
+  if (method === "initialize") return initialize(id, params);
   if (method === "tools/list") return sendResult(id, { tools: TOOLS });
   if (method === "tools/call")
     return dispatchTool(id, params.name, params.arguments || {});
@@ -129,7 +140,11 @@ function startServer() {
   rl.on("line", (line) => {
     queue = queue.then(async () => {
       const msg = parseMessage(line);
-      if (msg) await handleMessage(msg);
+      if (!msg) return;
+      try { await handleMessage(msg); } catch (error) {
+        sendError(msg && typeof msg === "object" && !Array.isArray(msg) ? msg.id ?? null : null,
+          -32603, `工具服务内部错误：${error.message}`);
+      }
     });
   });
   rl.on("close", () => {

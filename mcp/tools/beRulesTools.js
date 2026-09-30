@@ -84,7 +84,7 @@ function handleValidate(args = {}) {
     rules: Array.isArray(args.rules) ? args.rules : undefined,
   });
   const issues = args.severity ? scanned.issues.filter((issue) => issue.severity === args.severity) : scanned.issues;
-  const stats = {
+  const viewStats = {
     error: issues.filter((issue) => issue.severity === "error").length,
     warn: issues.filter((issue) => issue.severity === "warn").length,
     info: issues.filter((issue) => issue.severity === "info").length,
@@ -99,6 +99,8 @@ function handleValidate(args = {}) {
   const suppressed = scanned.suppressed;
   const coverage = scanned.coverage;
   const execution = scanned.execution;
+  const stats = scanned.stats;
+  const status = stats.error > 0 ? "failed" : coverage.status !== "complete" ? "partial" : stats.warn > 0 ? "warning" : "passed";
 
   // 按规则分组：摘要只保留计数，compact/full 才携带有限问题明细。
   const byRule = {};
@@ -127,7 +129,7 @@ function handleValidate(args = {}) {
     }
   }
   lines.push("");
-  lines.push(`汇总：🔴 ${stats.error} | 🟡 ${stats.warn} | 共 ${stats.total} 项；端点 ${endpoints.length}；抑制 ${suppressed.length}`);
+  lines.push(`汇总：🔴 ${stats.error} | 🟡 ${stats.warn} | 共 ${stats.total} 项；当前筛选展示 ${viewStats.total} 项；端点 ${endpoints.length}；抑制 ${suppressed.length}`);
   if (Buffer.byteLength(lines.join("\n"), "utf8") > maxBytes) {
     while (lines.length > 1 && Buffer.byteLength(lines.join("\n"), "utf8") > maxBytes) lines.splice(lines.length - 2, 1);
     lines.splice(lines.length - 1, 0, "… 输出已按 maxBytes 截断，请调大 maxBytes 或使用 detail=summary");
@@ -135,8 +137,8 @@ function handleValidate(args = {}) {
 
   const returnedIssues = detail === "summary" ? [] : issues.slice(0, maxItems).map((value) => issueView(value, detail));
   const structuredContent = {
-    ok: stats.error === 0,
-    status: stats.error > 0 ? "failed" : stats.warn > 0 ? "warning" : "passed",
+    ok: stats.error === 0 && coverage.status === "complete",
+    status,
     coverage,
     evaluatedRules: scanned.evaluatedRules,
     skippedRules: scanned.skippedRules,
@@ -145,10 +147,11 @@ function handleValidate(args = {}) {
     info: stats.info,
     total: stats.total,
     byRule: stats.byRule,
+    view: { severity: args.severity || null, total: viewStats.total, byRule: viewStats.byRule },
     endpointCount: endpoints.length,
     ...(args.includeEndpoints === true ? { endpoints } : detail === "full" ? { endpoints: endpoints.slice(0, maxItems) } : {}),
     issues: returnedIssues,
-    issueCount: issues.length,
+    issueCount: stats.total,
     returnedIssues: returnedIssues.length,
     truncated: returnedIssues.length < issues.length,
     suppressed: suppressed.length,
@@ -156,10 +159,14 @@ function handleValidate(args = {}) {
   };
 
   if (issues.length === 0) {
-    const state = coverage.status === "complete" ? `✅ 未发现 ${capabilities.backendRules.displayRange} 违规` : "✅ 未发现已评估规则违规";
+    const state = stats.error > 0
+      ? "❌ 当前筛选未展示阻断项，完整扫描仍有错误"
+      : stats.warn > 0 ? "⚠️ 当前筛选未展示警告项，完整扫描仍有警告"
+      : coverage.status === "complete" ? `✅ 未发现 ${capabilities.backendRules.displayRange} 违规` : "⚠️ 当前覆盖不完整，已评估规则未发现违规";
     return {
       text: `${state}；已盘点 ${endpoints.length} 个 Controller 端点。\n${lines.slice(1).join("\n")}\n注：架构、格式和缺陷仍需配合 ArchUnit/Checkstyle/PMD/SpotBugs/Spotless。`,
       structuredContent,
+      ...(stats.error > 0 ? { isError: true } : {}),
     };
   }
 

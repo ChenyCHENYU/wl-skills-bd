@@ -134,6 +134,7 @@ const { validateSchema } = require("../mcp/schema-validator");
   assert.strictEqual(Object.prototype.hasOwnProperty.call(generatedSourceSummary.structuredContent, "content"), false);
   const generatedSourceFull = await HANDLERS.wls_be_test.handle({ mode: "gen", contract, includeSource: true });
   assert.match(generatedSourceFull.structuredContent.content, /class .*ServiceTest/);
+  assert.doesNotMatch(generatedSourceFull.text, /class .*ServiceTest/, "生成源码只应传输一次");
 
   console.log("✅ MCP registry：18 工具（含 capabilities 清单）、严格 schema、路径边界及核心 handler 通过");
 })().catch((error) => {

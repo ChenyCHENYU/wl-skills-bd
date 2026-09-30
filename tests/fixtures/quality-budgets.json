@@ -3,11 +3,14 @@
   "accuracy": {
     "minimumPrecision": 1,
     "minimumRecall": 1,
-    "minimumCoveredRules": 32
+    "minimumCoveredRules": 32,
+    "minimumPositiveRules": 32,
+    "minimumNegativeRules": 32,
+    "minimumExactCases": 6
   },
   "performance": {
-    "scopedP95Ms": 1500,
-    "fullP95Ms": 5000,
+    "scopedP95Ms": 500,
+    "fullP95Ms": 1500,
     "maximumScopedGroupRatio": 0.2
   },
   "mcp": {

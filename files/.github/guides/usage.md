@@ -105,7 +105,7 @@ wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
 
 项目断言只有项目明确登记 safeReplacement、指定文件中字面 before 恰好命中一次时才可 apply；复验失败自动恢复。其余规则按报告人工处理。修复器不会猜权限码、把 `${}` 盲换成 `#{}`、自动补租户谓词或生成空洞 Javadoc。
 
-单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed 和目录或文件无法完整读取的扫描都标记为 partial，最终交付仍需 full 且 `scanComplete=true`。
+单点反馈可用 `--rules`，执行器只发现和读取对应规则需要的文件；`execution/coverage` 必须保留。quick/staged/changed、分页 Profile 损坏和事实源目录或文件无法完整读取的扫描都标记为 partial，最终交付仍需 full 且 `scanComplete=true`。MCP 的 `severity` 仅改变展示的问题，不能改变整体判断。
 
 ## 与前端协作
 

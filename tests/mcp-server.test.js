@@ -12,11 +12,11 @@ const messages = [
   { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "wls_be_standards", arguments: { id: "04" } } },
   { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "wls_be_codegen", arguments: { mode: "bad", contract: "x" } } },
 ];
-function run(entry) {
+function run(entry, inputMessages = messages) {
   return spawnSync(process.execPath, entry, {
   cwd: path.resolve(__dirname, ".."),
   env: { ...process.env, WL_PROJECT_ROOT: path.resolve(__dirname, "..") },
-  input: `${messages.map((message) => JSON.stringify(message)).join("\n")}\n`,
+  input: `${inputMessages.map((message) => JSON.stringify(message)).join("\n")}\n`,
   encoding: "utf8",
   timeout: 15000,
   windowsHide: true,
@@ -39,5 +39,14 @@ assert.strictEqual(cliResult.status, 0, cliResult.stderr);
 const cliResponses = cliResult.stdout.trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 assert.strictEqual(cliResponses.length, messages.length, "CLI mcp 必须真正启动 stdio 服务");
 assert.deepStrictEqual(cliResponses.map((response) => response.id), messages.map((message) => message.id));
+
+const malformed = run([server], [
+  { jsonrpc: "2.0", id: 10, method: "initialize", params: null },
+  { jsonrpc: "2.0", id: 11, method: "ping" },
+]);
+assert.strictEqual(malformed.status, 0, malformed.stderr);
+const recovered = malformed.stdout.trim().split(/\r?\n/).map((line) => JSON.parse(line));
+assert.strictEqual(recovered[0].error.code, -32602, "畸形请求应返回参数错误");
+assert.deepStrictEqual(recovered[1].result, {}, "单条坏请求不能中断后续 MCP 消息");
 
 console.log("✅ MCP server：initialize（含接入约定）、18 tools/list、tools/call 与严格参数错误通过");

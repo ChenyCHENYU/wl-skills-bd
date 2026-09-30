@@ -165,6 +165,54 @@ try {
     fs.rmSync(cleanRoot, { recursive: true, force: true });
     fs.rmSync(cleanSource, { recursive: true, force: true });
   }
+  const raceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-race-"));
+  const raceSource = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-race-source-"));
+  try {
+    fs.writeFileSync(path.join(raceSource, "a.txt"), "old-a\n");
+    fs.writeFileSync(path.join(raceSource, "b.txt"), "old-b\n");
+    assert.strictEqual(apply(installer.buildPlan(raceRoot, { sourceRoot: raceSource })).ok, true);
+    fs.writeFileSync(path.join(raceSource, "a.txt"), "new-a\n");
+    fs.writeFileSync(path.join(raceSource, "b.txt"), "new-b\n");
+    const racePlan = installer.buildPlan(raceRoot, { sourceRoot: raceSource });
+    const originalRename = fs.renameSync;
+    let changed = false;
+    fs.renameSync = (from, to) => {
+      const value = originalRename(from, to);
+      if (to === path.join(raceRoot, "a.txt") && !changed) {
+        changed = true;
+        fs.writeFileSync(path.join(raceRoot, "b.txt"), "user-b\n");
+      }
+      return value;
+    };
+    let aborted;
+    try { aborted = apply(racePlan); } finally { fs.renameSync = originalRename; }
+    assert.strictEqual(aborted.reason, "write-failed-rolled-back");
+    assert.strictEqual(fs.readFileSync(path.join(raceRoot, "a.txt"), "utf8"), "old-a\n");
+    assert.strictEqual(fs.readFileSync(path.join(raceRoot, "b.txt"), "utf8"), "user-b\n", "并发本地修改不得被覆盖");
+
+    fs.writeFileSync(path.join(raceRoot, "b.txt"), "old-b\n");
+    const cleanRacePlan = installer.buildCleanPlan(raceRoot);
+    const originalUnlink = fs.unlinkSync;
+    changed = false;
+    fs.unlinkSync = (file) => {
+      const value = originalUnlink(file);
+      if (file === path.join(raceRoot, "a.txt") && !changed) {
+        changed = true;
+        fs.writeFileSync(path.join(raceRoot, "b.txt"), "user-clean-b\n");
+      }
+      return value;
+    };
+    let cleanAborted;
+    try { cleanAborted = installer.applyCleanPlan(cleanRacePlan, { confirm: true, planHash: cleanRacePlan.planHash }); }
+    finally { fs.unlinkSync = originalUnlink; }
+    assert.strictEqual(cleanAborted.reason, "write-failed-rolled-back");
+    assert.strictEqual(fs.readFileSync(path.join(raceRoot, "a.txt"), "utf8"), "old-a\n");
+    assert.strictEqual(fs.readFileSync(path.join(raceRoot, "b.txt"), "utf8"), "user-clean-b\n");
+    assert.ok(fs.existsSync(path.join(raceRoot, installer.MANIFEST_NAME)));
+  } finally {
+    fs.rmSync(raceRoot, { recursive: true, force: true });
+    fs.rmSync(raceSource, { recursive: true, force: true });
+  }
   console.log("✅ installer：manifest、零写入冲突、备份、clean 保护、事务回滚与路径边界通过");
 } finally {
   fs.rmSync(root, { recursive: true, force: true });

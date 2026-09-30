@@ -16,6 +16,7 @@ const ROOT = path.resolve(__dirname, "..");
 const corpus = [
   ...require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy.json")),
   ...require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy-extra.js")),
+  ...require(path.join(ROOT, "tests", "fixtures", "be-rule-accuracy-negatives.js")),
 ];
 const budgets = require(path.join(ROOT, "tests", "fixtures", "quality-budgets.json"));
 const ruleIds = require(path.join(ROOT, "files", ".wl-skills-bd", "capabilities.json")).backendRules.ids;
@@ -37,14 +38,26 @@ function evaluateAccuracy() {
   let truePositive = 0;
   let falsePositive = 0;
   let falseNegative = 0;
+  let exactCases = 0;
   const failures = [];
   for (const testCase of corpus) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-accuracy-"));
     try {
       writeFixture(root, testCase.files);
       const result = runBeRules(root, { rules: testCase.rules });
-      const actual = new Set(result.issues.filter((item) => /^B\d+$/.test(item.rule)).map((item) => item.rule));
+      const actualFindings = result.issues.filter((item) => /^B\d+$/.test(item.rule));
+      const actual = new Set(actualFindings.map((item) => item.rule));
       const expected = new Set(testCase.expectedRules);
+      if (Array.isArray(testCase.expectedFindings)) {
+        exactCases += 1;
+        const project = (item) => ({ rule: item.rule, file: item.file, line: item.line, severity: item.severity });
+        const sort = (items) => items.map(project).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+        if (JSON.stringify(sort(actualFindings)) !== JSON.stringify(sort(testCase.expectedFindings))) {
+          failures.push(`${testCase.id}: finding location/severity mismatch`);
+          falsePositive += 1;
+          falseNegative += 1;
+        }
+      }
       for (const rule of actual) {
         if (expected.has(rule)) truePositive += 1;
         else { falsePositive += 1; failures.push(`${testCase.id}: unexpected ${rule}`); }
@@ -59,7 +72,10 @@ function evaluateAccuracy() {
   const precision = truePositive / Math.max(1, truePositive + falsePositive);
   const recall = truePositive / Math.max(1, truePositive + falseNegative);
   const coveredRuleIds = [...new Set(corpus.flatMap((testCase) => testCase.rules))].sort();
+  const positiveRules = new Set(corpus.filter((item) => item.expectedRules.length > 0).flatMap((item) => item.expectedRules));
+  const negativeRules = new Set(corpus.filter((item) => item.expectedRules.length === 0).flatMap((item) => item.rules));
   return { cases: corpus.length, coveredRuleIds, coveredRules: coveredRuleIds.length,
+    positiveRules: positiveRules.size, negativeRules: negativeRules.size, exactCases,
     totalRules: ruleIds.length, truePositive, falsePositive, falseNegative, precision, recall, failures };
 }
 
@@ -75,7 +91,11 @@ function evaluatePerformance() {
     }
     writeFixture(root, files);
     clearScanContextCache();
-    runBeRules(root, { rules: ["B13"] });
+    const scopedCold = runBeRules(root, { rules: ["B13"] });
+    const scopedWarm = runBeRules(root, { rules: ["B13"] });
+    clearScanContextCache();
+    const fullCold = runBeRules(root);
+    const fullWarm = runBeRules(root);
     const scopedTimes = [];
     const fullTimes = [];
     let scoped;
@@ -98,6 +118,10 @@ function evaluatePerformance() {
       scopedLoadedFiles: scoped.execution.scan.loadedFiles,
       fullLoadedFiles: full.execution.scan.loadedFiles,
       contentCacheHits: scoped.execution.scan.contentCacheHits,
+      scopedColdMisses: scopedCold.execution.scan.contentCacheMisses,
+      scopedWarmHits: scopedWarm.execution.scan.contentCacheHits,
+      fullColdMisses: fullCold.execution.scan.contentCacheMisses,
+      fullWarmHits: fullWarm.execution.scan.contentCacheHits,
     };
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -222,9 +246,18 @@ const report = {
 assert.ok(report.accuracy.precision >= budgets.accuracy.minimumPrecision, `precision ${report.accuracy.precision} 低于 ${budgets.accuracy.minimumPrecision}: ${report.accuracy.failures.join("; ")}`);
 assert.ok(report.accuracy.recall >= budgets.accuracy.minimumRecall, `recall ${report.accuracy.recall} 低于 ${budgets.accuracy.minimumRecall}: ${report.accuracy.failures.join("; ")}`);
 assert.ok(report.accuracy.coveredRules >= budgets.accuracy.minimumCoveredRules, `准确率语料只覆盖 ${report.accuracy.coveredRules}/${report.accuracy.totalRules} 条规则`);
+assert.ok(report.accuracy.positiveRules >= budgets.accuracy.minimumPositiveRules, "正例规则覆盖不足");
+assert.ok(report.accuracy.negativeRules >= budgets.accuracy.minimumNegativeRules, "反例规则覆盖不足");
+assert.ok(report.accuracy.exactCases >= budgets.accuracy.minimumExactCases, "定位/严重度精确样本不足");
 assert.ok(report.performance.scopedP95Ms <= budgets.performance.scopedP95Ms, `scoped P95 ${report.performance.scopedP95Ms}ms 超预算`);
 assert.ok(report.performance.fullP95Ms <= budgets.performance.fullP95Ms, `full P95 ${report.performance.fullP95Ms}ms 超预算`);
 assert.ok(report.performance.scopedGroupRatio <= budgets.performance.maximumScopedGroupRatio, `规则短路比例 ${report.performance.scopedGroupRatio} 超预算`);
+assert.strictEqual(report.performance.scopedLoadedFiles, 120, "B13 只应加载 Java 文件");
+assert.strictEqual(report.performance.fullLoadedFiles, 240, "全量扫描应加载 Java 与 XML 文件");
+assert.strictEqual(report.performance.scopedColdMisses, 120);
+assert.strictEqual(report.performance.scopedWarmHits, 120);
+assert.strictEqual(report.performance.fullColdMisses, 240);
+assert.strictEqual(report.performance.fullWarmHits, 240);
 assert.strictEqual(report.sourceCache.warm, "memory");
 assert.strictEqual(report.sourceCache.persistent, "persistent");
 assert.ok(report.mcp.bytes <= budgets.mcp.maxBytes, `MCP ${report.mcp.bytes} bytes 超预算`);
@@ -242,5 +275,5 @@ assert.strictEqual(report.review.returnedModuleItems, budgets.review.defaultModu
 
 if (process.argv.includes("--json")) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 else {
-  console.log(`✅ quality eval：样本 ${report.accuracy.cases} 例/${report.accuracy.coveredRules} of ${report.accuracy.totalRules} rules，precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog≈${report.catalog.summaryEstimatedTokens} tokens；Review≈${report.review.estimatedTokens} tokens/100 modules`);
+  console.log(`✅ quality eval：${report.accuracy.cases} 例，正/反例规则 ${report.accuracy.positiveRules}/${report.accuracy.negativeRules}，定位样本 ${report.accuracy.exactCases}；precision=${report.accuracy.precision.toFixed(3)} recall=${report.accuracy.recall.toFixed(3)}；scoped/full P95=${report.performance.scopedP95Ms.toFixed(1)}/${report.performance.fullP95Ms.toFixed(1)}ms；MCP≈${report.mcp.estimatedTokens} tokens；Catalog≈${report.catalog.summaryEstimatedTokens} tokens；Review≈${report.review.estimatedTokens} tokens/100 modules`);
 }

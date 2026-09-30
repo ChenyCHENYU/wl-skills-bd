@@ -54,7 +54,9 @@ function putResult(toolName, result) {
   const id = crypto.randomBytes(16).toString("hex");
   const original = Buffer.from(JSON.stringify(result), "utf8");
   const complete = original.length <= MAX_STORED_BYTES;
-  const data = complete ? original : original.subarray(0, MAX_STORED_BYTES);
+  let storedLength = Math.min(original.length, MAX_STORED_BYTES);
+  while (!complete && storedLength > 0 && (original[storedLength] & 0xc0) === 0x80) storedLength -= 1;
+  const data = original.subarray(0, storedLength);
   trimStore(data.length);
   resultStore.set(id, { toolName, data, complete, expiresAt: Date.now() + RESULT_TTL_MS });
   resultStoreBytes += data.length;
@@ -70,7 +72,8 @@ function readCursor(toolName, cursor, maxBytes = DEFAULT_MAX_BYTES) {
   trimStore();
   const parsed = parseCursor(cursor);
   const entry = parsed && resultStore.get(parsed.id);
-  if (!entry || entry.toolName !== toolName || !Number.isSafeInteger(parsed.offset) || parsed.offset < 0 || parsed.offset >= entry.data.length) {
+  if (!entry || entry.toolName !== toolName || !Number.isSafeInteger(parsed.offset) || parsed.offset < 0
+    || parsed.offset >= entry.data.length || (parsed.offset > 0 && (entry.data[parsed.offset] & 0xc0) === 0x80)) {
     return {
       text: "❌ 结果游标无效或已过期，请重新执行原工具",
       structuredContent: { ok: false, state: "cursor-invalid", response: { cursorExpired: true } },
@@ -79,13 +82,12 @@ function readCursor(toolName, cursor, maxBytes = DEFAULT_MAX_BYTES) {
   }
   const budget = Math.max(4096, Math.min(Number(maxBytes) || DEFAULT_MAX_BYTES, 200000));
   let end = Math.min(entry.data.length, parsed.offset + Math.max(1024, budget - 1024));
-  while (end < entry.data.length && end > parsed.offset && (entry.data[end] & 0xc0) === 0x80) end -= 1;
-  const chunk = entry.data.subarray(parsed.offset, end).toString("utf8");
-  const nextCursor = end < entry.data.length ? `${parsed.id}:${end}` : null;
-  if (!nextCursor) deleteStored(parsed.id);
-  return {
-    text: chunk,
-    structuredContent: {
+  let page;
+  do {
+    while (end < entry.data.length && end > parsed.offset && (entry.data[end] & 0xc0) === 0x80) end -= 1;
+    const chunk = entry.data.subarray(parsed.offset, end).toString("utf8");
+    const nextCursor = end < entry.data.length ? `${parsed.id}:${end}` : null;
+    page = { text: chunk, structuredContent: {
       ok: true,
       state: nextCursor ? "result-page" : "result-complete",
       response: {
@@ -96,8 +98,12 @@ function readCursor(toolName, cursor, maxBytes = DEFAULT_MAX_BYTES) {
         storedComplete: entry.complete,
         estimatedTokens: Math.ceil(byteLength(chunk) / 4),
       },
-    },
-  };
+    } };
+    if (byteLength(page) <= budget) break;
+    end = Math.min(entry.data.length, parsed.offset + Math.max(4, Math.floor((end - parsed.offset) / 2)));
+  } while (end > parsed.offset);
+  if (!page.structuredContent.response.nextCursor) deleteStored(parsed.id);
+  return page;
 }
 
 function truncateUtf8(value, limit) {
@@ -190,13 +196,27 @@ function applyResultBudget(toolName, response, result) {
       responseMeta.storedBytes = stored.bytes;
       responseMeta.storedComplete = stored.complete;
     }
-    text = truncateUtf8(text, Math.max(512, controls.maxBytes - byteLength(structuredContent) - 512));
+    const essential = {};
+    for (const key of ["ok", "state", "status", "reason", "planHash"]) {
+      if (Object.hasOwn(structuredContent, key)) {
+        const value = structuredContent[key];
+        if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
+          essential[key] = typeof value === "string" ? truncateUtf8(value, 160) : value;
+        }
+      }
+    }
+    structuredContent = { ...essential, response: responseMeta };
+    const available = controls.maxBytes - byteLength({ text: "", structuredContent }) - 32;
+    text = truncateUtf8(text, Math.max(0, available));
+    if (byteLength({ text, structuredContent }) > controls.maxBytes) text = "";
     returnedBytes = byteLength({ text, structuredContent });
   }
   responseMeta.returnedBytes = 0;
   responseMeta.estimatedTokens = 0;
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < 8; index += 1) {
     returnedBytes = byteLength({ text, structuredContent });
+    if (responseMeta.returnedBytes === returnedBytes
+      && responseMeta.estimatedTokens === Math.ceil(returnedBytes / 4)) break;
     responseMeta.returnedBytes = returnedBytes;
     responseMeta.estimatedTokens = Math.ceil(returnedBytes / 4);
   }

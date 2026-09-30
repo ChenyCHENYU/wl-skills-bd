@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const sourceIndex = require("../lib/source-index");
+const { runBeRules } = require("../lib/be-rules");
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-source-cache-"));
 try {
@@ -25,6 +26,67 @@ try {
   const memory = sourceIndex.buildSourceIndex(root);
   assert.strictEqual(memory.cache.level, "memory");
   assert.ok(sourceIndex.sourceIndexMemoryCacheStats().bytes <= sourceIndex.sourceIndexMemoryCacheStats().maxBytes);
+
+  const incompleteRoot = path.join(root, "incomplete-project");
+  const contractDir = path.join(incompleteRoot, "docs", "contracts");
+  fs.mkdirSync(contractDir, { recursive: true });
+  fs.writeFileSync(path.join(contractDir, "wl-contract.json"), JSON.stringify({
+    entity: { table: "source_demo" }, fields: [{ column: "id" }],
+  }));
+  fs.mkdirSync(path.join(incompleteRoot, "contracts"), { recursive: true });
+  fs.writeFileSync(path.join(incompleteRoot, "contracts", "integration.json"), JSON.stringify({
+    integrations: [{ id: "ORDER_CREATED", transport: "team-mq" }],
+  }));
+  const mixed = sourceIndex.buildSourceIndex(incompleteRoot, { cache: false });
+  assert.strictEqual(mixed.contracts.length, 1, "集成协议不能误报为数据库契约");
+  assert.strictEqual(mixed.diagnostics.length, 0);
+  fs.mkdirSync(path.join(incompleteRoot, "docs", "db-spec"), { recursive: true });
+  fs.writeFileSync(path.join(incompleteRoot, "docs", "db-spec", "demo.json"), JSON.stringify({
+    tables: [{ name: "source_demo", fields: [{ name: "id", dbType: "varchar(64)" }] }],
+  }));
+  const originalReaddir = fs.readdirSync;
+  fs.readdirSync = (directory, ...args) => {
+    if (directory === contractDir) { const error = new Error("EACCES injected"); error.code = "EACCES"; throw error; }
+    return originalReaddir(directory, ...args);
+  };
+  try {
+    const incomplete = sourceIndex.buildSourceIndex(incompleteRoot, { cache: false });
+    assert.strictEqual(incomplete.contracts.length, 0);
+    assert.ok(incomplete.diagnostics.some((item) => item.code === "SOURCE_SCAN_INCOMPLETE"));
+    const b31 = runBeRules(incompleteRoot, { rules: ["B31"], workspace: false });
+    assert.strictEqual(b31.coverage.status, "partial");
+    assert.ok(b31.issues.some((item) => item.rule === "WLS_CONFIG"));
+    assert.ok(!b31.issues.some((item) => item.rule === "B31"), "事实源不完整时不能推断文档漂移");
+  } finally { fs.readdirSync = originalReaddir; }
+  const originalLstat = fs.lstatSync;
+  fs.lstatSync = (file, ...args) => {
+    if (file === path.join(contractDir, "wl-contract.json")) {
+      const error = new Error("ENOENT injected"); error.code = "ENOENT"; throw error;
+    }
+    return originalLstat(file, ...args);
+  };
+  try {
+    assert.ok(sourceIndex.buildSourceIndex(incompleteRoot, { cache: false }).diagnostics
+      .some((item) => item.code === "SOURCE_SCAN_INCOMPLETE" && item.file.endsWith("wl-contract.json")),
+    "目录枚举后子文件消失不能被当成可选根忽略");
+  } finally { fs.lstatSync = originalLstat; }
+  fs.mkdirSync(path.join(contractDir, "db"), { recursive: true });
+  fs.writeFileSync(path.join(contractDir, "db", "broken.json"), JSON.stringify({ entity: { table: "broken" }, fields: [] }));
+  assert.ok(sourceIndex.buildSourceIndex(incompleteRoot, { cache: false }).diagnostics
+    .some((item) => item.code === "SOURCE_CONTRACT_INVALID"), "损坏的数据库契约必须显式报错");
+  const configFile = path.join(incompleteRoot, ".wl-skills-bd", "catalog.config.json");
+  fs.mkdirSync(path.dirname(configFile), { recursive: true });
+  fs.writeFileSync(configFile, JSON.stringify({ modules: {
+    valid: { contractRoots: ["docs/contracts"] }, invalid: { contractRoots: "contracts" },
+  } }));
+  const partiallyInvalidConfig = sourceIndex.buildSourceIndex(incompleteRoot, { cache: false });
+  assert.ok(partiallyInvalidConfig.diagnostics.some((item) => item.code === "SOURCE_CONFIG_INVALID"
+    && item.message.includes("invalid")), "部分模块的非法目录配置不能静默忽略");
+  assert.strictEqual(runBeRules(incompleteRoot, { rules: ["B31"], workspace: false }).coverage.status, "partial");
+  fs.writeFileSync(configFile, "{broken");
+  const invalidConfig = sourceIndex.buildSourceIndex(incompleteRoot, { cache: false });
+  assert.strictEqual(invalidConfig.contracts.length, 0, "损坏的 Catalog 配置不得静默退回默认目录");
+  assert.ok(invalidConfig.diagnostics.some((item) => item.code === "SOURCE_CONFIG_INVALID"));
   sourceIndex.clearSourceIndexMemoryCache();
   const persistent = sourceIndex.buildSourceIndex(root);
   assert.strictEqual(persistent.cache.level, "persistent");

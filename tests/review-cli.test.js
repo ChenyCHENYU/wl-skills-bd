@@ -58,7 +58,7 @@ test("review/integration/fix CLI 复用同一平台适配与安全写链", () =>
     assert.equal(fs.existsSync(path.join(root, "generated/OrderConsumer.java")), true);
 
     result = run(["review", "run", "--module", "order", "--target", root, "--json"]);
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.equal(JSON.parse(result.stdout).ruleCoverage.status, "complete");
 
     result = run(["fix", "advise", "--module", "order", "--rules", "B3", "--target", root, "--json"]);

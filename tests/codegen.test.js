@@ -97,6 +97,12 @@ try {
   const stablePlan = buildPlan(contractFile, { projectRoot: tempRoot });
   assert.deepStrictEqual(stablePlan.summary, { unchanged: 17 });
   assert.strictEqual(buildPlan(contractFile, { projectRoot: tempRoot }).planHash, stablePlan.planHash);
+  const stateFile = path.join(tempRoot, STATE_REL);
+  const stateBefore = fs.readFileSync(stateFile);
+  fs.appendFileSync(stateFile, "\n");
+  assert.strictEqual(applyPlan(stablePlan, { confirm: true, planHash: stablePlan.planHash }).reason,
+    "plan-changed", "生成状态文件在预览后变化必须阻断写入");
+  fs.writeFileSync(stateFile, stateBefore);
 
   const modified = stablePlan.actions.find((item) => item.rel.endsWith("Controller.java"));
   const untouched = stablePlan.actions.find((item) => item.rel.endsWith("Mapper.java"));

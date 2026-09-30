@@ -227,6 +227,21 @@ function contract(fields = [
   assert.ok(result.issues.some((issue) => issue.kind === "missing-table" && issue.table === "pl_charge"));
 }
 
+// 事实源配置损坏时，离线漂移对账不能用空索引给出误导性的通过结论。
+{
+  const root = makeProject();
+  writeJson(path.join(root, "snapshot.json"), []);
+  const config = path.join(root, ".wl-skills-bd", "catalog.config.json");
+  fs.mkdirSync(path.dirname(config), { recursive: true });
+  fs.writeFileSync(config, "{broken");
+  const result = dbDrift.detectDrift(root, path.join(root, "snapshot.json"));
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.reason, "source-incomplete");
+  assert.strictEqual(result.status, "partial");
+  assert.ok(result.diagnostics.some((item) => item.code === "SOURCE_CONFIG_INVALID"));
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 {
   const result = ruleRegistry.checkRuleRegistry(ROOT);
   assert.strictEqual(result.ok, true, result.issues.map((issue) => issue.message).join("; "));

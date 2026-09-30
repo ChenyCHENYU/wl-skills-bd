@@ -6,7 +6,7 @@ const os = require("os");
 const path = require("path");
 const { runBeRules } = require("../lib/be-rules");
 const { GROUPS, RULE_IDS } = require("../lib/be-rule-plan");
-const { clearScanContextCache } = require("../lib/scan-context");
+const { clearScanContextCache, createScanContext } = require("../lib/scan-context");
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-rule-execution-"));
 try {
@@ -58,6 +58,23 @@ try {
     assert.strictEqual(unreadable.coverage.scanComplete, false);
     assert.ok(unreadable.issues.some((item) => item.rule === "WLS_CONFIG" && /目录读取失败/.test(item.message)));
   } finally { fs.readdirSync = originalReaddir; }
+
+  let directoryReads = 0;
+  fs.readdirSync = (...args) => { directoryReads += 1; return originalReaddir(...args); };
+  let emptyDiscovery;
+  try { emptyDiscovery = createScanContext(root, { discoverExtensions: new Set(), readExtensions: new Set() }); }
+  finally { fs.readdirSync = originalReaddir; }
+  assert.strictEqual(emptyDiscovery.metrics.discoveredFiles, 0);
+  assert.strictEqual(directoryReads, 0, "没有文件需求的规则不应遍历整个工程");
+  const pageDto = path.join(root, "src", "SamplePageDTO.java");
+  fs.writeFileSync(pageDto, "class SamplePageDTO { private Long current = 999L; @Max(1000) private Long size = 20L; }");
+  assert.ok(runBeRules(root, { rules: ["B29"], workspace: false }).issues.some((item) => item.rule === "B29"));
+  const profile = path.join(root, ".wl-skills-bd", "contracts", "wl-delivery-profile.v1.json");
+  fs.mkdirSync(path.dirname(profile), { recursive: true });
+  fs.writeFileSync(profile, "{broken");
+  const invalidProfile = runBeRules(root, { rules: ["B29"], workspace: false });
+  assert.strictEqual(invalidProfile.coverage.status, "partial", "分页 Profile 损坏不得跳过 B29 后报完整");
+  assert.ok(invalidProfile.issues.some((item) => item.rule === "WLS_CONFIG" && /分页 Profile/.test(item.message)));
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

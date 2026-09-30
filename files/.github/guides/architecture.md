@@ -13,7 +13,7 @@ L3  执行节点       discover/context/validate/plan/approval/apply/verify + pi
       │
 L4  确定性生成     16 模板、17+N 工程/协作产物
       │
-L5  静态保证       B1~B31 前置短路 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
+L5  静态保证       B1~B32 前置短路 + ArchUnit/Checkstyle/PMD/SpotBugs/Spotless/JaCoCo
       │
 L6  受控变更       planHash、确认、备份、复扫 + 准确率/性能/token 回退门禁
       │
@@ -27,14 +27,14 @@ L7  人工卡口       DDL 执行、数据回填、权限发布、破坏性 API 
 | 模块 | 职责 |
 |---|---|
 | `files/.wl-skills-bd/` | profile、兼容矩阵、规则目录、JSON Schema |
-| `files/.github/standards/` | 29 条团队规范 |
+| `files/.github/standards/` | 30 条团队规范 |
 | `files/.github/skills/` | 场景编排与人工判断边界 |
 | `files/.github/templates/` | 16 个严格模板与示例契约 |
 | `lib/project-catalog.js` / `context-planner.js` | 模块增量目录、全局去重与一跳上下文选择 |
 | `lib/contract.js` | 契约语义校验与模板上下文 |
 | `lib/codegen.js` | 17+N 产物计划、上下文前置门、状态、冲突和应用 |
 | `lib/collaboration.js` | 前端 manifest/api.md、OpenAPI/权限差异 |
-| `lib/be-rule-plan.js` / `scan-context.js` / `be-rules.js` | B1~B31 前置短路、最小读取、执行/缓存证据与报告 |
+| `lib/be-rule-plan.js` / `scan-context.js` / `be-rules.js` | B1~B32 前置短路、最小读取、执行/缓存证据与报告；事实源失败标记 partial |
 | `lib/source-index.js` / `lib/db-drift.js` | 两级缓存 Source Index、安全失效与快照双向漂移对账 |
 | `lib/task-router.js` / `lib/pipeline.js` | 任务路由、标准 DAG、节点状态、确认门与 pipelineHash |
 | `lib/safe-fix.js` | B3/B5 白名单计划、备份回滚和复扫 |
