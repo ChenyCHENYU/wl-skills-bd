@@ -2,12 +2,14 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.30.1-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.31.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
 
 当前唯一经过验证的生成 Profile 是 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。包内能力以机器 Schema、兼容矩阵和回归测试为准，不从存量业务代码猜约定。
+
+独立与组合边界见 [机器能力声明](lib/capabilities.json)。后端契约、规则、CLI 和 MCP 均可独立使用，不要求安装其他 WL 包。安装器对共享 Markdown 只管理 `wl-skills-bd` 区块，对 MCP 只合并本包服务键，并保留 JSONC 注释及其他配置。预存相同内容仅登记引用，不能自动认领；`--force` 只可更新 manifest 证明归属的本包内容，不能覆盖用户或其他包贡献。项目 Delivery Profile 和业务配置不会因强制升级重置；清理保留本地修改及其引用记录。
 
 ## 核心能力
 
@@ -43,6 +45,12 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.31.0 共享资产保护与独立组合协议
+
+- 共享 Markdown 按本包标记管理，MCP 只合并本包服务键；JSONC 注释、其他包内容、预存空文件及用户修改都保留。`--force` 不授予外来内容所有权，项目 Profile 和业务配置不会重置。
+- 公共 API Schema 明确定义生产保障、缺失证据、业务命令与关系查询事实；结构校验与项目 Profile、BD 生产预算分别负责各自口径。包内独立能力声明可供组合客户端读取，运行时不依赖其他 WL 包。
+- 旧整文件安装可依据可信基线转为本包区块；清理保留修改内容及引用记录，路径类型预检避免半安装。新增真实 CLI、迁移与跨包生命周期回归。
 
 ### v0.30.1 精准诊断与结果预算
 

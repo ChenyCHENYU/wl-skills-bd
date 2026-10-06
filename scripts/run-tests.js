@@ -20,6 +20,8 @@ if (coverage) {
     "--test-coverage-branches=65",
     "--test-coverage-functions=85",
     "--test-coverage-include=lib/**/*.js",
+    "--test-coverage-include=lib/**/*.cjs",
+    "--test-coverage-exclude=lib/vendor/**",
     "--test-coverage-include=mcp/**/*.js",
     "--test-coverage-include=bin/**/*.js",
   );

@@ -45,7 +45,9 @@ try {
   const conflictRel = ".cursor/mcp.json";
   const missingRel = ".vscode/mcp.json";
   const conflictFile = path.join(root, conflictRel);
-  fs.appendFileSync(conflictFile, "\nlocal-change\n", "utf8");
+  const customizedMcp = JSON.parse(fs.readFileSync(conflictFile, "utf8"));
+  customizedMcp.mcpServers["wl-skills-bd"].args.push("local-change");
+  fs.writeFileSync(conflictFile, JSON.stringify(customizedMcp));
   fs.unlinkSync(path.join(root, missingRel));
 
   const conflictPlan = installer.buildPlan(root);
@@ -63,14 +65,16 @@ try {
     "force 覆盖前必须备份",
   );
 
-  fs.appendFileSync(conflictFile, "\nuser-owned\n", "utf8");
+  const userMcp = JSON.parse(fs.readFileSync(conflictFile, "utf8"));
+  userMcp.mcpServers["wl-skills-bd"].args.push("user-owned");
+  fs.writeFileSync(conflictFile, JSON.stringify(userMcp));
   const cleanPlan = installer.buildCleanPlan(root);
   assert.strictEqual(installer.applyCleanPlan(cleanPlan).reason, "confirm-required");
   const cleaned = installer.applyCleanPlan(cleanPlan, { confirm: true, planHash: cleanPlan.planHash });
   assert.strictEqual(cleaned.ok, true);
   assert.ok(cleaned.preserved.includes(conflictRel));
   assert.ok(fs.existsSync(conflictFile), "clean 必须保留被用户修改的文件");
-  assert.strictEqual(fs.existsSync(path.join(root, installer.MANIFEST_NAME)), false);
+  assert.strictEqual(fs.existsSync(path.join(root, installer.MANIFEST_NAME)), true, "保留用户修改时必须保留引用记录，避免再安装时认领");
 
   assert.throws(() => resolveWithin(root, "../outside"), /非法相对路径|路径越界/);
 

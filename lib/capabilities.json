@@ -1,0 +1,40 @@
+{
+  "boundaryVersion": 1,
+  "package": "@agile-team/wl-skills-bd",
+  "capabilities": [
+    {
+      "id": "backend.delivery",
+      "intents": [
+        "create",
+        "validate",
+        "plan",
+        "apply",
+        "review",
+        "impact"
+      ],
+      "inputs": [
+        "reviewed-requirements",
+        "wl-contract",
+        "project-profile"
+      ],
+      "outputs": [
+        "java-source",
+        "database-migrations",
+        "wl-api-contract"
+      ]
+    }
+  ],
+  "standalone": {
+    "requiresSiblingPackages": [],
+    "missingBusinessFacts": "report-unresolved",
+    "projectInputsOwnedBy": "project"
+  },
+  "composition": {
+    "contributionId": "wl-skills-bd",
+    "protocolVersion": "1.0",
+    "optionalTraceInput": "design-model",
+    "unknownProtocol": "reject-or-explicit-migration",
+    "apiAuthority": "validated-effective-api-manifest",
+    "sharedWrites": "own-block-or-json-entry-only"
+  }
+}
