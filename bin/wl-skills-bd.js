@@ -220,8 +220,8 @@ function commandValidate(args) {
   return result.stats.error > 0 || (strict && result.stats.warn > 0) ? 1 : 0;
 }
 
-function commandDoctor(args) {
-  if (has(args, "--host")) {
+function commandDoctor(args, forceHost = false) {
+  if (forceHost || has(args, "--host")) {
     const runtime = require("../lib/task-runtime");
     const result = runtime.doctorHost(targetRoot(args), option(args, "--host", "codex"));
     if (has(args, "--json")) printJson(result);
@@ -1102,7 +1102,8 @@ function commandCommit(args) {
 }
 
 function help() {
-  console.log("task/route/explain --input <任务> --json：任务判定、runId 与规则缺口；status --run-id <id> --json：真实回执；doctor --host codex --json：静态宿主入口诊断。");
+  console.log("task --input <任务> --json：判定并持久化任务计划与 preflight 证据（尚未执行）；route/explain 同判定但只读、不记录 run；status --run-id <id> --json：读取真实回执；doctor-host --host codex --json：静态宿主入口诊断。");
+  console.log("protocol describe --json / protocol request --input-file <request.json> --json：公开集成协议（能力目录与统一判定/状态信封）。");
   console.log(`wl-skills-bd v${pkg.version}
 
 用法：wl-skills-bd <command> [options]
@@ -1577,7 +1578,8 @@ function main(argv = process.argv.slice(2)) {
   if (command === "route") return commandTask(args, false);
   if (command === "explain") return commandTask(args, false);
   if (command === "status") return commandStatus(args);
-  if (command === "doctor-host") return commandDoctor(["--host", "codex", ...args]);
+  if (command === "doctor-host") return commandDoctor(args, true);
+  if (command === "protocol") return require("../lib/protocol-cli").runCli(args);
   if (command === "test") return commandTest(args);
   if (command === "mcp") { require("../mcp/server").startServer(); return 0; }
   console.error(`未知命令：${command}`);
