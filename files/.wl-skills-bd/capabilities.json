@@ -359,7 +359,7 @@
       },
       {
         "name": "wls_be_task",
-        "description": "只读任务路由（v0.13）：识别新服务/加接口/落库/业务命令/修复/重构/审计/配置，输出 skill、规则子集和统一安全写链；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
+        "description": "任务判定与可观测性：覆盖全部13个 Skill，输出 matched/baseline/ambiguous/gap/not-applicable、runId、规则、候选与未验证项；mode=status 读取真实回执。只写本包观测状态；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
         "write": "readonly"
       },
       {
@@ -385,7 +385,7 @@
     ]
   },
   "cliCommands": {
-    "count": 24,
+    "count": 28,
     "items": [
       {
         "name": "init",
@@ -485,6 +485,26 @@
       {
         "name": "troubleshoot",
         "summary": "错误关键字 → 诊断步骤",
+        "write": "readonly"
+      },
+      {
+        "name": "route",
+        "summary": "task 的判定入口别名",
+        "write": "readonly"
+      },
+      {
+        "name": "explain",
+        "summary": "解释任务判定、候选、规则和未验证项",
+        "write": "readonly"
+      },
+      {
+        "name": "status",
+        "summary": "读取本包任务回执与输入新鲜度",
+        "write": "readonly"
+      },
+      {
+        "name": "doctor-host",
+        "summary": "静态宿主入口诊断，不证明宿主已加载",
         "write": "readonly"
       },
       {

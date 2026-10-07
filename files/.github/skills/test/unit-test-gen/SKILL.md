@@ -15,12 +15,12 @@ metadata:
 
 > v0.16 起提供 `wl-skills-bd test gen/scenarios` CLI + `wls_be_test` MCP，从契约 customOperations 自动生成关键场景测试骨架。测"行为契约"不测"代码镜像"，避免冗余。
 
-## Pre-flight 声明
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发技能 unit-test-gen/SKILL.md
-✅ 已读取 standards/14-test-coverage.md
-✅ 已读取目标 Service/Controller 与对应契约
+模型声明：🚀 已触发技能 unit-test-gen/SKILL.md
+模型声明：✅ 已读取 standards/14-test-coverage.md
+模型声明：✅ 已读取目标 Service/Controller 与对应契约
 ✅ 已列出正常、边界、异常、租户与 revision 行为
 ```
 

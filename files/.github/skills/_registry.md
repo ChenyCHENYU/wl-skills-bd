@@ -151,3 +151,6 @@ business-doc-extract-be → api-design-be → entity-codegen → service-codegen
 
 - 新增 Skill：编辑本文件并创建 `skills/{category}/{name}/SKILL.md`；只有存在按需加载的详细资料时才增加 `references/` 或 `USAGE.md`
 - 不存在的 Skill 应明确说明未提供执行器，并给出当前可用的手工流程；不得声称已自动登记 roadmap。
+
+
+补充任务路线：`generate-tests` → `test/unit-test-gen`；`integration-adapter` → `core/integration-adapter-be`；`project-context` → `core/project-context-governance`；`extract-business-doc` → `core/business-doc-extract-be`（骨架，无语义执行器，显示 gap）；`data-safety` → `ops/data-safety`。实际路由以 `task --input ... --json` 为准，阈值、分差、负向领域和候选都在结果中；计划与模型声明不作为执行证据。

@@ -13,14 +13,14 @@ metadata:
 
 # db-migration
 
-## Pre-flight 声明（必填）
+## Pre-flight 模型声明（必填）
 
 ```
-🚀 已触发技能 db-migration/SKILL.md
-✅ 已读取 standards/index.md             → 任务类型 D
-✅ 已读取 standards/12-database-ddl.md   → 建表规则
-✅ 已读取 standards/29-database-source-governance.md → 文档基线与扩展门禁
-✅ 已读取 standards/11-security-permission.md → 租户字段强制
+模型声明：🚀 已触发技能 db-migration/SKILL.md
+模型声明：✅ 已读取 standards/index.md             → 任务类型 D
+模型声明：✅ 已读取 standards/12-database-ddl.md   → 建表规则
+模型声明：✅ 已读取 standards/29-database-source-governance.md → 文档基线与扩展门禁
+模型声明：✅ 已读取 standards/11-security-permission.md → 租户字段强制
 ⚠️ 高风险操作：将生成预览文件，等待人工确认
 ```
 

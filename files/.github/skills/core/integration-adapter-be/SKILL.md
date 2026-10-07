@@ -14,12 +14,12 @@ metadata:
 
 目标是验证并衔接项目真实封装，不建立第二套 MQ SDK 或平台规范。
 
-## Pre-flight
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发 integration-adapter-be
-✅ 已读取 standards/22-resilience.md 与 standards/30-change-review-integration-adapter.md
-✅ 已确认项目维护的 integration-adapters.json 和目标 binding
+模型声明：🚀 已触发 integration-adapter-be
+模型声明：✅ 已读取 standards/22-resilience.md 与 standards/30-change-review-integration-adapter.md
+模型声明：✅ 已确认项目维护的 integration-adapters.json 和目标 binding
 ✅ 已区分环境可用、内部 Inbox/Outbox、实际 Transport 和运行证据
 ⚠️ 未配置适配描述符时只报告 not-configured，不猜平台 API
 ```

@@ -13,14 +13,14 @@ metadata:
 
 # mapper-xml-gen
 
-## Pre-flight 声明（必填）
+## Pre-flight 模型声明（必填）
 
 ```
-🚀 已触发技能 mapper-xml-gen/SKILL.md
-✅ 已读取 standards/index.md             → 任务类型 C
-✅ 已读取 standards/06-mapper-xml.md     → XML 硬规则
-✅ 已读取 standards/02-project-structure.md → 包路径
-✅ 已读取 templates/Mapper.java.tmpl + Mapper.xml.tmpl
+模型声明：🚀 已触发技能 mapper-xml-gen/SKILL.md
+模型声明：✅ 已读取 standards/index.md             → 任务类型 C
+模型声明：✅ 已读取 standards/06-mapper-xml.md     → XML 硬规则
+模型声明：✅ 已读取 standards/02-project-structure.md → 包路径
+模型声明：✅ 已读取 templates/Mapper.java.tmpl + Mapper.xml.tmpl
 ✅ 数据库类型确认：{MySQL|Oracle}（决定分页/CONCAT/注释语法）
 ✅ Entity 已存在（字段来源）
 ```

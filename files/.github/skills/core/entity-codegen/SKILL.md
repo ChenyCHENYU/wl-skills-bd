@@ -13,14 +13,14 @@ metadata:
 
 模型不是从 DDL 或自然语言单独反推，而是与 Controller、Service、Mapper、DDL、测试和协作产物一起由同一契约生成。
 
-## Pre-flight 声明
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发技能 entity-codegen/SKILL.md
-✅ 已读取 standards/02-project-structure.md
-✅ 已读取 standards/03-naming.md
-✅ 已读取 standards/07-entity-dto-vo.md
-✅ 已读取 standards/12-database-ddl.md
+模型声明：🚀 已触发技能 entity-codegen/SKILL.md
+模型声明：✅ 已读取 standards/02-project-structure.md
+模型声明：✅ 已读取 standards/03-naming.md
+模型声明：✅ 已读取 standards/07-entity-dto-vo.md
+模型声明：✅ 已读取 standards/12-database-ddl.md
 ✅ 已校验 wl-contract.json
 ```
 

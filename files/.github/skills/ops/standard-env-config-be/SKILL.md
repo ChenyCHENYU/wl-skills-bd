@@ -12,12 +12,12 @@ metadata:
 
 # standard-env-config-be
 
-## Pre-flight 声明
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发技能 standard-env-config-be/SKILL.md
-✅ 已读取 standards/24-multi-env.md 与 25-config-layering.md
-✅ 已确认项目根、目标客户/环境和允许变更的配置范围
+模型声明：🚀 已触发技能 standard-env-config-be/SKILL.md
+模型声明：✅ 已读取 standards/24-multi-env.md 与 25-config-layering.md
+模型声明：✅ 已确认项目根、目标客户/环境和允许变更的配置范围
 ⚠️ doctor/troubleshoot 默认只读；init/migrate/fix 必须先预览并取得明确确认
 ```
 

@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.31.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.32.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -23,7 +23,7 @@
 | 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
 | 独立协同（v0.12） | 内置统一 delivery profile；没有 design/kit 也能从评审需求独立生成；有 kit 时用 `wl-api-contract` 严格握手 |
 | 配置分层（v0.12/v0.23） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix；明文 Secret、Bean 覆盖、Actuator 全暴露和错误详情泄露体检 |
-| 任务驱动（v0.13/v0.21） | 8 种任务类型精准触发；标准 DAG 输出 discover/context/validate/plan/approval/apply/verify、pipelineHash、节点状态与确认门 |
+| 任务驱动（v0.32） | 13 种任务类型覆盖全部 Skill；task 持久化判定与缺口，route/explain 只读；标准 DAG 表示尚未执行的计划，保留 pipelineHash 与确认门 |
 | 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
 | 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
 | 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
@@ -45,6 +45,12 @@
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.32.0 任务判定与真实验证回执
+
+- 独立 task/route/explain/status/doctor-host 解释匹配、基线、歧义、缺口、职责外和上下文不足；13 个 Skill 均进入路由，缺 canonical 资产或必要输入时不能 ready。
+- 独有 `.agents/skills/wl-skills-bd/SKILL.md` gateway 引导按需读取本包规则。宿主发现和模型读取仍为未验证状态；Pre-flight SHA 只证明文件快照，模型自述标为声明。
+- 实际 CLI/MCP 检查记录 runId、文件、规则及 Profile 快照和逐项覆盖；状态区分执行与验证，过期回执失效，能力缺口和未检查范围不能算整体通过。同一任务跨适用包复用 `--run-id` 或 `WL_TASK_RUN_ID`。
 
 ### v0.31.0 共享资产保护与独立组合协议
 
@@ -100,7 +106,7 @@
 ### v0.25.0 AI 精准接入：能力清单、Pre-flight 证据与入口防漂移
 
 - **单一机器能力清单**：`capabilities.json` 升级为 schemaVersion 2 的 agent manifest——13 个 Skill 携带触发词、状态、风险与目标项目安装路径（修复安装后 `files/` 前缀死链），并索引 MCP 工具、CLI 命令和推荐读取顺序；`wl-skills-bd capabilities [--json]` 与 MCP `wls_be_capabilities` 一步返回。AGENTS.md 收敛为"清单 + 10 条不变式 + 指针"，MCP `initialize.instructions` 写明五步接入约定。
-- **Pre-flight 证据化**：`task`（CLI `--json` / MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`，"宣称已读"可被机器对账，不再只是自我报告。
+- **Pre-flight 文件快照**：`task`（CLI `--json` / MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`。哈希可对账文件版本，模型是否实际读取仍需独立证据；v0.32 起明确区分文件快照与模型声明。
 - **入口防漂移门禁**：`verify-version` 校验 capabilities 的 mcpTools/cliCommands 与 registry、bin 分发严格一致；`verify-doc-sync` 扫描文档中 "N 个 MCP" 数量漂移与 AGENTS.md 有序列表编号断档；`lint-skills` 强制每个 Skill 声明 `metadata.triggers` 且 standards 引用断链零容忍。
 
 ### v0.24.0 变更审查、平台适配与精准修复
@@ -643,3 +649,10 @@ CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 - 前端工程脚手架：[wl-skills-kit](../wl-skills-kit/README.md)
 - 前端视觉能力：[wl-skills-ui](../wl-skills-ui/README.md)
+
+
+每次后端任务用 `wl-skills-bd task --input "<完整任务>" --json`取得 runId、判定、候选、规则和未验证项。`route`/`explain` 只读解释，不记录runId；相关任务使用 `task` 持久化判定与建议。13 个 canonical Skill 均有路由；相关却缺 Skill、规则、资产或执行器会记录 gap 建议，歧义不会强行选中。`.agents/skills/wl-skills-bd/SKILL.md` 是本包独有 Codex gateway，按需加载 canonical 文件；陌生入口不会被安装器或 force 覆盖。
+
+`validate --run-id <runId> --json`、`review run --run-id <runId> --json` 及等价 MCP 返回真实工具回执，含输入快照、实际规则覆盖与执行状态。`status --run-id <runId> --json` 检查尚未执行项和过期输入，`doctor --host codex --json` 只静态检查宿主入口。任务计划、文件哈希和模型读取自述不能当作已执行或已读取证据；模型自述标为“模型声明”，Java/Maven 与运行验证没有实际证据时保持未验证。观测记录只写 `.wl-skills-bd/runs/`，代码、配置、数据库与权限写入继续受现有确认链约束。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。

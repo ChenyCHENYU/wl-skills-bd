@@ -77,12 +77,15 @@ function handleValidate(args = {}) {
     ? Math.max(0, Math.min(Number(args.maxIssues) || 0, 500))
     : Math.max(1, Math.min(Number(args.maxItems) || 20, 500));
   const maxBytes = Math.max(4096, Math.min(Number(args.maxBytes) || 20000, 200000));
+  const runtime = require("../../lib/task-runtime");
+  const handle = runtime.validationStart(target, { runId: args.runId, targets: runtime.checkTargets(target, relScan) });
   const scanned = runBeRules(target, {
     scanRel: relScan,
     quick: args.quick === true,
     stagedFiles: changed,
     rules: Array.isArray(args.rules) ? args.rules : undefined,
   });
+  const receipt = runtime.validationFinish(handle, scanned, scanned.stats.error > 0 ? 1 : 0);
   const issues = args.severity ? scanned.issues.filter((issue) => issue.severity === args.severity) : scanned.issues;
   const viewStats = {
     error: issues.filter((issue) => issue.severity === "error").length,
@@ -109,7 +112,7 @@ function handleValidate(args = {}) {
     byRule[item.rule].push(item);
   }
 
-  const lines = [`扫描：${scanRoot}；模式=${coverage.mode}；覆盖=${coverage.status}`, ""];
+  const lines = [`扫描：${scanRoot}；模式=${coverage.mode}；覆盖=${coverage.status}`, `runId: ${handle.metadata.runId}；真实 B 规则检查回执已记录；Java 门与模型读取未验证`, ""];
   if (coverage.skippedRules.length > 0) {
     lines.push(`未评估规则：${coverage.skippedRules.map((item) => item.rule).join(", ")}（请用 full 扫描补齐）`);
     lines.push("");
@@ -156,6 +159,8 @@ function handleValidate(args = {}) {
     truncated: returnedIssues.length < issues.length,
     suppressed: suppressed.length,
     execution,
+    runId: handle.metadata.runId,
+    receipt,
   };
 
   if (issues.length === 0) {

@@ -15,14 +15,14 @@ metadata:
 
 > v0.10 新增。把"生产事故源"从口头规范固化为机器可校验的 B 规则，AI 生成 Redis/批量/外部调用代码时强制对照。
 
-## Pre-flight
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发 data-safety
-✅ 已读取 standards/index.md，匹配任务类型 I（数据安全与稳定性审计）
-✅ 已读取 standards/20-redis-cache.md → Key/TTL/Redisson 锁/大 Key/序列化/禁令
-✅ 已读取 standards/21-sensitive-write.md → 分级/批量/物理删禁令/幂等/生产只读
-✅ 已读取 standards/22-resilience.md → Feign 超时/重试/熔断/舱壁/限流
+模型声明：🚀 已触发 data-safety
+模型声明：✅ 已读取 standards/index.md，匹配任务类型 I（数据安全与稳定性审计）
+模型声明：✅ 已读取 standards/20-redis-cache.md → Key/TTL/Redisson 锁/大 Key/序列化/禁令
+模型声明：✅ 已读取 standards/21-sensitive-write.md → 分级/批量/物理删禁令/幂等/生产只读
+模型声明：✅ 已读取 standards/22-resilience.md → Feign 超时/重试/熔断/舱壁/限流
 ⚠️ 写代码后必须跑 B13~B19，error 未清零不得提交
 ⚠️ pre/prod/production 的 codegen/safe-fix/config/permissions apply 默认阻断
 ```

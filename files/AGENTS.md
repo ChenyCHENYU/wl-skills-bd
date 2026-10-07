@@ -4,7 +4,7 @@
 
 1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B32 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
 2. `.github/skills/_registry.md`：触发词 → Skill 路由；`.github/standards/index.md`：任务类型 → 必读规范（懒加载，不一次读全 30 条）。
-3. 任务路由优先 `wl-skills-bd task "<描述>"`（只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。宣称"已读取"必须能与该清单对上。
+3. 任务路由优先 `wl-skills-bd task "<描述>"`（只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。文件哈希仅证明可定位的版本，不证明模型已读取；读取与执行自述必须标为“模型声明”。
 
 ## 不变式（任何任务模式都不得违反）
 
@@ -41,3 +41,7 @@ wl-skills-bd test gen wl-contract.json    # 行为契约测试
 ```
 
 MCP 提供 18 个等价工具（`wls_be_capabilities` 起步）；`wls_be_review` 统一承载变更门禁、平台适配、项目断言、供应链与修复分级。写工具的 confirm 只能在用户评审预览后传递；pre/prod/production 额外需要 `allowProductionWrites=true`。
+
+每次任务先用 `task --input "<完整任务>" --json` 取得 runId 与 matched/baseline/ambiguous/gap/not-applicable 判定。任务计划尚未执行；`status --run-id <runId> --json` 才读取本包工具回执与新鲜度。`doctor --host codex --json` 仅诊断宿主入口可用性，不能证明宿主已发现或模型已选中技能。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。

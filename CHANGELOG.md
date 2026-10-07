@@ -4,7 +4,18 @@
 
 ---
 
-## [Unreleased]
+## [0.32.0] - 2026-10-07（任务判定与真实验证回执）
+
+### Added
+
+- 新增独立 task/route/explain/status/doctor-host 与 Codex gateway；13 个 Skill 全部可解释路由，含阈值、分差、负向领域、基础规则、歧义、输入缺失和 gap 建议。
+- 实际 CLI/MCP validate/review 记录 runId、输入与规则/Profile 快照及检查覆盖；状态区分执行、验证、新鲜度和未验证的宿主发现/模型读取，同一用户任务可复用 runId 跨独立包关联。
+
+### Fixed
+
+- 任务 Pipeline 仅表示尚未执行的计划；缺 canonical 文件或必要契约输入时不能 ready，业务文档骨架显示验证能力缺口。
+- canonical 标准与 Skill 按本包精确路径定位，不借用其他包同编号或同名文件；陌生 gateway 安装冲突零写入，force 不认领或覆盖用户内容。
+- Pre-flight 自述标为模型声明，文件哈希不再冒充模型已读取证据；原有 planHash、确认、环境、回滚与正式 Java/Maven 质量门保持生效。
 
 ## [0.31.0] - 2026-10-07（共享资产保护与独立组合协议）
 

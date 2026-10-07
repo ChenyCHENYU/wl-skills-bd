@@ -45,7 +45,7 @@ assert.ok(taskRouter.getTask("new-service").standards.includes("29"));
 assert.ok(taskRouter.getTask("add-field").steps.some((step) => step.includes("docs/db-spec")));
 assert.strictEqual(taskRouter.buildRuleSubset("config-op").length, 0);
 assert.deepStrictEqual(taskRouter.buildJavaGateSubset("new-service"), ["J1", "J2", "J3", "J8"]);
-assert.strictEqual(taskRouter.listTasks().length, 8);
+assert.strictEqual(taskRouter.listTasks().length, 13);
 for (const taskId of taskRouter.TASK_IDS) {
   assert.deepStrictEqual(
     taskRouter.buildRuleSubset(taskId),
@@ -88,7 +88,7 @@ const route = spawnSync(process.execPath, [cli, "task", "--type", "add-api"], {
   encoding: "utf8",
   windowsHide: true,
 });
-assert.strictEqual(route.status, 0, route.stderr);
+assert.strictEqual(route.status, 1, "缺少目标 canonical 安装时输出计划同时报告 gap");
 assert.match(route.stdout, /codegen plan/);
 
 const blockedWrite = spawnSync(process.execPath, [cli, "task", "--type", "add-api", "--apply"], {

@@ -14,15 +14,15 @@ metadata:
 
 本 Skill 只发现和解释问题，不修改源码。确定性结果来自实际执行器；AI 仅补充业务语义、DDL 风险和架构判断。
 
-## Pre-flight
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发 convention-audit-be
-✅ 已读取 standards/index.md 与本次相关规范
+模型声明：🚀 已触发 convention-audit-be
+模型声明：✅ 已读取 standards/index.md 与本次相关规范
 ✅ 已确定扫描范围和 compatible profile
-✅ 已读取 .be-rules-ignore / rules.local.json
+模型声明：✅ 已读取 .be-rules-ignore / rules.local.json
 ✅ 已检查 JDK/Maven 与质量门接入状态
-✅ 已读取 standards/30 和项目 quality-gate/adapter/assertion/supply-chain 策略（存在时）
+模型声明：✅ 已读取 standards/30 和项目 quality-gate/adapter/assertion/supply-chain 策略（存在时）
 ```
 
 ## 执行

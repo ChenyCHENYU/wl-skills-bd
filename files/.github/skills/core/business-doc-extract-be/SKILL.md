@@ -12,11 +12,11 @@ metadata:
 
 # business-doc-extract-be
 
-## Pre-flight 声明（必填）
+## Pre-flight 模型声明（必填）
 
 ```
-🚀 已触发技能 business-doc-extract-be/SKILL.md
-✅ 已读取 standards/index.md             → 仅用于结构理解，不写代码
+模型声明：🚀 已触发技能 business-doc-extract-be/SKILL.md
+模型声明：✅ 已读取 standards/index.md             → 仅用于结构理解，不写代码
 ```
 
 ## 前置检查

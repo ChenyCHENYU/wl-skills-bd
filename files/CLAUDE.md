@@ -2,7 +2,7 @@
 
 先读取 `.wl-skills-bd/capabilities.json`（机器能力清单：Skill 触发词/状态/路径、MCP 工具、CLI 命令与读取顺序；或调用 `wls_be_capabilities`）。再按 `.github/skills/_registry.md` 选择 Skill，并按 `.github/standards/index.md` 懒加载本次必要规范。
 
-任务路由优先 `wl-skills-bd task "<描述>" --json`：输出规则子集、安全写链和 Pre-flight 证据（必读 standards/skill 文件 sha256 清单）；宣称"已读取"必须与该清单对得上。
+任务路由优先 `wl-skills-bd task "<描述>" --json`：输出规则子集、安全写链和 Pre-flight 证据（必读 standards/skill 文件 sha256 清单）；文件哈希仅证明可定位的版本，不证明模型已读取；读取与执行自述必须标为“模型声明”。
 
 核心流程：已评审需求/数据库设计 → `docs/db-spec` → `wl-contract.json` → codegen plan → 用户评审 planHash → apply → `wl-api-contract` strict diff → B1~B32 → `mvn verify -Pwl-quality`。数据库表必须优先复用文档基线，扩展有依据且字段末尾追加（standards/29）。生产契约还必须满足 standards/28 的证据链；design/kit 都不是 bd 的硬依赖。
 
@@ -20,3 +20,7 @@
 - `.github/guides/frontend-backend-contract.md`
 - `.github/guides/mcp-workflow.md`
 - `.github/skills/_pipeline.md`
+
+每次任务先用 `task --input "<完整任务>" --json` 取得 runId 与 matched/baseline/ambiguous/gap/not-applicable 判定。任务计划尚未执行；`status --run-id <runId> --json` 才读取本包工具回执与新鲜度。`doctor --host codex --json` 仅诊断宿主入口可用性，不能证明宿主已发现或模型已选中技能。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。

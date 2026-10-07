@@ -14,18 +14,18 @@ metadata:
 
 # service-codegen
 
-## Pre-flight 声明（必填）
+## Pre-flight 模型声明（必填）
 
 ```
-🚀 已触发技能 service-codegen/SKILL.md
-✅ 已读取 standards/index.md             → 任务类型 A
-✅ 已读取 standards/02-project-structure.md → 包名 + 分层禁止跨层
-✅ 已读取 standards/04-controller.md     → Controller 模板 + 权限码
-✅ 已读取 standards/05-service.md        → Service 实现 + 状态变更
-✅ 已读取 standards/07-entity-dto-vo.md  → DTO/VO 用法
-✅ 已读取 standards/10-transaction.md    → @Transactional 粒度
-✅ 已读取 standards/11-security-permission.md → 权限码同步
-✅ 已读取 templates/Controller.java.tmpl + Service.java.tmpl
+模型声明：🚀 已触发技能 service-codegen/SKILL.md
+模型声明：✅ 已读取 standards/index.md             → 任务类型 A
+模型声明：✅ 已读取 standards/02-project-structure.md → 包名 + 分层禁止跨层
+模型声明：✅ 已读取 standards/04-controller.md     → Controller 模板 + 权限码
+模型声明：✅ 已读取 standards/05-service.md        → Service 实现 + 状态变更
+模型声明：✅ 已读取 standards/07-entity-dto-vo.md  → DTO/VO 用法
+模型声明：✅ 已读取 standards/10-transaction.md    → @Transactional 粒度
+模型声明：✅ 已读取 standards/11-security-permission.md → 权限码同步
+模型声明：✅ 已读取 templates/Controller.java.tmpl + Service.java.tmpl
 ✅ wl-contract.json 已通过 codegen validate
 ```
 

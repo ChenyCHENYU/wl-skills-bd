@@ -13,15 +13,15 @@ metadata:
 
 # api-design-be
 
-## Pre-flight 声明（必填）
+## Pre-flight 模型声明（必填）
 
 ```
-🚀 已触发技能 api-design-be/SKILL.md       → 后端 API 契约设计
-✅ 已读取 standards/index.md               → 任务类型 F
-✅ 已读取 standards/03-naming.md           → 路径与字段命名
-✅ 已读取 standards/04-controller.md       → Controller 模板
-✅ 已读取 standards/11-security-permission.md → 权限码规范
-✅ 已读取 standards/13-api-doc-swagger.md  → OpenAPI 3 注解
+模型声明：🚀 已触发技能 api-design-be/SKILL.md       → 后端 API 契约设计
+模型声明：✅ 已读取 standards/index.md               → 任务类型 F
+模型声明：✅ 已读取 standards/03-naming.md           → 路径与字段命名
+模型声明：✅ 已读取 standards/04-controller.md       → Controller 模板
+模型声明：✅ 已读取 standards/11-security-permission.md → 权限码规范
+模型声明：✅ 已读取 standards/13-api-doc-swagger.md  → OpenAPI 3 注解
 ✅ 涉及跨系统集成时已读取 standards/08-exception.md、standards/22-resilience.md 与 standards/30-change-review-integration-adapter.md
 ```
 

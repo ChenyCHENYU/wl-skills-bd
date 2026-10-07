@@ -177,7 +177,7 @@ function commandCheck(args) {
 
 function commandValidate(args) {
   const root = targetRoot(args);
-  const valueOptions = new Set(["--target", "--format", "--output", "--rules"]);
+  const valueOptions = new Set(["--target", "--format", "--output", "--rules", "--run-id"]);
   const positionals = [];
   for (let index = 0; index < args.length; index += 1) {
     if (valueOptions.has(args[index])) { index += 1; continue; }
@@ -185,12 +185,16 @@ function commandValidate(args) {
   }
   const positional = positionals[0];
   const selectedRules = option(args, "--rules");
+  const runtime = require("../lib/task-runtime");
+  const handle = runtime.validationStart(root, { runId: option(args, "--run-id"), targets: runtime.checkTargets(root, positional) });
   const result = runBeRules(root, {
     scanRel: positional,
     quick: has(args, "--quick"),
     stagedFiles: has(args, "--staged") ? stagedFiles(root) : undefined,
     rules: selectedRules ? selectedRules.split(",").map((value) => value.trim()).filter(Boolean) : undefined,
   });
+  result.receipt = runtime.validationFinish(handle, result, result.stats.error > 0 || (has(args, "--strict") && result.stats.warn > 0) ? 1 : 0);
+  result.runId = handle.metadata.runId;
   const format = has(args, "--json") ? "json" : option(args, "--format", "text");
   let rendered;
   try {
@@ -217,6 +221,13 @@ function commandValidate(args) {
 }
 
 function commandDoctor(args) {
+  if (has(args, "--host")) {
+    const runtime = require("../lib/task-runtime");
+    const result = runtime.doctorHost(targetRoot(args), option(args, "--host", "codex"));
+    if (has(args, "--json")) printJson(result);
+    else console.log(JSON.stringify(result, null, 2));
+    return result.ok === false ? 1 : 0;
+  }
   const result = runDoctor(targetRoot(args));
   if (has(args, "--json")) printJson(result);
   else {
@@ -1019,12 +1030,14 @@ function commandReview(args) {
   const review = require("../lib/review");
   if (subcommand === "run") {
     const ruleValue = option(rest, "--rules");
+    const runtime = require("../lib/task-runtime");
+    const handle = runtime.observation.beginExecution({ ...runtime.options(root, { runId: option(rest, "--run-id"), targets: runtime.checkTargets(root) }), tool: "backend-change-review", readOnlyVerification: true });
     const result = review.runReview(root, {
       base: option(rest, "--base"), staged: has(rest, "--staged"), module: option(rest, "--module"),
       quick: has(rest, "--quick"), limit: option(rest, "--limit"),
       rules: ruleValue ? ruleValue.split(",").map((item) => item.trim()).filter(Boolean) : undefined,
     });
-    const output = review.publicReview(result);
+    const output = { ...review.publicReview(result), runId: handle.metadata.runId, receipt: runtime.reviewFinish(handle, result) };
     if (has(rest, "--json")) printJson(output);
     else if (result.reason) console.error(`审查失败：${result.error || result.reason}`);
     else {
@@ -1089,6 +1102,7 @@ function commandCommit(args) {
 }
 
 function help() {
+  console.log("task/route/explain --input <任务> --json：任务判定、runId 与规则缺口；status --run-id <id> --json：真实回执；doctor --host codex --json：静态宿主入口诊断。");
   console.log(`wl-skills-bd v${pkg.version}
 
 用法：wl-skills-bd <command> [options]
@@ -1303,93 +1317,43 @@ function commandTest(args) {
   return 1;
 }
 
-function commandTask(args) {
-  const taskRouter = require("../lib/task-router");
-
-  // --list 列出所有任务类型
+function commandTask(args, persist = true) {
+  const runtime = require("../lib/task-runtime");
+  const router = require("../lib/task-router");
+  if (has(args, "--apply")) {
+    console.error("task 是只读指挥层，不直接写代码；写入必须走原有 planHash + --confirm 链。");
+    return 1;
+  }
   if (has(args, "--list")) {
-    const list = taskRouter.listTasks();
-    console.log("任务类型（task-driven 精准触发）：");
-    for (const t of list) {
-      console.log(`  ${t.id.padEnd(18)} ${t.name}（${t.mode}，${t.ruleCount} 规则，${t.skillCount} skill${t.requiresContract ? "，需契约" : ""}）`);
-      console.log(`                     触发词示例：${t.triggerExamples.join("、")}`);
-    }
-    console.log("\n用法：wl-skills-bd task \"<自然语言描述>\"        # 自动识别任务");
-    console.log("      wl-skills-bd task --type add-api                # 指定类型输出安全执行步骤");
+    if (has(args, "--json")) printJson({ ok: true, list: router.listTasks() });
+    else for (const row of router.listTasks()) console.log(`${row.id}: ${row.name}`);
     return 0;
   }
+  const valueFlags = new Set(["--target", "--type", "--input", "--run-id", "--target-file"]);
+  const positionals = [];
+  for (let i = 0; i < args.length; i += 1) {
+    if (valueFlags.has(args[i])) { i += 1; continue; }
+    if (!args[i].startsWith("-")) positionals.push(args[i]);
+  }
+  const type = option(args, "--type");
+  const input = option(args, "--input") || positionals.join(" ");
+  if (!input && !type) { console.error('task 需要 --input "<任务>"、--type <id> 或 --list'); return 1; }
+  const result = runtime.task(targetRoot(args), input, { type, persist, runId: option(args, "--run-id"), targets: option(args, "--target-file") ? [option(args, "--target-file")] : [] });
+  if (has(args, "--json")) printJson(result);
+  else {
+    console.log(runtime.observation.formatDecision(result.decision));
+    console.log(`${result.runId ? `runId: ${result.runId}；` : "静态判定；"}计划尚未执行，模型读取尚未验证`);
+    if (result.taskId) console.log(router.formatTaskPlan(router.getTask(result.taskId)));
+  }
+  return result.decision.status === "ambiguous" ? 2 : result.decision.status === "gap" ? 1 : 0;
+}
 
-  const taskType = option(args, "--type");
-  const keyword = args.find((a) => !a.startsWith("-"));
-
-  // 模式 1：--type 指定类型并输出统一安全写链。
-  if (taskType) {
-    const task = taskRouter.getTask(taskType);
-    if (!task) {
-      console.error(`未知任务类型：${taskType}（--list 查看全部）`);
-      return 1;
-    }
-    if (has(args, "--apply")) {
-      console.error("task 是只读指挥层，不直接写代码；请按计划使用 codegen plan/apply（planHash + --confirm）或 safe-fix/config 的确认链。");
-      return 1;
-    }
-    if (has(args, "--json")) {
-      const pipeline = taskRouter.buildTaskPipeline(taskType);
-      printJson({
-        ok: true,
-        taskId: task.id,
-        taskName: task.name,
-        mode: task.mode,
-        requiresContract: task.requiresContract,
-        rules: task.rules,
-        javaGates: task.javaGates,
-        skills: task.skills,
-        standards: task.standards,
-        steps: task.steps,
-        tools: task.tools,
-        pipeline,
-        preflight: taskRouter.buildPreflightEvidence(task.id, targetRoot(args)),
-      });
-      return 0;
-    }
-    // 默认：输出任务计划
-    console.log(taskRouter.formatTaskPlan(task, { targetFile: option(args, "--target-file") }));
-    return 0;
-  }
-
-  // 模式 2：自然语言识别
-  if (!keyword) {
-    console.error('用法：wl-skills-bd task "<描述>" 或 --type <id> 或 --list');
-    return 1;
-  }
-  const detected = taskRouter.detectTask(keyword);
-  if (!detected) {
-    console.log(`未识别任务意图："${keyword}"`);
-    console.log("可用任务类型：wl-skills-bd task --list");
-    return 1;
-  }
-  if (has(args, "--json")) {
-    printJson({
-      ok: true,
-      taskId: detected.task.id,
-      taskName: detected.task.name,
-      mode: detected.task.mode,
-      score: detected.score,
-      candidates: detected.candidates,
-      rules: detected.task.rules,
-      skills: detected.task.skills,
-      standards: detected.task.standards,
-      pipeline: taskRouter.buildTaskPipeline(detected.task.id),
-      preflight: taskRouter.buildPreflightEvidence(detected.task.id, targetRoot(args)),
-    });
-    return 0;
-  }
-  console.log(taskRouter.formatTaskPlan(detected.task));
-  if (detected.candidates.length > 1) {
-    console.log("\n其他候选：");
-    for (const c of detected.candidates.slice(1)) console.log(`  ${c.id}（${c.score}分）：${c.name}`);
-  }
-  return 0;
+function commandStatus(args) {
+  const runtime = require("../lib/task-runtime");
+  const result = runtime.status(targetRoot(args), { runId: option(args, "--run-id") });
+  if (has(args, "--json")) printJson(result);
+  else console.log(runtime.observation.formatStatus(result));
+  return result.ok === false ? 1 : 0;
 }
 
 function commandConfig(args) {
@@ -1610,6 +1574,10 @@ function main(argv = process.argv.slice(2)) {
   if (command === "troubleshoot") return commandTroubleshoot(args);
   if (command === "capabilities") return commandCapabilities(args);
   if (command === "task") return commandTask(args);
+  if (command === "route") return commandTask(args, false);
+  if (command === "explain") return commandTask(args, false);
+  if (command === "status") return commandStatus(args);
+  if (command === "doctor-host") return commandDoctor(["--host", "codex", ...args]);
   if (command === "test") return commandTest(args);
   if (command === "mcp") { require("../mcp/server").startServer(); return 0; }
   console.error(`未知命令：${command}`);

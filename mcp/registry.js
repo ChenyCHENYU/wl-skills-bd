@@ -36,6 +36,7 @@ const validateTool = {
     type: "object",
     properties: {
       path: { type: "string", minLength: 1, description: "项目内相对扫描路径" },
+      runId: { type: "string", minLength: 1, description: "关联本包任务回执" },
       quick: { type: "boolean", description: "跳过 B9~B12 设计级检查" },
       rules: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: capabilities.backendRules.ids } },
       severity: { type: "string", enum: ["error", "warn", "info"] },
@@ -61,6 +62,7 @@ const reviewTool = {
     properties: {
       mode: { type: "string", enum: ["run", "baseline-plan", "baseline-apply", "adapter-inspect", "adapter-plan", "adapter-apply", "assertion-inspect", "assertion-plan", "assertion-apply", "repair-advise", "supply-chain"] },
       base: { type: "string", minLength: 1, description: "run：Git 比较基线，如 origin/main" },
+      runId: { type: "string", minLength: 1, description: "关联本包任务检查回执" },
       staged: { type: "boolean", description: "run：只评审暂存变更" },
       module: { type: "string", minLength: 1 },
       quick: { type: "boolean" },
@@ -86,7 +88,7 @@ const reviewTool = {
 const doctorTool = {
   name: "wls_be_doctor",
   description: "只读检查 JDK/Maven、兼容性 Profile、质量门配置、ArchUnit 与租户接入证据。",
-  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  inputSchema: { type: "object", properties: { host: { type: "string", minLength: 1 } }, additionalProperties: false },
   handle: handleDoctor,
 };
 
@@ -278,14 +280,16 @@ const troubleshootTool = {
 
 const taskTool = {
   name: "wls_be_task",
-  description: "只读任务路由（v0.13）：识别新服务/加接口/落库/业务命令/修复/重构/审计/配置，输出 skill、规则子集和统一安全写链；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。",
+  description: "任务判定与可观测性：覆盖全部13个 Skill，输出 matched/baseline/ambiguous/gap/not-applicable、runId、规则、候选与未验证项；mode=status 读取真实回执。只写本包观测状态；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。",
   inputSchema: {
     type: "object",
     properties: {
       input: { type: "string", description: "自然语言描述（如\"加个查询接口\"\"加字段落库\"\"改空指针bug\"）" },
-      type: { type: "string", enum: ["new-service", "add-api", "add-field", "add-business-cmd", "fix-bug", "refactor", "audit", "config-op"], description: "直接指定任务类型" },
+      type: { type: "string", enum: require("../lib/task-router").TASK_IDS, description: "直接指定任务类型" },
       list: { type: "boolean", description: "列出所有任务类型" },
-      targetFile: { type: "string", description: "可选目标文件，仅作为计划上下文，不读取或写入" },
+      targetFile: { type: "string", description: "可选目标文件，记录输入快照，不修改" },
+      mode: { type: "string", enum: ["task", "route", "explain", "status"] },
+      runId: { type: "string", minLength: 1 },
     },
     additionalProperties: false,
   },

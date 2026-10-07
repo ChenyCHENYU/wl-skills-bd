@@ -245,7 +245,11 @@ function handleContract(args) {
   }, !ok);
 }
 
-function handleDoctor() {
+function handleDoctor(args = {}) {
+  if (args.host) {
+    const result = require("../../lib/task-runtime").doctorHost(projectRoot(), args.host);
+    return toolResult(JSON.stringify(result, null, 2), result, result.ok === false);
+  }
   const result = runDoctor(projectRoot());
   const lines = result.checks.map((item) => `${item.ok ? "✅" : "❌"} ${item.id}: ${item.detail}${item.ok ? "" : `\n  → ${item.fix}`}`);
   return toolResult(lines.join("\n"), result, !result.ok);
@@ -442,47 +446,19 @@ function handleTroubleshoot(args) {
 }
 
 function handleTask(args) {
-  const taskRouter = require("../../lib/task-router");
-  if (args.apply !== undefined) {
-    return blockedResult("task 是只读指挥层；实际写入请使用 codegen/safe-fix/config 的计划、确认与回滚链", "invalid-input");
+  const router = require("../../lib/task-router");
+  const runtime = require("../../lib/task-runtime");
+  if (args.apply !== undefined) return blockedResult("task 是只读指挥层；实际写入必须走现有计划、确认与回滚链", "invalid-input");
+  if (args.mode === "status") {
+    const result = runtime.status(projectRoot(), { runId: args.runId });
+    return toolResult(runtime.observation.formatStatus(result), result, result.ok === false);
   }
-  if (args.list === true) {
-    return toolResult("任务类型：\n" + taskRouter.listTasks().map((t) => `  ${t.id}: ${t.name}（${t.mode}）`).join("\n"), { ok: true, list: taskRouter.listTasks() });
-  }
-  // 模式 1：自然语言识别
-  if (args.input && !args.type) {
-    const detected = taskRouter.detectTask(args.input);
-    if (!detected) {
-      return blockedResult(`未识别任务意图："${args.input}"，可用 --list 查看`, "no-match");
-    }
-    return toolResult(taskRouter.formatTaskPlan(detected.task), {
-      ok: true,
-      taskId: detected.task.id,
-      taskName: detected.task.name,
-      mode: detected.task.mode,
-      rules: detected.task.rules,
-      skills: detected.task.skills,
-      candidates: detected.candidates,
-      pipeline: taskRouter.buildTaskPipeline(detected.task.id),
-      preflight: taskRouter.buildPreflightEvidence(detected.task.id, projectRoot()),
-    });
-  }
-  // 模式 2：指定 type 输出统一安全写链。
-  if (args.type) {
-    const task = taskRouter.getTask(args.type);
-    if (!task) return blockedResult(`未知任务类型：${args.type}`, "invalid-input");
-    return toolResult(taskRouter.formatTaskPlan(task, { targetFile: args.targetFile }), {
-      ok: true,
-      taskId: args.type,
-      taskName: task.name,
-      mode: task.mode,
-      rules: task.rules,
-      skills: task.skills,
-      pipeline: taskRouter.buildTaskPipeline(args.type),
-      preflight: taskRouter.buildPreflightEvidence(args.type, projectRoot()),
-    });
-  }
-  return blockedResult("task 需要 input（自然语言）或 type（指定）参数，或 list=true", "invalid-input");
+  if (args.list === true) return toolResult("任务类型：\n" + router.listTasks().map((item) => `${item.id}: ${item.name}`).join("\n"), { ok: true, list: router.listTasks() });
+  if (!args.input && !args.type) return blockedResult("task 需要 input 或 type 参数，或 list=true", "invalid-input");
+  const result = runtime.task(projectRoot(), args.input || "", { type: args.type, persist: !["route", "explain"].includes(args.mode), runId: args.runId, targets: args.targetFile ? [args.targetFile] : [] });
+  const lines = [runtime.observation.formatDecision(result.decision), `${result.runId ? `runId: ${result.runId}；` : "静态判定；"}计划尚未执行，模型读取尚未验证`];
+  if (result.taskId) lines.push(router.formatTaskPlan(router.getTask(result.taskId), { targetFile: args.targetFile }));
+  return toolResult(lines.join("\n"), result, result.decision.status === "gap" || result.decision.status === "ambiguous");
 }
 
 function handleCatalog(args) {
@@ -611,6 +587,8 @@ function handleReview(args) {
   const mode = args.mode;
   if (mode === "run") {
     const engine = require("../../lib/review");
+    const runtime = require("../../lib/task-runtime");
+    const handle = runtime.observation.beginExecution({ ...runtime.options(root, { runId: args.runId, targets: runtime.checkTargets(root) }), tool: "backend-change-review", readOnlyVerification: true });
     const result = engine.runReview(root, {
       base: args.base,
       staged: args.staged === true,
@@ -619,7 +597,7 @@ function handleReview(args) {
       rules: args.rules,
       limit: args.limit,
     });
-    const output = engine.publicReview(result);
+    const output = { ...engine.publicReview(result), runId: handle.metadata.runId, receipt: runtime.reviewFinish(handle, result) };
     const text = result.reason
       ? `审查失败：${result.error || result.reason}`
       : `review ${result.decision.toUpperCase()}：新增 ${result.findingCount}，阻断 ${result.blockerCount}，基线 ${result.existingCount}，豁免 ${result.suppressedCount}`;

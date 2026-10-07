@@ -13,11 +13,11 @@ metadata:
 
 # code-fix-be
 
-## Pre-flight
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发 code-fix-be
-✅ 已读取 standards/index.md 与偏差报告
+模型声明：🚀 已触发 code-fix-be
+模型声明：✅ 已读取 standards/index.md 与偏差报告
 ✅ 自动修复白名单：B3/B5 + 项目 quality-assertions 中批准的单次精确替换
 ⚠️ 其他规则不自动猜权限、字段、租户、异常或业务结构
 ⚠️ apply 必须使用刚刚预览的 planHash 并显式确认

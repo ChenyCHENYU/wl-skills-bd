@@ -12,13 +12,13 @@ metadata:
 
 本 Skill 先确定模块事实边界，再允许契约设计或代码生成。默认只扫描当前模块；关联模块只读一跳快照，绝不因快照缺失扩大全仓扫描。
 
-## Pre-flight
+## Pre-flight 模型声明
 
 ```text
-🚀 已触发 project-context-governance
-✅ 已读取 standards/index.md 与 standards/27-project-catalog-context.md
-✅ 已确认当前 module、任务描述和扫描预算
-✅ 已确认 .wl-skills-bd/catalog.config.json 中的模块边界与一跳关系
+模型声明：🚀 已触发 project-context-governance
+模型声明：✅ 已读取 standards/index.md 与 standards/27-project-catalog-context.md
+模型声明：✅ 已确认当前 module、任务描述和扫描预算
+模型声明：✅ 已确认 .wl-skills-bd/catalog.config.json 中的模块边界与一跳关系
 ```
 
 ## 执行

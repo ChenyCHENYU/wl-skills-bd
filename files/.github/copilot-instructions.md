@@ -36,13 +36,13 @@ plan 输出的 `openQuestions` 是机器枚举的业务闭环疑点（空批语�
 
 ## Pre-flight
 
-触发 Skill 时先声明：
+触发 Skill 时先标注模型声明（不能代替工具回执；文件哈希不证明模型读取）：
 
 ```text
-🚀 已触发 {skill}
-✅ 已读取 standards/index.md → 任务类型
-✅ 已读取本次必需规范 → 文件列表
-✅ 已确认工程 Profile/JDK/Maven/数据库
+模型声明：🚀 已触发 {skill}
+模型声明：✅ 已读取 standards/index.md → 任务类型
+模型声明：✅ 已读取本次必需规范 → 文件列表
+模型声明：✅ 已确认工程 Profile/JDK/Maven/数据库
 ⚠️ 本次写入、DDL、权限或破坏性 API 风险与确认点
 ```
 
@@ -97,3 +97,7 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 ## 方法论
 
 规范以官方/社区最佳实践、团队 standards、机器 Profile 和本次契约为准；存量代码只作为待审计事实，不自动晋升为标准答案。Skill 文档不能承诺执行器未实现的能力。
+
+每次任务执行 `wl-skills-bd task --input "<完整任务>" --json`（或 MCP wls_be_task），持有 runId 后用 `status --run-id <runId> --json` 核验真实检查、输入新鲜度与未验证项；相关但缺能力/规则必须显示 gap 并保留建议。宿主入口诊断用 `doctor --host codex --json`，发现/选中仍须宿主证据。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。
