@@ -44,6 +44,8 @@ test("task 持久化返回 runId 且 status 可回查", () => {
   assert.ok(planned.result.runId);
   const status = protocol.request({ operation: "status", projectRoot: root, runId: planned.result.runId }, runOperation);
   assert.equal(status.ok, true);
+  assert.equal(status.result.runId, planned.result.runId);
+  assert.equal(status.result.executionStatus, "not-executed");
 });
 
 test("doctor-host 运行时按指定 host 诊断", () => {
@@ -95,4 +97,38 @@ test("协议错误：缺输入/未知操作/非对象", () => {
   assert.equal(protocol.request({ operation: "route" }, runOperation).error.code, "missing-input");
   assert.equal(protocol.request({ operation: "codegen" }, runOperation).error.code, "unknown-operation");
   assert.equal(protocol.request("route", runOperation).error.code, "invalid-input");
+});
+
+test("边界输入校验：非法类型在触达执行器前判 invalid-input（独立复验缺陷回归）", () => {
+  const invalidPayloads = [
+    { operation: "task", task: true },
+    { operation: "task", task: { text: "bad" } },
+    { operation: "task", task: "检查目标", targets: [null, 42, {}] },
+    { operation: "route", task: "检查目标", projectRoot: 42 },
+    { operation: "task", task: "检查目标", runId: {} },
+  ];
+  for (const payload of invalidPayloads) {
+    const envelope = protocol.request(payload, () => { throw new Error("不应触达执行器"); });
+    assert.equal(envelope.ok, false);
+    assert.equal(envelope.error.code, "invalid-input");
+    assert.ok(envelope.error.field);
+  }
+});
+
+test("route 支持 type-only（保留原入口条件式输入）", () => {
+  const root = tempRoot();
+  const envelope = protocol.request({ operation: "route", projectRoot: root, type: "project-context" }, runOperation);
+  assert.equal(envelope.ok, true);
+  assert.equal(envelope.result.decision.status, "gap");
+  const missing = protocol.request({ operation: "route", projectRoot: root }, runOperation);
+  assert.equal(missing.error.code, "missing-input");
+});
+
+test("CLI 缺 --input-file 时 stdout 输出 missing-input JSON 信封", () => {
+  const run = spawnSync(process.execPath, [BIN, "protocol", "request"], { encoding: "utf8" });
+  assert.equal(run.status, 2);
+  const envelope = JSON.parse(run.stdout);
+  assert.equal(envelope.ok, false);
+  assert.equal(envelope.error.code, "missing-input");
+  assert.equal(envelope.error.field, "input-file");
 });

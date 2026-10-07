@@ -1,0 +1,15 @@
+[
+  { "task": "新建一个后端服务", "skill": "service-codegen", "installedStatus": "needs-context", "installedReason": "required-contract-input-not-created" },
+  { "task": "给契约加一个接口", "skill": "service-codegen" },
+  { "task": "给表加字段", "skill": "entity-codegen" },
+  { "task": "加业务命令和状态机", "skill": "service-codegen" },
+  { "task": "修后端 bug", "skill": "code-fix-be" },
+  { "task": "重构 Service", "skill": "code-fix-be" },
+  { "task": "审计后端规则", "skill": "convention-audit-be" },
+  { "task": "做模块上下文治理", "skill": "project-context-governance" },
+  { "task": "抽取业务文档", "skill": "business-doc-extract-be", "installedStatus": "gap", "installedReason": "skeleton-skill-without-semantic-executor" },
+  { "task": "数据安全护栏", "skill": "data-safety" },
+  { "task": "画流程图", "skill": null, "status": "not-applicable" },
+  { "task": "写诗", "skill": null, "status": "not-applicable" },
+  { "task": "检查", "skill": "convention-audit-be" }
+]
