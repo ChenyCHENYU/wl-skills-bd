@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.32.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.33.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -62,6 +62,11 @@ wl-skills-bd protocol request --input-file request.json --json
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
 | AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
+
+### v0.33.0 公开集成协议与输入校验收口
+
+- 新增 describe/request 统一信封的公开集成协议：外部宿主与适配器仅依赖公开入口获取能力清单与路由语料；`doctor-host` 修复 host 透传。
+- 能力清单与真实安装技能对齐（`taskTypes` 分离）；context null / 空 targets 输入校验返回可解释拒绝。
 
 ### v0.32.0 任务判定与真实验证回执
 
