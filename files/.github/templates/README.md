@@ -72,3 +72,9 @@ Service 与 ServiceTest 的 `<wl-custom>` 区用于补全 export、relation 和�
 - MyBatis-Plus `@Version` / `@TableLogic` 作为实体语义；业务写 SQL 另外显式同时约束租户、有效标记和 revision，不单独依赖插件
 - `@Transactional(rollbackFor = Exception.class)` —— 显式回滚 checked 异常（Spring 官方）
 - 构造注入 `@RequiredArgsConstructor` —— Spring 4.3+ 推荐
+
+## 注释产物核对（v0.34.0）
+
+唯一规范见 `../standards/19-design.md` §9。Service/Mapper 职责与写方法边界来自契约及模板实际实现；不假定请求幂等、外部消息或跨服务事务。模板默认的生成器 author/since 不能作为项目负责人/业务创建时间证据。新增模板说明与现有有效元数据一起分发，已有项目正常 update 即可。
+
+验收：`tests/comments.test.js` 核对真实契约生成内容；`npm run verify:quality-maven` 在 Java 8 上检查全部扩展契约生成源码，并用真实 Checkstyle 缺注释/缺返回标签的负例验证退出码。语义准确性仍需契约审查。

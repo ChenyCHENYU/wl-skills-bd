@@ -31,6 +31,7 @@ import java.util.Objects;
 
 /**
  * {{apiDesc}}({{Entity}})表服务实现。
+ * <p>业务模块：{{module}}；只编排本实体的租户内查询与写入，权限由 Controller 校验。
  * <p>继承 JhServiceImpl 获 baseMapper / lambdaQuery / saveBatch 等能力。
  * <p>构造注入（@RequiredArgsConstructor），不写 @Autowired。
  *
@@ -47,6 +48,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
 
     /**
      * 分页查询{{apiDesc}}。
+     * <p>固定使用登录租户，只读查询；空结果返回空分页，不修改业务状态。
      *
      * @param page 分页参数（current/size）
      * @param params 查询条件（全可选）
@@ -75,6 +77,8 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     /**
      * 新增{{apiDesc}}。
      * <p>自动填充审计字段（id/createUserNo/createDateTime/companyId）。
+     * <p>单次调用在本地事务内插入一条记录；请求不携带租户与审计字段。
+     * <p>未声明请求级幂等键或外部通知；业务去重只按契约配置生成，不能代替请求幂等。
      *
      * @param dto 新增参数（已 @Validated 校验）
      * @return 新生成的主键 id
@@ -111,6 +115,8 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     /**
      * 修改{{apiDesc}}。
      * <p>自动填充更新审计字段（updateUserNo/updateDateTime）。
+     * <p>在登录租户内读取有效记录；以客户端 revision 原子更新，本地事务失败整体回滚。
+     * <p>空字段保持原值；不允许覆盖租户、创建审计与软删除标记。
      *
      * @param dto 修改参数（必须含 id）
      * @throws ServiceException 当 id 为空 或 记录不存在
@@ -158,6 +164,7 @@ public class {{Entity}}Service extends JhServiceImpl<{{Entity}}Mapper, {{Entity}
     /**
      * 删除{{apiDesc}}（软删除）。
      * <p>当前 profile：{{softDeleteColumn}} = {{softDeleteDeletedValue}} 表示已删除（{{softDeleteActiveValue}}=有效），不物理删除。
+     * <p>限登录租户的有效记录，本地事务与乐观锁控制；重复删除按不存在处理，不承诺幂等成功。
      *
      * @param id 主键
      * @throws ServiceException 当记录不存在

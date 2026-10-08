@@ -251,7 +251,7 @@ public void save(DTO dto) {
 | 类 Javadoc（@author @since + 职责）| 🔴 强制 | 所有 public 类，Checkstyle JavadocType 兜底 |
 | 接口/抽象方法 Javadoc（@param/@return/@throws）| 🔴 强制 | 黄山版明确：接口方法必须注释，Checkstyle JavadocMethod 兜底 |
 | 复杂业务方法 Javadoc（业务规则/@throws 场景）| 🔴 强制 | 状态变更、多步业务、有副作用的写方法 |
-| 普通 public 方法（查询/简单转换）| 🟡 建议 | 签名自解释时可豁免，但建议加一句话业务意图 |
+| 普通 public 方法（查询/简单转换）| 🔴 格式门禁 | 当前 Checkstyle J2 检查 public 方法；除已声明豁免外，至少一句准确说明及适用标签 |
 | Controller 方法（已有 @Operation）| 🟡 建议 | @Operation 给 OpenAPI，复杂业务再补 Javadoc |
 | getter/setter/toString/equals/hashCode | ⚪ 豁免 | IDE 生成，加注释是噪音 |
 | 纯数据类字段（Entity/DTO/VO）| ⚪ 用 @Schema | 字段已有 OpenAPI 注解，不重复 Javadoc |
@@ -298,9 +298,9 @@ List<User> users = mapper.selectList(null);
 
 ### 9.5 检查边界（B12/Checkstyle 对齐，如实声明）
 
-- B12 普查 Service public 方法、Checkstyle J2 覆盖 public 方法：**格式满足**（有 Javadoc 块）与**语义正确**（说明了真实边界）分开判定。B12/Checkstyle 只能证明前者；空泛模板说明（仅有标签、无实际内容）应被识别为"缺少实际说明"并报告。
-- getter/setter 与简单代理方法沿用既有豁免；`@Operation`/`@Schema` 的存在不能证明复杂业务注释已充分（复杂写方法仍需边界说明）。
-- 同一问题在 B12 与 J2 的重复统计按规则与位置关联，不双报。
+- B12 普查 Service public 方法、Checkstyle J2 覆盖 public 方法：**格式满足**（有 Javadoc 块）与**语义正确**（说明了真实边界）分开判定。B12 检查实际正文，Checkstyle 检查格式与标签；二者都不能自动证明业务说明准确；空泛模板说明（仅有标签、无实际内容）应被识别为"缺少实际说明"并报告。
+- 纯属性 getter/setter 与继承 `@Override` 豁免；名称像 getter 的业务方法、普通代理方法不自动豁免；`@Operation`/`@Schema` 的存在不能证明复杂业务注释已充分（复杂写方法仍需边界说明）。
+- 当前 CLI review 收集 B12，Maven J2 独立执行，尚未合并两类报告。展示与人工汇总须保留来源，以文件/方法关联同一格式问题，不宣称已有自动跨报告去重。
 
 ## 10. 与其他规范的联动
 
@@ -352,3 +352,7 @@ MdmModelLifecycleService     // 启用/禁用/树
 
 ## 变更记录
 - 2026-07-17 v0.5 新增（依据黄山版第七章 + SOLID + Clean Code + Refactoring；B9/B10/B11 机器兜底）
+
+### 9.6 单包闭环验证（v0.34.0）
+
+Service/Mapper 模板说明实际模块、租户和事务边界；代码gen 按契约生成后由 Java 8 的 Checkstyle/Spotless/PMD 源码夹具核对。`tests/comments.test.js` 固化空正文、仅标签、继承/纯属性豁免与真实契约产物；`verify:quality-maven` 使用真实正/负样本证明文档门有效。现有模板 author 表示生成器而非人类负责人，since 为模板默认值；有已确认项目元数据时填写，不改写既有有效历史。

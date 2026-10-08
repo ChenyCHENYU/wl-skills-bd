@@ -87,6 +87,7 @@
     <!-- public 方法 Javadoc 强制；OpenAPI/Test/Bean 方法由其机器注解替代重复文档 -->
     <module name="MissingJavadocMethod">
       <property name="scope" value="public"/>
+      <property name="allowMissingPropertyJavadoc" value="true"/>
       <property name="allowedAnnotations" value="Override,Test,BeforeEach,Bean,Operation"/>
     </module>
     <module name="JavadocMethod">

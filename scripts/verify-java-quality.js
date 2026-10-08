@@ -240,6 +240,50 @@ class CoverageTest {
     windowsHide: true,
   });
   assert.strictEqual(result.status, 0, `Java 质量 Maven 夹具失败：${result.error ? `\n${result.error.message}` : ""}\n${result.stdout || ""}\n${result.stderr || ""}`);
+  // 注释门使用真实 Checkstyle：属性/继承方法通过，业务方法缺文档或标签必须失败。
+  const commentSource = path.join(tempRoot, "src", "main", "java", "com", "jhict", "fixture", "CommentSample.java");
+  const baseComment = `package com.jhict.fixture;
+
+/**
+ * 注释边界夹具。
+ *
+ * @author wl-skills-bd
+ */
+public class CommentSample {
+    private int value;
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int input) {
+        this.value = input;
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
+`;
+  const commentArgs = [...commandArgs];
+  commentArgs.splice(commentArgs.indexOf("verify"), 1, "checkstyle:check");
+  const commentCheck = (method) => {
+    fs.writeFileSync(commentSource, `${baseComment}${method}\n}\n`, "utf8");
+    return spawnSync(command, commentArgs, { cwd: tempRoot, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true });
+  };
+  const validComment = commentCheck("");
+  assert.strictEqual(validComment.status, 0, `属性/Override 豁免不生效：\n${validComment.stdout}\n${validComment.stderr}`);
+  for (const [method, expectedRule] of [
+    ["    public int queryValue() {\n        return value;\n    }", "MissingJavadocMethod"],
+    ["    /** 查询当前值。 */\n    public int queryValue() {\n        return value;\n    }", "JavadocMethod"],
+  ]) {
+    const invalidComment = commentCheck(method);
+    assert.notStrictEqual(invalidComment.status, 0, `${expectedRule} 违规必须让真实 Maven 退出非零`);
+    assert.match(invalidComment.stdout + invalidComment.stderr, new RegExp(expectedRule), "必须证实目标规则触发，不能把环境故障当作通过");
+    console.log(`✅ comment-negative：${expectedRule} 真实违规被拒绝`);
+  }
+  fs.unlinkSync(commentSource);
+  console.log("✅ comment-positive：getter/setter 与 Override 在真实 Checkstyle 通过");
   const generatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-generated-quality-"));
   try {
     const { applyPlan, buildPlan } = require("../lib/codegen");

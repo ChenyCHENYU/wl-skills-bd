@@ -190,3 +190,7 @@ xxx-service/src/main/resources/mapper/{module}/{Entity}Mapper.xml
 - 2026-07-17 v0.4 补厚落地（执行步骤 + BaseColumns + 动态条件 + 方言差异 + 边界用例 + 正反例）+ USAGE.md
 - 2026-07-17 v0.2 加 templates 引用
 - 2026-05-14 v0.0.1 骨架
+
+## 注释交付
+
+读取 `../../../standards/19-design.md` §9 的单一权威规范。对本次新建/实质修改的类和业务方法说明实际模块、职责、租户/事务/版本与副作用边界；保留有效历史。事实不足列 gap，不能从方法名编造幂等或异常。结合契约复核业务语义，分别报告 B12 正文与实际 Checkstyle 格式结果；同 runId 回查真实执行证据。无需兄弟包或 harness。

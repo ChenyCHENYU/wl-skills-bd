@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.33.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.34.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -10,6 +10,18 @@
 当前唯一经过验证的生成 Profile 是 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。包内能力以机器 Schema、兼容矩阵和回归测试为准，不从存量业务代码猜约定。
 
 独立与组合边界见 [机器能力声明](lib/capabilities.json)。后端契约、规则、CLI 和 MCP 均可独立使用，不要求安装其他 WL 包。安装器对共享 Markdown 只管理 `wl-skills-bd` 区块，对 MCP 只合并本包服务键，并保留 JSONC 注释及其他配置。预存相同内容仅登记引用，不能自动认领；`--force` 只可更新 manifest 证明归属的本包内容，不能覆盖用户或其他包贡献。项目 Delivery Profile 和业务配置不会因强制升级重置；清理保留本地修改及其引用记录。
+
+## 后端注释职责（v0.34.0）
+
+bd 独立提供后端注释规范、契约模板与检查，唯一权威为 [19-design §9](files/.github/standards/19-design.md)。无需 kit、UI 或 DSH。
+
+- 类/Mapper 说明业务模块、职责与访问边界；Service 写方法说明实际租户、事务、版本、重复请求和副作用行为。事实不足列 gap，不能编造幂等、权限或异常承诺。
+- Service/Mapper 模板从契约填充模块、租户与写入边界；保留原有有效注释/作者历史。模板的 `@author wl-skills-bd codegen` 是生成器标识，`@since 1.0.0` 是既有模板默认值，不代表项目负责人或真实业务创建时间；项目有明确元数据时按规范填写。
+- **B12** 检查 Service public/Mapper 方法的 Javadoc 正文，标签堆叠或空块不能代替实际说明。Service 的继承 `@Override` 与纯属性 getter/setter 豁免；名字像 getter 的业务方法仍检查。
+- **Checkstyle J2** 校验公共类型、方法文档和参数/返回/异常标签，启用纯属性与已声明注解豁免。Java 8 的真实 Maven 正/负夹具验证缺文档和缺返回标签的非零退出。
+- 自动检查证明结构与格式，业务说明准确性仍需对照契约和执行代码。CLI review 当前收集 B12，Maven J2 独立执行；二者并列展示，不宣称已有跨报告语义去重。
+
+正常 `update` 分发，不全库重写注释，也不要求安装兄弟包。
 
 ## 公开集成协议 v1
 
