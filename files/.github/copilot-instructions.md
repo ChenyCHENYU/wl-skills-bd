@@ -100,4 +100,6 @@ wl-skills-bd validate . --format sarif --output reports/backend.sarif
 
 每次任务执行 `wl-skills-bd task --input "<完整任务>" --json`（或 MCP wls_be_task），持有 runId 后用 `status --run-id <runId> --json` 核验真实检查、输入新鲜度与未验证项；相关但缺能力/规则必须显示 gap 并保留建议。宿主入口诊断用 `doctor --host codex --json`，发现/选中仍须宿主证据。
 
+编辑前必须展示实际 `notice`：包名/版本、判定、Skill 或基础约束、规则编号与名称、目标、runId 和尚未执行的检查；命令失败或版本不一致须明示，不能静默跳过。
+
 同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。

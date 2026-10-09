@@ -217,6 +217,20 @@ try {
     fs.rmSync(raceRoot, { recursive: true, force: true });
     fs.rmSync(raceSource, { recursive: true, force: true });
   }
+  const profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wl-profile-upgrade-"));
+  const profileSource = fs.mkdtempSync(path.join(os.tmpdir(), "wl-profile-source-"));
+  try {
+    const rel = ".wl-skills-bd/profiles/custom.json";
+    fs.mkdirSync(path.dirname(path.join(profileSource, rel)), { recursive: true });
+    fs.writeFileSync(path.join(profileSource, rel), '{"version":1}\n');
+    assert.strictEqual(apply(installer.buildPlan(profileRoot, { sourceRoot: profileSource })).ok, true);
+    fs.writeFileSync(path.join(profileSource, rel), '{"version":2}\n');
+    const update = installer.buildPlan(profileRoot, { sourceRoot: profileSource });
+    assert.strictEqual(update.actions.find((item) => item.rel === rel).action, "update", "未改动的受管 profile 正常升级");
+    fs.writeFileSync(path.join(profileRoot, rel), '{"projectCustomization":true}\n');
+    const custom = installer.buildPlan(profileRoot, { sourceRoot: profileSource });
+    assert.strictEqual(custom.actions.find((item) => item.rel === rel).action, "unchanged", "项目实际定制必须保留");
+  } finally { fs.rmSync(profileRoot, { recursive: true, force: true }); fs.rmSync(profileSource, { recursive: true, force: true }); }
   console.log("✅ installer：manifest、零写入冲突、备份、clean 保护、事务回滚与路径边界通过");
 } finally {
   fs.rmSync(root, { recursive: true, force: true });

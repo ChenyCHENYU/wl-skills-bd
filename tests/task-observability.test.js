@@ -18,6 +18,8 @@ const oldRoot = process.env.WL_PROJECT_ROOT;
 try {
   const installPlan = json(run("init"));
   assert.strictEqual(run("init", "--confirm", "--plan-hash", installPlan.planHash).status, 0);
+  const mcpConfig = JSON.parse(fs.readFileSync(path.join(root, ".vscode/mcp.json"), "utf8"));
+  assert.ok(mcpConfig.servers["wl-skills-bd"].args.includes(`${require("../package.json").name}@${require("../package.json").version}`));
   fs.writeFileSync(path.join(root, ".github/standards/20-aaa-other-package.md"), "foreign standard\n");
   assert.ok(router.buildPreflightEvidence("data-safety", root).standards.some((item) => item.id === "20" && !item.file.includes("aaa-other-package")));
   const mapped = new Set(router.TASK_IDS.flatMap((id) => router.getTask(id).skills));
@@ -30,6 +32,15 @@ try {
   assert.strictEqual(router.classifyTask("后端 Java 缺未知规则").status, "gap");
   assert.strictEqual(router.classifyTask("后端 Java 代码改动").status, "baseline");
   assert.strictEqual(router.classifyTask("random").status, "needs-context");
+  const comments = router.classifyTask("核对停机实绩服务和 Mapper 的业务边界注释");
+  assert.strictEqual(comments.status, "baseline");
+  assert.deepStrictEqual(comments.task.rules, ["B12"]);
+  assert.deepStrictEqual(comments.task.javaGates, ["J2"]);
+  assert.strictEqual(router.classifyTask("给这个文件补上职责注释", null, { targets: ["src/Foo.java"] }).status, "baseline");
+  assert.notStrictEqual(router.classifyTask("新增接口并补充 Java 注释").task?.baselineKind, "comments");
+  assert.strictEqual(router.classifyTask("审查 outbox 幂等重试与接口设计说明书").task.id, "integration-adapter");
+  assert.strictEqual(router.classifyTask("抽取业务文档并整理失败处理").task.id, "extract-business-doc");
+  assert.strictEqual(router.classifyTask("给 Vue 页面的图片补注释").status, "not-applicable");
   assert.strictEqual(router.classifyTask("prefix").status, "needs-context");
   assert.strictEqual(router.classifyTask("不要生成单元测试，只做Vue页面").status, "not-applicable");
   assert.strictEqual(router.classifyTask("", "invalid").status, "gap");
@@ -79,6 +90,12 @@ try {
 
   // MCP 同样持有实际检查回执，而不是只返回模型声明。
   process.env.WL_PROJECT_ROOT = root;
+  const mcpComments = handleTask({ input: "给 Java 文件补职责注释", targetFile: "src/CacheService.java", runId: "mcp-comments" });
+  assert.strictEqual(mcpComments.structuredContent.decision.status, "baseline");
+  assert.deepStrictEqual(mcpComments.structuredContent.notice.rules.map((rule) => rule.id), ["B12"]);
+  assert.ok(mcpComments.structuredContent.notice.requiredChecks.includes("J2"), "格式质量门单独列为待执行检查");
+  assert.ok(mcpComments.text.includes("bd@"));
+  assert.ok(!mcpComments.text.includes("B13"), "注释基础约束不能额外展示完整审计规则清单");
   const mcpPlan = handleTask({ input: "生成单元测试", runId: "mcp-test" });
   assert.strictEqual(mcpPlan.structuredContent.decision.status, "matched");
   const mcpScan = handleValidate({ path: "src", rules: ["B13"], runId: "mcp-test" });

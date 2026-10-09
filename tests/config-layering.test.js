@@ -328,6 +328,22 @@ withRoot((root) => {
 
 console.log("✅ config-init：骨架生成（bootstrap/application/env×5/matrix/gitignore）通过");
 
+withRoot((root) => {
+  fs.mkdirSync(path.join(root, ".wl-skills-bd"), { recursive: true });
+  const local = path.join(root, ".wl-skills-bd/profile.local.json");
+  const configure = (deletedValue) => fs.writeFileSync(local, JSON.stringify({ schemaVersion: 1, profileId: "jh4j3-openapi3", softDelete: { column: "DELETE_FLAG", javaField: "deleteFlag", activeValue: 0, deletedValue } }));
+  configure(4);
+  const plan = configInit.buildInitPlan(root, { project: "wl-produce", module: "pl" });
+  const application = plan.actions.find((item) => item.kind === "application").content;
+  assert.match(application, /logic-delete-field: deleteFlag/);
+  assert.match(application, /logic-delete-value: 4/);
+  assert.match(application, /logic-not-delete-value: 0/);
+  configure(1);
+  const next = configInit.buildInitPlan(root, { project: "wl-produce", module: "pl" });
+  assert.notStrictEqual(next.planHash, plan.planHash, "profile 变化必须使旧计划失效");
+  assert.match(next.actions.find((item) => item.kind === "application").content, /logic-delete-value: 1/);
+});
+
 // ─── 6. config-doctor：全链路体检 ───
 withRoot((root) => {
   // 先 init

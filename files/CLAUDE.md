@@ -23,4 +23,6 @@
 
 每次任务先用 `task --input "<完整任务>" --json` 取得 runId 与 matched/baseline/ambiguous/gap/not-applicable 判定。任务计划尚未执行；`status --run-id <runId> --json` 才读取本包工具回执与新鲜度。`doctor --host codex --json` 仅诊断宿主入口可用性，不能证明宿主已发现或模型已选中技能。
 
+编辑前必须展示实际 `notice`：包名/版本、判定、Skill 或基础约束、规则编号与名称、目标、runId 和尚未执行的检查；命令失败或版本不一致须明示，不能静默跳过。
+
 同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。

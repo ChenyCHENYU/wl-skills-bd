@@ -456,8 +456,8 @@ function handleTask(args) {
   if (args.list === true) return toolResult("任务类型：\n" + router.listTasks().map((item) => `${item.id}: ${item.name}`).join("\n"), { ok: true, list: router.listTasks() });
   if (!args.input && !args.type) return blockedResult("task 需要 input 或 type 参数，或 list=true", "invalid-input");
   const result = runtime.task(projectRoot(), args.input || "", { type: args.type, persist: !["route", "explain"].includes(args.mode), runId: args.runId, targets: args.targetFile ? [args.targetFile] : [] });
-  const lines = [runtime.observation.formatDecision(result.decision), `${result.runId ? `runId: ${result.runId}；` : "静态判定；"}计划尚未执行，模型读取尚未验证`];
-  if (result.taskId) lines.push(router.formatTaskPlan(router.getTask(result.taskId), { targetFile: args.targetFile }));
+  const lines = [runtime.observation.formatDecision(result), "计划尚未执行，模型读取尚未验证"];
+  if (result.taskId && result.decision.status !== "baseline") lines.push(router.formatTaskPlan(router.getTask(result.taskId), { targetFile: args.targetFile }));
   return toolResult(lines.join("\n"), result, result.decision.status === "gap" || result.decision.status === "ambiguous");
 }
 

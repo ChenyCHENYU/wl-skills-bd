@@ -1342,9 +1342,9 @@ function commandTask(args, persist = true) {
   const result = runtime.task(targetRoot(args), input, { type, persist, runId: option(args, "--run-id"), targets: option(args, "--target-file") ? [option(args, "--target-file")] : [] });
   if (has(args, "--json")) printJson(result);
   else {
-    console.log(runtime.observation.formatDecision(result.decision));
+    console.log(runtime.observation.formatDecision(result));
     console.log(`${result.runId ? `runId: ${result.runId}；` : "静态判定；"}计划尚未执行，模型读取尚未验证`);
-    if (result.taskId) console.log(router.formatTaskPlan(router.getTask(result.taskId)));
+    if (result.taskId && result.decision.status !== "baseline") console.log(router.formatTaskPlan(router.getTask(result.taskId)));
   }
   return result.decision.status === "ambiguous" ? 2 : result.decision.status === "gap" ? 1 : 0;
 }

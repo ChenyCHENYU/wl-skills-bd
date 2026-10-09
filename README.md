@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.34.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.35.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -11,7 +11,17 @@
 
 独立与组合边界见 [机器能力声明](lib/capabilities.json)。后端契约、规则、CLI 和 MCP 均可独立使用，不要求安装其他 WL 包。安装器对共享 Markdown 只管理 `wl-skills-bd` 区块，对 MCP 只合并本包服务键，并保留 JSONC 注释及其他配置。预存相同内容仅登记引用，不能自动认领；`--force` 只可更新 manifest 证明归属的本包内容，不能覆盖用户或其他包贡献。项目 Delivery Profile 和业务配置不会因强制升级重置；清理保留本地修改及其引用记录。
 
-## 后端注释职责（v0.34.0）
+Java 工程未声明本包 npm 依赖时，安装器将宿主 MCP 的 npx 调用固定到本次安装版本。配置生成器从有效 profile（含 profile.local）读取软删除字段和值，拒绝以模板默认值覆盖项目口径；profile 变化使旧生成计划失效。
+
+## 如何确认本包正在起作用
+
+每次适用任务先运行项目本地 `wl-skills-bd task --input "修改目标文件" --target-file src/Foo.java --json`。编辑前展示真实 `notice`：包名与版本、判定、选中 Skill 或基础约束、具体规则、目标、runId 和尚未执行的检查。普通修改也需要基础约束提醒；相关但未覆盖的意图显示 gap 与建议；没有目标依据显示 needs-context，职责外显示 not-applicable，不强行匹配。
+
+执行实际检查时复用 `--run-id`，结束读取 `wl-skills-bd status --run-id <id> --json`，分别报告执行和验证、实际检查文件、过期证据与未执行项。`notice.displayEvidence=unverified` 表示工具回执不能证明聊天界面展示；安装、路由或模型自报不能证明宿主加载/模型读取。
+
+`wl-skills-bd doctor-host --json` 对比已分发规范、本地执行器和正在运行的版本，漂移会显式报告。规范更新不会替代依赖升级：同步本包依赖、锁文件和受管入口；未使用的兄弟包无需安装。重开/刷新宿主加载后仍需观察真实任务调用，不能宣称所有 AI 自动触发。
+
+## 后端注释职责（v0.35.0）
 
 bd 独立提供后端注释规范、契约模板与检查，唯一权威为 [19-design §9](files/.github/standards/19-design.md)。无需 kit、UI 或 DSH。
 

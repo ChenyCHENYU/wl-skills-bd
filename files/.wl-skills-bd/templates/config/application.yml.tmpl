@@ -24,9 +24,9 @@ mybatis-plus:
     cache-enabled: false
   global-config:
     db-config:
-      logic-delete-field: deleteFlag
-      logic-delete-value: 0
-      logic-not-delete-value: 1
+      logic-delete-field: {{softDelete.javaField}}
+      logic-delete-value: {{softDelete.deletedValue}}
+      logic-not-delete-value: {{softDelete.activeValue}}
 
 management:
   endpoints:
