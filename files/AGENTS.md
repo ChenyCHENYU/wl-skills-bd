@@ -4,7 +4,7 @@
 
 1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B32 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
 2. `.github/skills/_registry.md`：触发词 → Skill 路由；`.github/standards/index.md`：任务类型 → 必读规范（懒加载，不一次读全 30 条）。
-3. 任务路由优先 `wl-skills-bd task "<描述>"`（只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。文件哈希仅证明可定位的版本，不证明模型已读取；读取与执行自述必须标为“模型声明”。
+3. 任务路由优先 `wl-skills-bd task "<描述>"`（仅持久化本包任务计划；`route`/`explain` 只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。文件哈希仅证明可定位的版本，不证明模型已读取；读取与执行自述必须标为“模型声明”。
 
 ## 不变式（任何任务模式都不得违反）
 

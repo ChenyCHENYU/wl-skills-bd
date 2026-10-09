@@ -2,7 +2,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.35.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.35.1-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -498,7 +498,7 @@ mvn verify -Pwl-quality
 | `wls_be_export_permissions` | 条件 | 导出权限码为 kit SYS_PERMISSION_INFO.md 片段 |
 | `wls_be_config` | 条件 | 配置分层 init/migrate/doctor/fix；写操作保留计划与确认门 |
 | `wls_be_troubleshoot` | 否 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
-| `wls_be_task` | 否 | 只读任务路由：自然语言/显式类型 → Skill、规则子集、统一安全写链与 Pre-flight 证据（必读文件 sha256 清单） |
+| `wls_be_task` | 否 | 任务判定（task 写观测记录，route/explain 只读）：自然语言/显式类型 → Skill、规则子集、统一安全写链与 Pre-flight 证据（必读文件 sha256 清单） |
 | `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show + integration-audit；show 支持 section/cursor，默认禁止隐式全量扫描 |
 | `wls_be_context` | 否 | 当前模块 + 一跳快照的文件/字节/token 有界上下文选择，不扫描关联源码 |
 | `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
