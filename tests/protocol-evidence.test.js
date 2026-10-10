@@ -8,7 +8,9 @@ const path = require("node:path");
 const { protocol, runOperation } = require("../lib/protocol-cli");
 
 function tempRoot() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-evidence-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-evidence-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ devDependencies: { "@agile-team/wl-skills-bd": "*" } }));
+  return root;
 }
 
 test("status 严格回查同一 runId：字段精确、不兜底", () => {

@@ -13,7 +13,9 @@ const pkg = require("../package.json");
 const BIN = path.join(__dirname, "..", "bin", "wl-skills-bd.js");
 
 function tempRoot() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-protocol-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-protocol-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ devDependencies: { "@agile-team/wl-skills-bd": "*" } }));
+  return root;
 }
 
 test("describe 返回协议版本、能力目录与五个统一操作", () => {

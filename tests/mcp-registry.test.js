@@ -2,11 +2,20 @@
 
 const assert = require("assert");
 const path = require("path");
+const fs = require("fs");
+const os = require("os");
 const { HANDLERS, TOOLS } = require("../mcp/registry");
 const { validateSchema } = require("../mcp/schema-validator");
+const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-registry-"));
+const source = path.resolve(__dirname, "..");
+fs.cpSync(path.join(source, "files"), path.join(fixture, "files"), { recursive: true });
+fs.cpSync(path.join(source, "files/.github"), path.join(fixture, ".github"), { recursive: true });
+fs.cpSync(path.join(source, "files/.wl-skills-bd"), path.join(fixture, ".wl-skills-bd"), { recursive: true });
+fs.writeFileSync(path.join(fixture, ".wl-skills-scope.json"), JSON.stringify({ schemaVersion: 1, projectType: "backend", packages: { bd: true } }));
+process.on("exit", () => fs.rmSync(fixture, { recursive: true, force: true }));
 
 (async () => {
-  process.env.WL_PROJECT_ROOT = path.resolve(__dirname, "..");
+  process.env.WL_PROJECT_ROOT = fixture;
   const expected = [
     "wls_be_capabilities",
     "wls_be_validate",

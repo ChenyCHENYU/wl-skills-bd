@@ -118,7 +118,10 @@ try {
 
   // 状态文件与输入路径都拒绝越界，陌生 gateway 即使force也不得覆盖。
   assert.throws(() => runtime.task(root, "单测", { runId: "../escape" }), /runId/);
-  assert.throws(() => runtime.task(root, "单测", { targets: ["../outside"] }), /escapes/);
+  const escaped = runtime.task(root, "单测", { targets: ["../outside"] });
+  assert.strictEqual(escaped.decision.status, "needs-context");
+  assert.strictEqual(escaped.decision.scope.reason, "target-outside-authorized-project");
+  assert.strictEqual(escaped.runId, undefined);
   const foreign = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-foreign-gateway-"));
   try {
     const gateway = path.join(foreign, ".agents/skills/wl-skills-bd/SKILL.md");

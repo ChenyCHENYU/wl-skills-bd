@@ -83,8 +83,11 @@ try {
 }
 
 const cli = path.resolve(__dirname, "..", "bin", "wl-skills-bd.js");
+const cliProject = fs.mkdtempSync(path.join(os.tmpdir(), "wl-bd-task-cli-"));
+fs.writeFileSync(path.join(cliProject, "package.json"), JSON.stringify({ devDependencies: { "@agile-team/wl-skills-bd": "*" } }));
+process.on("exit", () => fs.rmSync(cliProject, { recursive: true, force: true }));
 const route = spawnSync(process.execPath, [cli, "task", "--type", "add-api"], {
-  cwd: path.resolve(__dirname, ".."),
+  cwd: cliProject,
   encoding: "utf8",
   windowsHide: true,
 });
@@ -92,7 +95,7 @@ assert.strictEqual(route.status, 1, "缺少目标 canonical 安装时输出计�
 assert.match(route.stdout, /codegen plan/);
 
 const blockedWrite = spawnSync(process.execPath, [cli, "task", "--type", "add-api", "--apply"], {
-  cwd: path.resolve(__dirname, ".."),
+  cwd: cliProject,
   encoding: "utf8",
   windowsHide: true,
 });
