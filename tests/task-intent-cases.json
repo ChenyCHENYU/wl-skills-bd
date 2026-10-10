@@ -1,0 +1,38 @@
+[
+  {
+    "task": "只补充后端 Service 注释，不新增接口，不实现功能",
+    "status": "baseline",
+    "skills": [],
+    "rules": [
+      "B12"
+    ],
+    "mode": "apply"
+  },
+  {
+    "task": "只补充 Service 注释",
+    "status": "baseline",
+    "skills": [],
+    "rules": [
+      "B12"
+    ],
+    "mode": "apply",
+    "javaProject": true
+  },
+  {
+    "task": "只分析新增接口方案，暂不生成或改写代码",
+    "status": "matched",
+    "skills": [
+      "service-codegen"
+    ],
+    "mode": "explain"
+  },
+  {
+    "task": "不要新增接口，只补充后端注释",
+    "status": "baseline",
+    "skills": [],
+    "rules": [
+      "B12"
+    ],
+    "mode": "apply"
+  }
+]

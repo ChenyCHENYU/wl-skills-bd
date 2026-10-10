@@ -1,0 +1,86 @@
+[
+  {
+    "id": "validate",
+    "command": [
+      "validate"
+    ],
+    "when": {
+      "rulePrefixes": [
+        "B"
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "targets"
+      ],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^B[0-9]+$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "sideEffects": {
+      "business": "none",
+      "records": true,
+      "reports": "stdout"
+    },
+    "authorization": "read-only-business-check",
+    "receipt": "package-execution-record-v1"
+  },
+  {
+    "id": "review-run",
+    "command": [
+      "review",
+      "run"
+    ],
+    "when": {
+      "rulePrefixes": [
+        "B"
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "targets"
+      ],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "sideEffects": {
+      "business": "none",
+      "records": true,
+      "reports": "stdout"
+    },
+    "authorization": "read-only-business-check",
+    "receipt": "package-execution-record-v1"
+  }
+]

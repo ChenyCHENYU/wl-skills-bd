@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.36.0",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.36.0：后端注释职责、契约模板与 Java 8 文档质量门）",
+  "version": "0.37.0",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.37.0：后端注释职责、契约模板与 Java 8 文档质量门）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"

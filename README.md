@@ -4,7 +4,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.36.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.37.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -702,3 +702,15 @@ CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 `validate --run-id <runId> --json`、`review run --run-id <runId> --json` 及等价 MCP 返回真实工具回执，含输入快照、实际规则覆盖与执行状态。`status --run-id <runId> --json` 检查尚未执行项和过期输入，`doctor --host codex --json` 只静态检查宿主入口。任务计划、文件哈希和模型读取自述不能当作已执行或已读取证据；模型自述标为“模型声明”，Java/Maven 与运行验证没有实际证据时保持未验证。观测记录只写 `.wl-skills-bd/runs/`，代码、配置、数据库与权限写入继续受现有确认链约束。
 
 同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。
+
+### 当前请求、动作边界与 Harness 集成
+
+任务判定保留原始文本，并将当前请求、历史引用和明确否定分开。自然语言判定覆盖已公开语料与规则，不能承诺任意表述都自动命中；遇到歧义或缺口应补充目标/领域或显式指定本包能力，不能静默选择。编辑前显示真实 `notice`，包括版本、技能、规则、目标、runId、动作与待检查项。
+
+`protocol describe --json` 声明 `task-intent-v1`、`result-core-v1`、`executor-catalog-v1`；`schemas.resultCore` 与五操作 `schemas.results` 可供宿主验证。原有结果字段保留，新增 `result.integration`：项目适用范围、动作模式、规则身份、目标、就绪状态、允许执行器和真实执行/验证状态。`ok` 只表示调用成功。未声明使用的输入字段进入 diagnostics，不会转成授权依据。
+
+`action.mode` 为 explain/plan/inspect/apply/unspecified；解释和规划不自动启动检查。`businessWritesAuthorized=false`，任务意图不能替代业务写入授权。`ruleRefs` 为包自有规则身份（包名、规则 ID、版本、来源、性质），自然语言约束有稳定 ID；原规则名称与列表保留。所有规则的机械/语义验证仍以实际回执为准。
+
+`inventory.executors` 声明本包业务只读检查器、目标与参数 Schema；其适用条件由本包判定。外部适配器须核对同项目、同包、同版本、同 runId 的真实计划、新鲜度与允许动作，指定一个目标，不能扩大范围；支持规则子集的执行器不得选择计划外规则。多目标需拆分调用。五包和 Harness 均为可选组合，不新增兄弟包或 Harness 运行时依赖；卸下适配器后原 CLI/MCP 继续独立使用。
+
+仅补注释的请求会排除“不新增接口/不实现功能”的否定动作；后端目标文件或实际 Maven 项目证据决定 B12 基线。只有 Service 等称谓而没有后端事实时返回 needs-context。
