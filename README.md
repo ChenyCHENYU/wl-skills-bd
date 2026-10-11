@@ -4,7 +4,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.37.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.38.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -18,6 +18,10 @@ Java 工程未声明本包 npm 依赖时，安装器将宿主 MCP 的 npx 调用
 ## 如何确认本包正在起作用
 
 每次适用任务先运行项目本地 `wl-skills-bd task --input "修改目标文件" --target-file src/Foo.java --json`。编辑前展示真实 `notice`：包名与版本、判定、选中 Skill 或基础约束、具体规则、目标、runId 和尚未执行的检查。普通修改也需要基础约束提醒；相关但未覆盖的意图显示 gap 与建议；没有目标依据显示 needs-context，职责外显示 not-applicable，不强行匹配。
+
+Java/Maven 项目事实只补充模糊任务的上下文，不能把明确的 Vue 页面、CSS 样式或日常请求转成后端任务。明确 Java/Controller/Mapper 目标、后端职责或前后端联调内容仍按真实证据判定；单纯共享目录或存在 pom.xml 不代表所有请求都受 BD 约束。
+
+自有 CLI 值参数支持 `--target B` 与 `--target=B`；缺值、空白值和冲突的重复值会在写入前拒绝。`validate` 只接受一个目标位置参数，未知目标选项不会静默忽略；多个目标分别执行并复用任务 runId。执行器异常也写失败终态，不能把未完成检查显示为长期运行或通过。
 
 执行实际检查时复用 `--run-id`，结束读取 `wl-skills-bd status --run-id <id> --json`，分别报告执行和验证、实际检查文件、过期证据与未执行项。`notice.displayEvidence=unverified` 表示工具回执不能证明聊天界面展示；安装、路由或模型自报不能证明宿主加载/模型读取。
 
@@ -648,9 +652,9 @@ wl-skills-bd task "加字段落库"             # → add-field
 wl-skills-bd task "改个空指针bug"          # → fix-bug
 wl-skills-bd task "连不上redis"           # → config-op
 wl-skills-bd task "新开发销售模块全套"      # → new-service
-wl-skills-bd task --list                   # 列出 8 种任务
+wl-skills-bd task --list                   # 列出 13 种任务
 
-# 指定类型输出契约增量、计划确认和验证步骤；task 本身不写文件
+# 指定类型输出契约增量、计划确认和验证步骤；task 记录计划，不改写业务文件
 wl-skills-bd task --type add-api
 wl-skills-bd task --type add-field --target-file src/main/java/.../Foo.java
 ```
@@ -714,3 +718,9 @@ CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 `inventory.executors` 声明本包业务只读检查器、目标与参数 Schema；其适用条件由本包判定。外部适配器须核对同项目、同包、同版本、同 runId 的真实计划、新鲜度与允许动作，指定一个目标，不能扩大范围；支持规则子集的执行器不得选择计划外规则。多目标需拆分调用。五包和 Harness 均为可选组合，不新增兄弟包或 Harness 运行时依赖；卸下适配器后原 CLI/MCP 继续独立使用。
 
 仅补注释的请求会排除“不新增接口/不实现功能”的否定动作；后端目标文件或实际 Maven 项目证据决定 B12 基线。只有 Service 等称谓而没有后端事实时返回 needs-context。
+
+### 任务反馈与执行边界
+
+编辑前展示实际 `notice` 的包版本、判定、动作、技能/规则、目标、runId、待检查项与版本对齐信息；解释/规划和明确禁止检查时不自动执行检查。`runtime=mismatch/invalid` 或 `planStale=true` 必须先同步本包或重新判定。只读 `inspect` 输入变化后重新 `task`；`apply` 完成正常业务修改后可用同 runId 做实际复扫，但规则、配置或版本变化仍需重新判定。
+
+单包只读取自身公开能力；多包复用同 runId 并各存各的证据。`matched/ready/ok=true` 仅说明判定或调用成功，是否完成以实际 `executionStatus/validationStatus/checkedFiles` 为准。未接入或不适用的项目不借父目录规则；宿主发现、模型读取、反馈展示没有真实证据时继续标记未验证。

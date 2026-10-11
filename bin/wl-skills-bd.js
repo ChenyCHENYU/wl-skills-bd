@@ -15,6 +15,7 @@ const { resolveWithin, writeTextAtomic } = require("../lib/manifest");
 const { formatReport } = require("../lib/reporters");
 const safeFix = require("../lib/safe-fix");
 const permissionExport = require("../lib/permission-export");
+const { normalizeArguments, commandPositionals } = require("../lib/cli-arguments");
 
 function has(args, flag) {
   return args.includes(flag);
@@ -177,22 +178,27 @@ function commandCheck(args) {
 
 function commandValidate(args) {
   const root = targetRoot(args);
-  const valueOptions = new Set(["--target", "--format", "--output", "--rules", "--run-id"]);
-  const positionals = [];
-  for (let index = 0; index < args.length; index += 1) {
-    if (valueOptions.has(args[index])) { index += 1; continue; }
-    if (!args[index].startsWith("-")) positionals.push(args[index]);
-  }
+  let positionals;
+  try { positionals = commandPositionals(args, ["--target", "--format", "--output", "--rules", "--run-id"], ["--json", "--quick", "--staged", "--strict"], 1); }
+  catch (error) { console.error(error.message); return 1; }
   const positional = positionals[0];
   const selectedRules = option(args, "--rules");
   const runtime = require("../lib/task-runtime");
   const handle = runtime.validationStart(root, { runId: option(args, "--run-id"), targets: runtime.checkTargets(root, positional) });
-  const result = runBeRules(root, {
-    scanRel: positional,
-    quick: has(args, "--quick"),
-    stagedFiles: has(args, "--staged") ? stagedFiles(root) : undefined,
-    rules: selectedRules ? selectedRules.split(",").map((value) => value.trim()).filter(Boolean) : undefined,
-  });
+  let result;
+  try {
+    result = runBeRules(root, {
+      scanRel: positional,
+      quick: has(args, "--quick"),
+      stagedFiles: has(args, "--staged") ? stagedFiles(root) : undefined,
+      rules: selectedRules ? selectedRules.split(",").map((value) => value.trim()).filter(Boolean) : undefined,
+    });
+  } catch (error) {
+    const receipt = runtime.observation.finishExecution(handle, { exitCode: 1, validationStatus: "unverified", checks: [], checkedFiles: [], errorCode: error.code || error.name, summary: { reason: "validator-input-error" }, artifacts: [] });
+    if (has(args, "--json")) printJson({ ok: false, error: { code: "validator-input-error", message: error.message }, runId: handle.metadata.runId, receipt });
+    else console.error(error.message);
+    return 1;
+  }
   result.receipt = runtime.validationFinish(handle, result, result.stats.error > 0 || (has(args, "--strict") && result.stats.warn > 0) ? 1 : 0);
   result.runId = handle.metadata.runId;
   const format = has(args, "--json") ? "json" : option(args, "--format", "text");
@@ -1330,12 +1336,9 @@ function commandTask(args, persist = true) {
     else for (const row of router.listTasks()) console.log(`${row.id}: ${row.name}`);
     return 0;
   }
-  const valueFlags = new Set(["--target", "--type", "--input", "--run-id", "--target-file"]);
-  const positionals = [];
-  for (let i = 0; i < args.length; i += 1) {
-    if (valueFlags.has(args[i])) { i += 1; continue; }
-    if (!args[i].startsWith("-")) positionals.push(args[i]);
-  }
+  let positionals;
+  try { positionals = commandPositionals(args, ["--target", "--type", "--input", "--run-id", "--target-file"], ["--json"]); }
+  catch (error) { console.error(error.message); return 1; }
   const type = option(args, "--type");
   const input = option(args, "--input") || positionals.join(" ");
   if (!input && !type) { console.error('task 需要 --input "<任务>"、--type <id> 或 --list'); return 1; }
@@ -1552,9 +1555,13 @@ function commandCapabilities(args) {
 }
 
 function main(argv = process.argv.slice(2)) {
-  const [command = "help", ...args] = argv;
+  const [command = "help", ...rawArgs] = argv;
   if (["help", "--help", "-h"].includes(command)) { help(); return 0; }
   if (["version", "--version", "-v"].includes(command)) { console.log(pkg.version); return 0; }
+  if (command === "protocol") return require("../lib/protocol-cli").runCli(rawArgs);
+  let args;
+  try { args = normalizeArguments(rawArgs); }
+  catch (error) { console.error(error.message); return 1; }
   if (["init", "update", "diff"].includes(command)) return commandInstall(command, args);
   if (command === "clean") return commandClean(args);
   if (command === "check") return commandCheck(args);
@@ -1579,7 +1586,6 @@ function main(argv = process.argv.slice(2)) {
   if (command === "explain") return commandTask(args, false);
   if (command === "status") return commandStatus(args);
   if (command === "doctor-host") return commandDoctor(args, true);
-  if (command === "protocol") return require("../lib/protocol-cli").runCli(args);
   if (command === "test") return commandTest(args);
   if (command === "mcp") { require("../mcp/server").startServer(); return 0; }
   console.error(`未知命令：${command}`);
