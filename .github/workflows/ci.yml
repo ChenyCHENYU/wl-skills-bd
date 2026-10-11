@@ -35,6 +35,8 @@ jobs:
       - run: npm run support:check
       - run: npm run verify
       - if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        run: npm audit --omit=dev --audit-level=moderate
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == 22
         run: npm run verify:quality-maven
       - run: npm pack --dry-run --ignore-scripts
 

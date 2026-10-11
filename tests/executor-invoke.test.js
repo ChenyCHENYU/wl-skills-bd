@@ -139,7 +139,7 @@ test("综合审查保留 audit/new-service/fix-bug/refactor 真实 Skill 准入"
   }
 }));
 
-test("开始后的取消和输出超限留下真实 failed/unverified 中断回执，不遗留 running", async () => fixture(async ({ root, run }) => {
+test("开始后的取消（Windows 仅 handler 注入）和输出超限留下真实 failed/unverified 中断回执", async () => fixture(async ({ root, run }) => {
   const helper = require("../lib/executor-process.cjs");
   const runtimeFile = path.resolve(__dirname, "../lib/task-runtime.js");
   for (const mode of ["cancel", "output-limit"]) {
@@ -156,7 +156,12 @@ test("开始后的取消和输出超限留下真实 failed/unverified 中断回�
         const processResult = helper.invokeCli({ cli: cliFile, args: [], projectRoot: root, maxOutputBytes: 128 });
         if (mode === "cancel") timer = setInterval(() => {
           if (fs.existsSync(marker)) {
-            clearInterval(timer); cancellationSent = true; process.kill(process.pid, "SIGTERM");
+            clearInterval(timer);
+            // Windows process.kill(SIGTERM) terminates this test worker. Emit only
+            // the handler event there; the helper must still terminate the real CLI.
+            if (process.platform === "win32") assert.equal(process.emit("SIGTERM"), true);
+            else process.kill(process.pid, "SIGTERM");
+            cancellationSent = true;
           }
         }, 10);
         try { return await processResult; } finally { clearInterval(timer); }
@@ -167,7 +172,11 @@ test("开始后的取消和输出超限留下真实 failed/unverified 中断回�
       assert.equal(cancellationSent, true);
       assert.equal(result.ok, true);
       assert.equal(result.result.execution.cancelled, true);
-      assert.equal(result.result.execution.signal, "SIGKILL");
+      if (process.platform === "win32") {
+        const { exitCode, signal } = result.result.execution;
+        assert.ok((Number.isInteger(exitCode) && exitCode !== 0) || (typeof signal === "string" && signal.length > 0), "taskkill 必须留下真实非正常退出，不虚报 SIGKILL");
+      } else assert.equal(result.result.execution.signal, "SIGKILL");
+      assert.throws(() => process.kill(result.result.execution.processId, 0), { code: "ESRCH" }, "实际子 CLI 必须已经终止");
       assert.equal(result.result.executionStatus, "failed");
     } else {
       assert.equal(result.ok, false);
