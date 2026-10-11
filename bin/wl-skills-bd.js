@@ -1109,7 +1109,7 @@ function commandCommit(args) {
 
 function help() {
   console.log("task --input <任务> --json：判定并持久化任务计划与 preflight 证据（尚未执行）；route/explain 同判定但只读、不记录 run；status --run-id <id> --json：读取真实回执；doctor-host --host codex --json：静态宿主入口诊断。");
-  console.log("protocol describe --json / protocol request --input-file <request.json> --json：公开集成协议（能力目录与统一判定/状态信封）。");
+  console.log("protocol describe --json / protocol request --input-file <request.json> --json：公开集成协议（能力目录、判定/状态及本包受控 execute）。");
   console.log(`wl-skills-bd v${pkg.version}
 
 用法：wl-skills-bd <command> [options]
@@ -1593,6 +1593,11 @@ function main(argv = process.argv.slice(2)) {
   return 1;
 }
 
-if (require.main === module) process.exitCode = main();
+if (require.main === module) {
+  Promise.resolve().then(() => main()).then((code) => { process.exitCode = code; }, (error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
 
 module.exports = { main };

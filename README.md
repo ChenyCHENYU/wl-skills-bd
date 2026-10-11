@@ -4,7 +4,7 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.38.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.39.0-blue.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -41,20 +41,46 @@ bd 独立提供后端注释规范、契约模板与检查，唯一权威为 [19-
 
 ## 公开集成协议 v1
 
-供 harness、客户端或其他编排层以统一 JSON 入口调用本包判定与状态能力（业务执行仍走本包 CLI/MCP，不因协议新增兄弟包依赖）。
+供单包客户端、harness 或其他编排层以统一 JSON 入口调用本包判定、状态与受控执行能力；执行映射和检查器均由 BD 自己维护，不新增兄弟包依赖。
 
 ```bash
-wl-skills-bd protocol describe --json                      # 能力目录、五操作映射、请求/响应 Schema、错误码
+wl-skills-bd protocol describe --json                      # 能力目录、六操作映射、请求/响应 Schema、错误码
 wl-skills-bd protocol request --input-file request.json --json
 ```
 
-- 操作：`route` / `explain`（只读判定）、`task`（判定并持久化计划，尚未执行）、`status`（回查本包执行回执）、`doctor-host`（宿主入口静态诊断）。
-- 请求字段：`protocolVersion`(1)、`operation`、`requestId`、`runId`、`projectRoot`、`task`、`targets`、`skill`、`host`+ `type`（条件式必要输入：task/type 至少其一）。
+- 操作：`route` / `explain`（只读判定）、`task`（判定并持久化计划，尚未执行）、`status`（回查本包执行回执）、`doctor-host`（宿主入口静态诊断）、`execute`（按真实计划调用本包只读检查器）。旧五操作保持兼容；`features` 中的 `executor-invoke-v1` 表示支持稳定执行入口。
+- 判定请求字段：`protocolVersion`(1)、`operation`、`requestId`、`runId`、`projectRoot`、`task`、`targets`、`skill`、`host`+ `type`（条件式必要输入：task/type 至少其一）；执行请求另用下方 `executorId` / `parameters` Schema。
 - 统一信封：`{ ok, result | error, diagnostics }`；机器结果与诊断分离；非法输入在触达执行器前判 `invalid-input`，不写入任何记录。
-- 错误码：`unsupported-protocol` / `unknown-operation` / `missing-input` / `invalid-input` / `internal-error`；请求失败（exit 2）时 stdout 仍为可解析 JSON 信封。
+- 完整输入 Schema、执行器参数与错误码以 `describe` 为准；请求失败（exit 2）时 stdout 仍为可解析 JSON 信封。
 - **`ok=true` 只表示协议调用成功，不代表业务验证通过**；业务状态以 `result` 内 `validationStatus` / `executionStatus` 为准（仅计划时为 `unverified` / `not-executed`）。
-- 副作用：仅 `task` 写入本包自己的 runs 目录（见 describe 中各操作 `sideEffects`）；其余操作只读。
+- 副作用：`task` 写计划，`execute` 调用检查器并写本包 runs 回执；二者不因协议调用获得修改业务文件权限。其余操作只读，各操作以 `sideEffects` 明确声明。
 - 协议实现为本包内置的同源快照 `integration-protocol.cjs`，五包一致；跨包一致性由 conformance `integration-protocol.check.cjs` 验收。
+
+### 单包稳定执行入口
+
+先对明确目标建立任务，再在项目外保存以下请求，使用同一个 runId：
+
+```bash
+wl-skills-bd task --input "检查 Java Service 职责注释" --target-file src/FooService.java --run-id comment-review --json
+wl-skills-bd protocol request --input-file /tmp/bd-execute.json --json
+wl-skills-bd status --run-id comment-review --json
+```
+
+```json
+{
+  "operation": "execute",
+  "projectRoot": "/absolute/path/to/backend-project",
+  "runId": "comment-review",
+  "executorId": "validate",
+  "parameters": { "targets": ["src/FooService.java"], "rules": ["B12"] }
+}
+```
+
+`projectRoot`、`runId`、`executorId`、`parameters` 必填。目标需属于真实计划且位于项目内；缺计划、过期计划、规则/安装版本漂移、解释或禁止检查的任务、未知执行器和不合法参数会拒绝，不能由宿主拼出一条 CLI 绕开准入。
+
+当前支持 `validate`（单个文件或目录，可选 B 规则子集；省略 rules 时使用真实任务的 B 规则子集）与 `review-run`（需任务选中 `convention-audit-be`，仅整个项目根 `targets:["."]`，B 检查遵守计划子集）。普通注释基础任务不会升级成综合审查。BD 自己维护命令参数与范围语义；新增规则无需宿主再维护规则表。`execute` 不开放 codegen/apply、数据库写入或配置修复。
+
+结果保留原 `status`，附 `executorId` 与 `execution`（真实 `exitCode` / `signal` / stdout / stderr / 输出截断 / 取消）。业务检查退出 1 时仍是 `ok=true` 的已完成调用，业务失败和覆盖范围必须从真实回执判断。取消时立即终止执行器进程树；本次已开始但未完成的检查记执行失败、验证未验证，不伪造问题或通过项。输出超过 4 MiB 明确失败。详细边界见 [公开 API 与兼容性](docs/public-api.md)。
 
 ## 核心能力
 
@@ -724,3 +750,7 @@ CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 编辑前展示实际 `notice` 的包版本、判定、动作、技能/规则、目标、runId、待检查项与版本对齐信息；解释/规划和明确禁止检查时不自动执行检查。`runtime=mismatch/invalid` 或 `planStale=true` 必须先同步本包或重新判定。只读 `inspect` 输入变化后重新 `task`；`apply` 完成正常业务修改后可用同 runId 做实际复扫，但规则、配置或版本变化仍需重新判定。
 
 单包只读取自身公开能力；多包复用同 runId 并各存各的证据。`matched/ready/ok=true` 仅说明判定或调用成功，是否完成以实际 `executionStatus/validationStatus/checkedFiles` 为准。未接入或不适用的项目不借父目录规则；宿主发现、模型读取、反馈展示没有真实证据时继续标记未验证。
+
+维护边界、结构化执行和防漂移验收：[维护契约](docs/maintenance-contract.md)。
+
+1.0 评估与稳定公开面准入：[版本成熟度](docs/release-maturity.md)。

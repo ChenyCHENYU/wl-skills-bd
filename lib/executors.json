@@ -52,8 +52,8 @@
       "run"
     ],
     "when": {
-      "rulePrefixes": [
-        "B"
+      "skills": [
+        "convention-audit-be"
       ]
     },
     "parameters": {

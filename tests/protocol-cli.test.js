@@ -18,12 +18,13 @@ function tempRoot() {
   return root;
 }
 
-test("describe 返回协议版本、能力目录与五个统一操作", () => {
+test("describe 保留五个原操作并追加稳定 execute 入口", () => {
   const described = protocol.describe();
   assert.equal(described.protocolVersion, 1);
   assert.equal(described.package, pkg.name);
   assert.ok(Array.isArray(described.capabilities) && described.capabilities.length > 0);
-  assert.deepEqual(described.operations.map((operation) => operation.id), ["route", "explain", "task", "status", "doctor-host"]);
+  assert.deepEqual(described.operations.map((operation) => operation.id), ["route", "explain", "task", "status", "doctor-host", "execute"]);
+  assert.ok(described.features.includes("executor-invoke-v1"));
   for (const operation of described.operations) {
     assert.equal(typeof operation.readOnly, "boolean");
     assert.equal(typeof operation.mapping, "string");

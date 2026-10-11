@@ -32,7 +32,27 @@ jobs:
           distribution: temurin
           java-version: "8"
       - run: npm ci
+      - run: npm run support:check
       - run: npm run verify
       - if: matrix.os == 'ubuntu-latest' && matrix.node == 22
         run: npm run verify:quality-maven
       - run: npm pack --dry-run --ignore-scripts
+
+  compatibility:
+    name: Published baseline upgrade and coexistence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+      - run: npm run compatibility:check -- --output compatibility-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-evidence
+          path: compatibility-evidence
