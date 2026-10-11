@@ -89,6 +89,15 @@ checkVersionMatch(
   "standards/index.md 版本",
 );
 
+// 原生 gateway 的 npx 命令会被宿主实际执行，不能分发旧版或 latest。
+// 使用本地 wl-skills-bd 的无 pin 形式仍合法；检查每个自身包 pin。
+const gatewayFile = "files/.agents/skills/wl-skills-bd/SKILL.md";
+for (const match of read(gatewayFile).matchAll(/@agile-team\/wl-skills-bd@([^\s`]+)/g)) {
+  if (match[1] !== VERSION) {
+    errors.push(`${gatewayFile}: gateway npx pin 版本不一致 (${match[1]} vs ${VERSION})`);
+  }
+}
+
 // package.json#description
 const descMatch = (PKG.description || "").match(/v(\d+\.\d+\.\d+)/);
 if (!descMatch) {

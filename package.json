@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
   "version": "0.39.0",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.39.0：测试分层、安全审计模板与 DTO 风险分级）",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.39.0：结构化执行、独立维护与兼容验收）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
