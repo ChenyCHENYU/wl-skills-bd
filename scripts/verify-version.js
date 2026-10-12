@@ -251,13 +251,14 @@ if (exists("mcp/registry.js")) {
       errors.push("capabilities.json: 缺少 mcpTools（运行 npm run capabilities:sync）");
     }
     if (Array.isArray(capabilities.cliCommands?.items) && capabilities.cliCommands.items.length > 0) {
-      const binSource = read("bin/wl-skills-bd.js");
-      for (const cmd of capabilities.cliCommands.items) {
-        const dispatched = binSource.includes(`command === "${cmd.name}"`)
-          || new RegExp(`\\[[^\\]]*"${cmd.name}"[^\\]]*\\]\\.includes\\(command\\)`).test(binSource);
-        if (!dispatched) {
-          errors.push(`capabilities.json: CLI 命令 ${cmd.name} 未在 bin/wl-skills-bd.js main() 分发中找到`);
-        }
+      const { commandInventory, createCommandDispatcher } = require("../lib/cli-catalog");
+      const { commandHandlers } = require("../bin/wl-skills-bd");
+      createCommandDispatcher(commandHandlers); // Fail if a described command lacks a real entry.
+      if (JSON.stringify(capabilities.cliCommands.items) !== JSON.stringify(commandInventory())) {
+        errors.push("capabilities.json: CLI 完整参数/副作用与单源目录漂移");
+      }
+      if (capabilities.cliCommands.count !== capabilities.cliCommands.items.length) {
+        errors.push("capabilities.json: CLI count 与实际条目数不一致");
       }
     } else {
       errors.push("capabilities.json: 缺少 cliCommands（运行 npm run capabilities:sync）");

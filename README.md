@@ -4,9 +4,9 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.40.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.41.0-blue.svg)]()
 
-当前版本为 0.40.0，增加分层质量模式与精选扫描约束。业务项目需正常 update 后才能读取新增规范；本包不会自动修改业务源码或 POM。静态规则只读检查业务源码；Maven 构建/测试执行代码，必须在隔离 Runner 验收。当前接入建议见 [Java 质量门](files/.github/java-quality/README.md) 和 [Gate 质量分级与隔离](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/13-quality-cost-and-isolation.md)。
+当前版本为 0.41.0，统一完整 CLI 能力目录、真实分发/帮助与安装快照，并补齐当前任务文档和聚合工作区范围诊断。业务项目需正常 update 后才能读取新增规范；本包不会自动修改业务源码或 POM。静态规则只读检查业务源码；Maven 构建/测试执行代码，必须在隔离 Runner 验收。当前接入建议见 [Java 质量门](files/.github/java-quality/README.md) 和 [Gate 质量分级与隔离](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/13-quality-cost-and-isolation.md)。
 
 本轮收敛：B32 请求入口缺失保留 error，未知消费端的返回 DTO 改为 warn，不自动改变 DTO 可变性；B30 正确保留 `{resource}` 等类级路由前缀。Maven 模板拆出静态审计和单元/架构测试作业，显式选择单元测试并排除外部流程/未归类测试；被排除的集合须另行归类验收，不能称为全部测试已通过。
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
@@ -56,6 +56,8 @@ wl-skills-bd protocol request --input-file request.json --json
 - 判定请求字段：`protocolVersion`(1)、`operation`、`requestId`、`runId`、`projectRoot`、`task`、`targets`、`skill`、`host`+ `type`（条件式必要输入：task/type 至少其一）；执行请求另用下方 `executorId` / `parameters` Schema。
 - 统一信封：`{ ok, result | error, diagnostics }`；机器结果与诊断分离；非法输入在触达执行器前判 `invalid-input`，不写入任何记录。
 - 完整输入 Schema、执行器参数与错误码以 `describe` 为准；请求失败（exit 2）时 stdout 仍为可解析 JSON 信封。
+- `inventory.commands`、本地 CLI 分发/帮助和安装资产 `capabilities.json` 的 CLI 条目共用 `lib/cli-catalog.js`；完整列出业务治理、判定、协议、帮助/版本入口及参数、副作用。`check` 检查安装漂移；`validate` 执行规则并记录回执；`codegen` 使用位置参数 `<validate|plan|apply> <contract-file>`。目录不等于调用授权，修改仍遵循原命令的计划确认和项目边界。
+- MCP 完整输入 Schema 与副作用来自真实 `mcp/registry.js`。`tools/list` 的 `annotations.readOnlyHint` 和 `_meta["wl/sideEffects"]`、协议 MCP 目录及安装能力快照一致：`recorded` 写本包观测记录，`gated` 按模式可能写业务资产且仍需原计划确认；`readonly` 不写项目文件。`wls_be_task` 的 route/explain/status/list 模式仍只读，`wls_be_test` 只返回源码/场景，不保存测试文件。
 - **`ok=true` 只表示协议调用成功，不代表业务验证通过**；业务状态以 `result` 内 `validationStatus` / `executionStatus` 为准（仅计划时为 `unverified` / `not-executed`）。
 - 副作用：`task` 写计划，`execute` 调用检查器并写本包 runs 回执；二者不因协议调用获得修改业务文件权限。其余操作只读，各操作以 `sideEffects` 明确声明。
 - 协议实现为本包内置的同源快照 `integration-protocol.cjs`，五包一致；跨包一致性由 conformance `integration-protocol.check.cjs` 验收。
@@ -187,7 +189,7 @@ wl-skills-bd status --run-id comment-review --json
 
 - **单一机器能力清单**：`capabilities.json` 升级为 schemaVersion 2 的 agent manifest——13 个 Skill 携带触发词、状态、风险与目标项目安装路径（修复安装后 `files/` 前缀死链），并索引 MCP 工具、CLI 命令和推荐读取顺序；`wl-skills-bd capabilities [--json]` 与 MCP `wls_be_capabilities` 一步返回。AGENTS.md 收敛为"清单 + 10 条不变式 + 指针"，MCP `initialize.instructions` 写明五步接入约定。
 - **Pre-flight 文件快照**：`task`（CLI `--json` / MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`。哈希可对账文件版本，模型是否实际读取仍需独立证据；v0.32 起明确区分文件快照与模型声明。
-- **入口防漂移门禁**：`verify-version` 校验 capabilities 的 mcpTools/cliCommands 与 registry、bin 分发严格一致；`verify-doc-sync` 扫描文档中 "N 个 MCP" 数量漂移与 AGENTS.md 有序列表编号断档；`lint-skills` 强制每个 Skill 声明 `metadata.triggers` 且 standards 引用断链零容忍。
+- **入口防漂移门禁**：`verify-version` 校验 capabilities 的 MCP 名称与 registry 一致，并核验完整 CLI 条目参数/副作用和真实 handler 接线；CLI 测试对照公开目录、安装快照与实际帮助，新增无 handler 或重复别名即拒绝。`verify-doc-sync` 扫描文档中 "N 个 MCP" 数量漂移与 AGENTS.md 有序列表编号断档；`lint-skills` 强制每个 Skill 声明 `metadata.triggers` 且 standards 引用断链零容忍。
 
 ### v0.24.0 变更审查、平台适配与精准修复
 
@@ -679,18 +681,29 @@ wl-skills-bd troubleshoot "CrashLoopBackOff"
 
 bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点触发（加个接口/落库/改 bug）。关键：**任何任务模式都必须遵守对应规范兜底，不让约束形同虚设**。详见 [standards/26](files/.github/standards/26-task-driven.md)。
 
-**8 种任务类型**：
+<!-- wl-bd-task-types:begin -->
+当前 **13 种任务类型**（从 task-router 与规则 catalog 生成）：
 
-| 任务 | 模式 | 触发词 | 规则子集 |
-|---|---|---|---|
-| new-service | full | 新开发/全套CRUD | B1-B32 子集 + J |
-| add-api | incremental-contract | 加接口/加方法 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31/B32 |
-| add-field | incremental-contract | 加字段/落库 | B3/B4/B7/B18/B25/B26/B31 |
-| add-business-cmd | incremental-contract | 加submit/状态机 | B5/B8/B17/B20/B24/B25/B26/B31 |
-| fix-bug | fix | 改bug/修复 | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31/B32 |
-| refactor | fix | 重构/优化 | B5-B12/B23/B24/B25/B26/B28/B30/B31/B32 |
-| audit | readonly | 审计/体检 | B1-B32 |
-| config-op | config | 配置/连不上 | config-doctor |
+| 任务类型 | 名称 | 模式 | 典型触发词 | 计划规则/质量门 | 原工具 |
+|---|---|---|---|---|---|
+| new-service | 新开发完整后端服务 | full | 新开发/新建服务/全套CRUD | B1/B2/B3/B4/B5/B7/B8/B12/B17/B18/B20/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J8 | codegen/validate/contract/permissions |
+| add-api | 加一个接口/方法 | incremental-contract | 加接口/加方法/加一个 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31/B32 | codegen/validate/contract |
+| add-field | 加字段落库 | incremental-contract | 加字段/落库/加列 | B3/B4/B7/B18/B25/B26/B31 | codegen/validate/db |
+| add-business-cmd | 加业务命令/状态机 | incremental-contract | 加业务命令/状态机/加submit | B5/B8/B17/B20/B24/B25/B26/B31 | codegen/validate/contract |
+| fix-bug | 修 bug/修复问题 | fix | 改bug/修复/fix | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31/B32 | validate/fix/troubleshoot |
+| refactor | 重构/优化 | fix | 重构/优化/refactor | B5/B6/B8/B9/B10/B11/B12/B23/B24/B25/B26/B28/B30/B31/B32/J1/J2/J3/J8 | validate/fix |
+| audit | 审计/体检 | readonly | 审计/体检/检查 | B1/B2/B3/B4/B5/B6/B7/B8/B9/B10/B11/B12/B13/B14/B15/B16/B17/B18/B19/B20/B21/B22/B23/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J4/J5/J8 | doctor/validate |
+| config-op | 配置/环境/部署 | config | 配置/环境/部署 | 见 task 回执 requiredChecks | config/troubleshoot |
+| generate-tests | 生成行为契约测试 | readonly | 生成单元测试/生成单测/补覆盖率 | B1/B5/B24/B25/B32/J8 | test/validate |
+| integration-adapter | MQ/HTTP 集成适配 | readonly | mq 对接/接入 mq/消息封装 | B20/B21/B28/B32/J1/J8 | integration/review |
+| project-context | 模块上下文治理 | readonly | 模块上下文/查关联服务/生成前去重 | 见 task 回执 requiredChecks | catalog/context |
+| extract-business-doc | 反向抽取业务文档 | readonly | 抽取业务文档/业务理解/接手陌生模块 | 见 task 回执 requiredChecks | context |
+| data-safety | 数据与缓存安全 | readonly | 缺 ttl/没有 ttl/缓存安全 | B13/B14/B15/B16/B17/B18/B19/B25 | validate/fix |
+
+表格表示判定与计划，具体范围、资产缺口、待补输入和实际验证状态以 task/status 回执为准。反向业务文档抽取目前只有骨架指导，缺少语义执行器时明确报告 gap。
+<!-- wl-bd-task-types:end -->
+
+维护任务定义或 catalog 后，在包仓库运行 `node scripts/sync-task-docs.js --write` 同步当前目录，再运行 `npm run verify:doc-sync`；门禁默认只读，发现文档漂移会失败。规则与步骤仍由原任务/执行器维护，表格不建立第二套路由。
 
 **路由与安全写链**：
 
@@ -777,3 +790,5 @@ CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 维护边界、结构化执行和防漂移验收：[维护契约](docs/maintenance-contract.md)。
 
 1.0 评估与稳定公开面准入：[版本成熟度](docs/release-maturity.md)。
+
+MCP 请求入口使用共享 JSON-RPC 边界校验：非法请求/参数返回明确错误并继续服务，仅注册工具可调用；通知不应答，`id:null` 请求保留原 id。

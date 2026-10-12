@@ -30,6 +30,8 @@ const TEMPLATE_MAP = Object.freeze({
 });
 
 const validateTool = {
+  write: "recorded",
+  sideEffects: "写本包 runs 校验回执；只读业务源码，不执行 Maven",
   name: "wls_be_validate",
   description: `只读扫描后端工程 ${capabilities.backendRules.displayRange}；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。`,
   inputSchema: {
@@ -54,6 +56,8 @@ const validateTool = {
 };
 
 const reviewTool = {
+  write: "gated",
+  sideEffects: "run 写校验回执；baseline/adapter/assertion apply 需要 planHash+confirmApply，写前重算",
   name: "wls_be_review",
   description: "变更级审查总控与平台适配闭环：统一 B 规则、项目质量断言、MQ/集成适配、Maven 供应链、JaCoCo 全量/变更行覆盖率及分级修复。平台语义只来自项目描述符；apply 均要求 planHash + confirmApply。",
   inputSchema: {
@@ -86,6 +90,8 @@ const reviewTool = {
 };
 
 const doctorTool = {
+  write: "readonly",
+  sideEffects: "无写入；静态环境和宿主诊断",
   name: "wls_be_doctor",
   description: "只读检查 JDK/Maven、兼容性 Profile、质量门配置、ArchUnit 与租户接入证据。",
   inputSchema: { type: "object", properties: { host: { type: "string", minLength: 1 } }, additionalProperties: false },
@@ -93,6 +99,8 @@ const doctorTool = {
 };
 
 const codegenTool = {
+  write: "gated",
+  sideEffects: "validate/plan 只读；apply 需 planHash+confirmApply 后写生成源码与清单",
   name: "wls_be_codegen",
   description: "契约驱动的 validate/plan/apply。plan 返回 openQuestions 业务疑点清单与三方字段对账汇总；apply 必须携带预览 planHash 与 confirmApply=true（含疑点时另需 questionsReviewed=true）；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。",
   inputSchema: {
@@ -114,6 +122,8 @@ const codegenTool = {
 };
 
 const contractTool = {
+  write: "gated",
+  sideEffects: "seed/show/diff/inspect/impact/integration-inspect 只读；migrate 确认后写契约",
   name: "wls_be_contract",
   description: "契约种子、分类/兼容迁移、协作差异、集成完备性与字段影响。inspect/impact/integration-inspect 只读；migrate 必须 planHash + confirmApply。",
   inputSchema: {
@@ -156,6 +166,8 @@ const contractTool = {
 };
 
 const fixTool = {
+  write: "gated",
+  sideEffects: "默认预览；确认后写白名单修复并备份、回滚及复扫",
   name: "wls_be_safe_fix",
   description: "仅自动修复有确定性前置条件的 B3/B5。默认预览；apply 必须携带 planHash 与 confirmApply=true，并执行备份、写前重算、失败回滚、强制复扫和 FIX_BE 报告。其他规则降级人工。",
   inputSchema: {
@@ -173,6 +185,8 @@ const fixTool = {
 };
 
 const standardsTool = {
+  write: "readonly",
+  sideEffects: "无写入；读取本包规范",
   name: "wls_be_standards",
   description: `查询 ${capabilities.standards.count} 条后端规范。无参返回索引；id=${capabilities.standards.ids[0]}~${capabilities.standards.latest} 返回指定全文。只读。`,
   inputSchema: {
@@ -189,6 +203,8 @@ const standardsTool = {
 };
 
 const templatesTool = {
+  write: "readonly",
+  sideEffects: "无写入；读取本包模板",
   name: "wls_be_templates",
   description: "查询 16 个确定性代码/DDL/测试模板。无参返回 README；name 必须来自固定白名单。只读。",
   inputSchema: {
@@ -204,6 +220,8 @@ const templatesTool = {
 };
 
 const dbPreviewTool = {
+  write: "readonly",
+  sideEffects: "无写入；生成 DDL 文本，不连接数据库、不执行 DDL",
   name: "wls_be_db_preview",
   description: "只读预览契约生成的 DDL（CREATE 或 ALTER）、Expand-Contract 阶段标注与自定义索引。不写盘。",
   inputSchema: {
@@ -219,6 +237,8 @@ const dbPreviewTool = {
 };
 
 const exportPermissionsTool = {
+  write: "gated",
+  sideEffects: "默认预览；确认后写项目内权限输出文件",
   name: "wls_be_export_permissions",
   description: "从后端契约导出权限码为 wl-skills-kit 的 SYS_PERMISSION_INFO.md 片段。默认预览；apply 必须传 planHash + confirmApply=true，写前重算并可回滚。",
   inputSchema: {
@@ -237,6 +257,8 @@ const exportPermissionsTool = {
 };
 
 const configTool = {
+  write: "gated",
+  sideEffects: "init/migrate/fix 需计划确认后写配置；doctor 默认只读，probe 额外执行 TCP 探测",
   name: "wls_be_config",
   description: "配置分层与多环境管理（v0.12）：doctor 体检 L0~L8、init 生成骨架、migrate 客户迁移、fix 明文密码修复。详见 standards/25。",
   inputSchema: {
@@ -265,6 +287,8 @@ const configTool = {
 };
 
 const troubleshootTool = {
+  write: "readonly",
+  sideEffects: "无写入；返回诊断建议",
   name: "wls_be_troubleshoot",
   description: "故障排查导引（v0.12）：根据错误关键字匹配诊断树，输出可能原因与排查步骤。覆盖 DB/Redis/Nacos/K8s/端口/Bean/Profile/Flyway/Feign/MQ 常见错误。",
   inputSchema: {
@@ -279,6 +303,8 @@ const troubleshootTool = {
 };
 
 const taskTool = {
+  write: "recorded",
+  sideEffects: "task 写本包 runs 计划/preflight；route/explain/status/list 只读；不执行或授权业务写入",
   name: "wls_be_task",
   description: "任务判定与可观测性：覆盖全部13个 Skill，输出 matched/baseline/ambiguous/gap/not-applicable、runId、规则、候选与未验证项；mode=status 读取真实回执。只写本包观测状态；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。",
   inputSchema: {
@@ -297,6 +323,8 @@ const taskTool = {
 };
 
 const catalogTool = {
+  write: "gated",
+  sideEffects: "plan/show/check/integration-audit 只读；apply 确认后写目录快照",
   name: "wls_be_catalog",
   description: "模块目录治理与重复集成工具审计。默认摘要；show 可按 section/cursor 有界读取。扫描默认只限当前模块；apply 需要同一 planHash 与确认。",
   inputSchema: {
@@ -323,6 +351,8 @@ const catalogTool = {
 };
 
 const contextTool = {
+  write: "readonly",
+  sideEffects: "无写入；读取当前模块及一跳快照",
   name: "wls_be_context",
   description: "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件/字节/token 预算和 contextHash。只读。",
   inputSchema: {
@@ -343,6 +373,8 @@ const contextTool = {
 };
 
 const commitTool = {
+  write: "readonly",
+  sideEffects: "无写入；校验提交消息、git range 和钩子接入",
   name: "wls_be_commit",
   description: "按 catalog 配置校验 type(scope): 功能点-具体内容。validate 校验单条消息，check 校验 Git range，doctor 检查版本受控 Hook 接入。只读。",
   inputSchema: {
@@ -359,6 +391,8 @@ const commitTool = {
 };
 
 const testTool = {
+  write: "readonly",
+  sideEffects: "无写入；返回测试代码/场景，不保存生成文件",
   name: "wls_be_test",
   description: "行为契约测试生成：从 customOperations 生成正常路径、前置拒绝、状态转移及 batch 全成全败测试。gen 生成可执行 ServiceTest；scenarios 列出场景。禁止 TODO、空断言和部分成功语义。",
   inputSchema: {
@@ -376,6 +410,8 @@ const testTool = {
 };
 
 const capabilitiesTool = {
+  write: "readonly",
+  sideEffects: "无写入；读取机器能力清单",
   name: "wls_be_capabilities",
   description: `AI 首次接入的单一能力清单（只读）：${capabilities.skills.count} 个 Skill（触发词/状态/安装路径）、${capabilities.backendRules.displayRange} 规则范围、${capabilities.standards.count} 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。`,
   inputSchema: {
@@ -398,6 +434,10 @@ const capabilitiesTool = {
 
 const DEFINITIONS = [capabilitiesTool, validateTool, reviewTool, doctorTool, codegenTool, contractTool, fixTool, standardsTool, templatesTool, dbPreviewTool, exportPermissionsTool, configTool, troubleshootTool, taskTool, catalogTool, contextTool, commitTool, testTool].map(withResponseControls);
 const HANDLERS = Object.fromEntries(DEFINITIONS.map((tool) => [tool.name, tool]));
-const TOOLS = DEFINITIONS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
+const TOOLS = DEFINITIONS.map(({ name, description, inputSchema, write, sideEffects }) => ({
+  name, description, inputSchema,
+  annotations: { readOnlyHint: write === "readonly" },
+  _meta: { "wl/sideEffects": { write, summary: sideEffects } },
+}));
 
 module.exports = { HANDLERS, TOOLS };

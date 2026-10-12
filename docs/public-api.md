@@ -15,6 +15,8 @@
 
 `lib/index.js` 的命名空间为：beRules、codegen、collaboration、commitPolicy、configDoctor、configFix、permissionExport、configInit、configLayering、configProbe、contract、contractCompat、deterministic、doctor、envMatrix、installer、impactAnalysis、integrationAdapter、integrationContract、manifest、projectCatalog、qualityGate、repair、review、reporters、safeFix、supplyChain、taskRouter、taskRuntime、taskObservability、pipeline、policyAssertions、contextPlanner、templateEngine、troubleshoot。已有消费者不应被悄悄移到私有路径；新宿主应优先使用 CLI/MCP 或公开协议。
 
+CLI 命令/别名/参数/副作用和分发 descriptor 共用 `lib/cli-catalog.js`，帮助与公开目录从其生成；新增入口缺少真实 handler 即失败。MCP 的 handler、完整输入 Schema、模式副作用共用真实注册表；`tools/list` 用 `annotations.readOnlyHint` 和 `_meta["wl/sideEffects"]` 暴露，公开协议与安装快照引用同一事实。`recorded` 指本包 runs 记录写入，不能当作项目完全零写入；`gated` 表示可能存在经确认的资产写入，不代表所有调用都写入。目录和 MCP 提示均不授予执行或写入权限。
+
 ## 执行所有权
 
 `lib/executors.json` 发布本包允许的只读检查器与完整参数 Schema，`lib/executor-invoke.js` 保存本包 CLI 参数及范围语义。共用辅助层负责协议校验、真实 status 准入、路径边界与子进程生命周期；共用层不定义 BD 的业务规则或 CLI 旗标。宿主不得导入包的私有库，也不复制 `validate --rules` 或 `review run` 的拼接表。

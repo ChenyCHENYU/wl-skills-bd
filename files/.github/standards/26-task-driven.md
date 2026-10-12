@@ -47,16 +47,27 @@ discover → context → validate → plan → approval → apply → verify
 
 ## 3. 任务类型与最小验证面
 
-| 任务 | 模式 | 主要入口 | 必跑规则/质量门 |
-|---|---|---|---|
-| `new-service` | full | codegen 全链路 | 相关 B 规则 + J1~J8 + strict contract |
-| `add-api` | incremental-contract | `customOperations/relations/export` | B1/B2/B5/B8/B12/B20 |
-| `add-field` | incremental-contract | `fields + alter` | B3/B4/B7/B18 + DDL 预览 |
-| `add-business-cmd` | incremental-contract | `customOperations` | B5/B8/B17/B20 + completion |
-| `fix-bug` | fix | troubleshoot + safe-fix/人工最小修复 | B3/B5/B7/B8/B17/B18 |
-| `refactor` | fix | 基线审计 + 小步重构 | B5~B12/B23/B24/B25/B26 + Maven |
-| `audit` | readonly | doctor + validate | B1~B31 + J1~J8 + production assurance；quick/staged 需补 full |
-| `config-op` | config | config doctor/init/migrate/fix | standards/24/25 |
+<!-- wl-bd-task-types:begin -->
+当前 **13 种任务类型**（从 task-router 与规则 catalog 生成）：
+
+| 任务类型 | 名称 | 模式 | 典型触发词 | 计划规则/质量门 | 原工具 |
+|---|---|---|---|---|---|
+| new-service | 新开发完整后端服务 | full | 新开发/新建服务/全套CRUD | B1/B2/B3/B4/B5/B7/B8/B12/B17/B18/B20/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J8 | codegen/validate/contract/permissions |
+| add-api | 加一个接口/方法 | incremental-contract | 加接口/加方法/加一个 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31/B32 | codegen/validate/contract |
+| add-field | 加字段落库 | incremental-contract | 加字段/落库/加列 | B3/B4/B7/B18/B25/B26/B31 | codegen/validate/db |
+| add-business-cmd | 加业务命令/状态机 | incremental-contract | 加业务命令/状态机/加submit | B5/B8/B17/B20/B24/B25/B26/B31 | codegen/validate/contract |
+| fix-bug | 修 bug/修复问题 | fix | 改bug/修复/fix | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31/B32 | validate/fix/troubleshoot |
+| refactor | 重构/优化 | fix | 重构/优化/refactor | B5/B6/B8/B9/B10/B11/B12/B23/B24/B25/B26/B28/B30/B31/B32/J1/J2/J3/J8 | validate/fix |
+| audit | 审计/体检 | readonly | 审计/体检/检查 | B1/B2/B3/B4/B5/B6/B7/B8/B9/B10/B11/B12/B13/B14/B15/B16/B17/B18/B19/B20/B21/B22/B23/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J4/J5/J8 | doctor/validate |
+| config-op | 配置/环境/部署 | config | 配置/环境/部署 | 见 task 回执 requiredChecks | config/troubleshoot |
+| generate-tests | 生成行为契约测试 | readonly | 生成单元测试/生成单测/补覆盖率 | B1/B5/B24/B25/B32/J8 | test/validate |
+| integration-adapter | MQ/HTTP 集成适配 | readonly | mq 对接/接入 mq/消息封装 | B20/B21/B28/B32/J1/J8 | integration/review |
+| project-context | 模块上下文治理 | readonly | 模块上下文/查关联服务/生成前去重 | 见 task 回执 requiredChecks | catalog/context |
+| extract-business-doc | 反向抽取业务文档 | readonly | 抽取业务文档/业务理解/接手陌生模块 | 见 task 回执 requiredChecks | context |
+| data-safety | 数据与缓存安全 | readonly | 缺 ttl/没有 ttl/缓存安全 | B13/B14/B15/B16/B17/B18/B19/B25 | validate/fix |
+
+表格表示判定与计划，具体范围、资产缺口、待补输入和实际验证状态以 task/status 回执为准。反向业务文档抽取目前只有骨架指导，缺少语义执行器时明确报告 gap。
+<!-- wl-bd-task-types:end -->
 
 规则子集用于单点任务的快速反馈，不替代发布前全量质量门。
 

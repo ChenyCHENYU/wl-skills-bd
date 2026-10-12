@@ -12,6 +12,7 @@
  */
 
 const readline = require("readline");
+const { validateRequest } = require("../lib/json-rpc-request.cjs");
 const { TOOLS, HANDLERS } = require("./registry");
 const { applyResultBudget, normalizeControls, readCursor } = require("./result-budget");
 const { validateSchema } = require("./schema-validator");
@@ -41,7 +42,11 @@ function sendError(id, code, message) {
 // ─── Tool 调度 ──────────────────────────────────────────────────────────
 
 async function dispatchTool(id, toolName, toolArgs) {
-  const desc = HANDLERS[toolName];
+  if (typeof toolName !== "string" || !toolName.trim()) {
+    sendError(id, -32602, "name 必须是非空字符串");
+    return;
+  }
+  const desc = Object.hasOwn(HANDLERS, toolName) ? HANDLERS[toolName] : null;
   if (!desc) {
     sendError(id, -32601, `未知工具: ${toolName}`);
     return;
@@ -81,7 +86,7 @@ async function dispatchTool(id, toolName, toolArgs) {
 
 function parseMessage(line) {
   const raw = line.trim();
-  if (!raw) return null;
+  if (!raw) return undefined;
   try {
     return JSON.parse(raw);
   } catch {
@@ -90,7 +95,7 @@ function parseMessage(line) {
       id: null,
       error: { code: -32700, message: "Parse error" },
     });
-    return null;
+    return undefined;
   }
 }
 
@@ -109,24 +114,14 @@ function initialize(id, params) {
 }
 
 async function handleMessage(msg) {
-  if (!msg || typeof msg !== "object" || Array.isArray(msg) || msg.jsonrpc !== "2.0"
-    || typeof msg.method !== "string") {
-    sendError(msg && typeof msg === "object" && !Array.isArray(msg) ? msg.id ?? null : null,
-      -32600, "Invalid Request");
-    return;
-  }
-  const { id, method } = msg;
-  if (method === "notifications/initialized") return; // ack，无需响应
-  if (id === undefined || id === null) return;
-  const params = msg.params === undefined ? {} : msg.params;
-  if (!params || typeof params !== "object" || Array.isArray(params)) {
-    sendError(id, -32602, "params 必须是对象");
-    return;
-  }
+  const validated = validateRequest(msg);
+  if (validated.error) return send(validated.error);
+  if (validated.notification) return;
+  const { id, method, params } = validated.request;
   if (method === "initialize") return initialize(id, params);
   if (method === "tools/list") return sendResult(id, { tools: TOOLS });
   if (method === "tools/call")
-    return dispatchTool(id, params.name, params.arguments || {});
+    return dispatchTool(id, params.name, params.arguments === undefined ? {} : params.arguments);
   if (method === "ping") return sendResult(id, {});
   return sendError(id, -32601, `Method not found: ${method}`);
 }
@@ -140,7 +135,7 @@ function startServer() {
   rl.on("line", (line) => {
     queue = queue.then(async () => {
       const msg = parseMessage(line);
-      if (!msg) return;
+      if (msg === undefined) return;
       try { await handleMessage(msg); } catch (error) {
         sendError(msg && typeof msg === "object" && !Array.isArray(msg) ? msg.id ?? null : null,
           -32603, `工具服务内部错误：${error.message}`);

@@ -295,237 +295,425 @@
       {
         "name": "wls_be_capabilities",
         "description": "AI 首次接入的单一能力清单（只读）：13 个 Skill（触发词/状态/安装路径）、B1~B32 规则范围、30 条规范、MCP 工具与 CLI 命令索引、推荐读取顺序。section 可按分区读取；无参返回完整清单。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；读取机器能力清单",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_validate",
         "description": "只读扫描后端工程 B1~B32；规则子集在扫描前短路，默认返回摘要，quick/staged/changed 会明确标记 partial 覆盖。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "recorded",
+        "sideEffects": "写本包 runs 校验回执；只读业务源码，不执行 Maven",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_review",
         "description": "变更级审查总控与平台适配闭环：统一 B 规则、项目质量断言、MQ/集成适配、Maven 供应链、JaCoCo 全量/变更行覆盖率及分级修复。平台语义只来自项目描述符；apply 均要求 planHash + confirmApply。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "run 写校验回执；baseline/adapter/assertion apply 需要 planHash+confirmApply，写前重算",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_doctor",
         "description": "只读检查 JDK/Maven、兼容性 Profile、质量门配置、ArchUnit 与租户接入证据。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；静态环境和宿主诊断",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_codegen",
         "description": "契约驱动的 validate/plan/apply。plan 返回 openQuestions 业务疑点清单与三方字段对账汇总；apply 必须携带预览 planHash 与 confirmApply=true（含疑点时另需 questionsReviewed=true）；requireComplete 可阻断业务骨架；写前重算，冲突默认整批零写入。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "validate/plan 只读；apply 需 planHash+confirmApply 后写生成源码与清单",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_contract",
         "description": "契约种子、分类/兼容迁移、协作差异、集成完备性与字段影响。inspect/impact/integration-inspect 只读；migrate 必须 planHash + confirmApply。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "seed/show/diff/inspect/impact/integration-inspect 只读；migrate 确认后写契约",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_safe_fix",
         "description": "仅自动修复有确定性前置条件的 B3/B5。默认预览；apply 必须携带 planHash 与 confirmApply=true，并执行备份、写前重算、失败回滚、强制复扫和 FIX_BE 报告。其他规则降级人工。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "默认预览；确认后写白名单修复并备份、回滚及复扫",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_standards",
         "description": "查询 30 条后端规范。无参返回索引；id=01~30 返回指定全文。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；读取本包规范",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_templates",
         "description": "查询 16 个确定性代码/DDL/测试模板。无参返回 README；name 必须来自固定白名单。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；读取本包模板",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_db_preview",
         "description": "只读预览契约生成的 DDL（CREATE 或 ALTER）、Expand-Contract 阶段标注与自定义索引。不写盘。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；生成 DDL 文本，不连接数据库、不执行 DDL",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_export_permissions",
         "description": "从后端契约导出权限码为 wl-skills-kit 的 SYS_PERMISSION_INFO.md 片段。默认预览；apply 必须传 planHash + confirmApply=true，写前重算并可回滚。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "默认预览；确认后写项目内权限输出文件",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_config",
         "description": "配置分层与多环境管理（v0.12）：doctor 体检 L0~L8、init 生成骨架、migrate 客户迁移、fix 明文密码修复。详见 standards/25。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "init/migrate/fix 需计划确认后写配置；doctor 默认只读，probe 额外执行 TCP 探测",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_troubleshoot",
         "description": "故障排查导引（v0.12）：根据错误关键字匹配诊断树，输出可能原因与排查步骤。覆盖 DB/Redis/Nacos/K8s/端口/Bean/Profile/Flyway/Feign/MQ 常见错误。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；返回诊断建议",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_task",
         "description": "任务判定与可观测性：覆盖全部13个 Skill，输出 matched/baseline/ambiguous/gap/not-applicable、runId、规则、候选与未验证项；mode=status 读取真实回执。只写本包观测状态；实际写入必须走 codegen/safe-fix/config 的计划、确认与回滚门。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "recorded",
+        "sideEffects": "task 写本包 runs 计划/preflight；route/explain/status/list 只读；不执行或授权业务写入",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_catalog",
         "description": "模块目录治理与重复集成工具审计。默认摘要；show 可按 section/cursor 有界读取。扫描默认只限当前模块；apply 需要同一 planHash 与确认。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "gated"
+        "write": "gated",
+        "sideEffects": "plan/show/check/integration-audit 只读；apply 确认后写目录快照",
+        "annotations": {
+          "readOnlyHint": false
+        }
       },
       {
         "name": "wls_be_context",
         "description": "为当前模块构建有界上下文：扫描当前模块，最多加载一跳上下游快照，不遍历关联模块源码目录；返回文件/字节/token 预算和 contextHash。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；读取当前模块及一跳快照",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_commit",
         "description": "按 catalog 配置校验 type(scope): 功能点-具体内容。validate 校验单条消息，check 校验 Git range，doctor 检查版本受控 Hook 接入。只读。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；校验提交消息、git range 和钩子接入",
+        "annotations": {
+          "readOnlyHint": true
+        }
       },
       {
         "name": "wls_be_test",
         "description": "行为契约测试生成：从 customOperations 生成正常路径、前置拒绝、状态转移及 batch 全成全败测试。gen 生成可执行 ServiceTest；scenarios 列出场景。禁止 TODO、空断言和部分成功语义。 所有响应统一支持 response.mode/maxItems/maxBytes；大结果用 response.cursor 续取。",
-        "write": "readonly"
+        "write": "readonly",
+        "sideEffects": "无写入；返回测试代码/场景，不保存生成文件",
+        "annotations": {
+          "readOnlyHint": true
+        }
       }
     ]
   },
   "cliCommands": {
-    "count": 28,
+    "count": 31,
     "items": [
       {
         "name": "init",
-        "summary": "安装受管资产；冲突零写入，--force 备份后覆盖",
-        "write": "gated"
+        "args": "[--target <dir>] [--json] [--dry-run] [--force] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "预览安装受管资产；确认计划后写入",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "确认后写受管文件、manifest 和备份；默认只预览"
       },
       {
         "name": "update",
-        "summary": "按 manifest 增量更新并保护本地修改",
-        "write": "gated"
+        "args": "[--target <dir>] [--json] [--dry-run] [--force] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "按 manifest 增量升级并保护本地修改",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "确认后事务化更新受管文件；冲突默认零写入"
       },
       {
         "name": "diff",
+        "args": "[--target <dir>] [--json]",
         "summary": "查看包内容、manifest 与当前项目差异",
-        "write": "readonly"
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "clean",
-        "summary": "只清理未被修改的受管文件",
-        "write": "gated"
+        "args": "[--target <dir>] [--json] [--dry-run] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "预览卸载未被修改的受管文件",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "确认后删除本包未修改受管文件；保留修改和备份"
       },
       {
         "name": "check",
+        "args": "[--target <dir>] [--json]",
         "summary": "检查 manifest 和安装漂移",
-        "write": "readonly"
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入；不执行 Maven 质量门"
       },
       {
         "name": "validate",
-        "summary": "执行 B 规则快速审计并输出端点与数据库事实源差异",
-        "write": "readonly"
+        "args": "[path] [--target <dir>] [--json] [--rules <B1,B2>] [--run-id <id>] [--strict] [--quick] [--staged] [--format <text|json|sarif|markdown>] [--output <file>]",
+        "summary": "执行 B1~B32 规则、端点及数据库事实源审计",
+        "execution": "programmatic",
+        "write": "recorded",
+        "sideEffects": "写本包 runs 校验回执；--output 可写项目内报告；不修改业务源码"
       },
       {
         "name": "doctor",
-        "summary": "环境/JDK/质量门/租户/契约覆盖/配置体检",
-        "write": "readonly"
+        "args": "[--target <dir>] [--json] [--host <name>]",
+        "summary": "环境/JDK/质量门/租户/契约/配置体检；--host 为宿主诊断",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "codegen",
-        "summary": "契约驱动生成 validate/plan/apply（planHash+确认）",
-        "write": "gated"
+        "args": "<validate|plan|apply> <contract-file> [--target <dir>] [--json] [--force] [--questions-reviewed] [--require-complete] [--plan-hash <hash> --confirm]",
+        "summary": "契约驱动代码生成与业务疑点核对",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "validate/plan 只读；apply 按 planHash 确认写生成源码与清单"
       },
       {
         "name": "contract",
-        "summary": "契约治理 seed/inspect/migrate/show/diff",
-        "write": "gated"
+        "args": "<seed|inspect|migrate|show|diff> [contract-file] [--target <dir>] [--json] [--table <table>] [--database <type>] [--profile <id>] [--root-package <package>] [--module <id>] [--entity <name>] [--contract-id <id>] [--format <json|markdown>] [--output <file>] [--frontend <file>] [--openapi <file>] [--permissions <file>] [--kit-api-md <file>] [--strict] [--allow-unresolved] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "契约种子、校验、迁移、展示及协作差异核对",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "seed/inspect/diff 默认只读；migrate 确认后写契约；show --output 写项目内文件"
       },
       {
         "name": "db",
-        "summary": "数据库治理 preview/review（三方对账）/drift/executed/ledger/snapshot-template（DDL 只生成不执行）",
-        "write": "gated"
+        "args": "<preview|review|drift|executed|ledger|snapshot-template> [contract-file] [--target <dir>] [--json] [--snapshot <file>] [--database <type>] [--prefix <table-prefix>] [--output <file>] [--table <table>] [--column <column>] [--ddl-plan-hash <hash>] [--migration-hash <hash>] [--approval-ref <ref>] [--source-ref <ref>] [--executed-at <ISO>] [--expires-at <ISO>] [--by <name>] [--note <text>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "DDL 预览、字段三方对账、漂移与执行台账",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "不执行 DDL；--output 可写报告；executed 确认后写执行台账"
       },
       {
         "name": "permissions",
-        "summary": "权限码导出 export（kit 片段）",
-        "write": "gated"
+        "args": "export <contract-file> [--target <dir>] [--json] [--output <file>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "导出 kit SYS_PERMISSION_INFO 权限码片段",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "默认预览；确认后写项目内输出文件"
       },
       {
         "name": "catalog",
-        "summary": "模块目录 plan/apply/show/check（默认仅当前模块）",
-        "write": "gated"
+        "args": "<plan|apply|show|check|rules> [--target <dir>] [--json] [--module <id>] [--section <name>] [--limit <n>] [--cursor <n>] [--full] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "模块目录与规则注册完整性核对",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "plan/show/check/rules 只读；apply 确认后写目录快照"
       },
       {
         "name": "context",
-        "summary": "精准上下文 plan（当前模块 + 一跳快照）",
-        "write": "readonly"
+        "args": "plan [--target <dir>] [--json] [--module <id>] [--task <text>] [--keywords <text>] [--max-files <n>] [--max-bytes <n>] [--max-tokens <n>] [--max-hops <n>]",
+        "summary": "精准上下文：当前模块及一跳快照",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入；不扫描关联模块源码"
       },
       {
         "name": "impact",
-        "summary": "字段影响 field（契约/存储/迁移/源码证据）",
-        "write": "readonly"
+        "args": "field --module <id> --field <name> [--target <dir>] [--json] [--table <table>] [--limit <n>] [--cursor <n>]",
+        "summary": "字段影响：契约、存储、迁移与源码证据",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "integration",
-        "summary": "集成治理 inspect/audit/adapters/plan/apply",
-        "write": "gated"
+        "args": "<inspect|audit|adapters|plan|apply> [contract-file] [--target <dir>] [--json] [--module <id>] [--binding <id>] [--recipe <id>] [--var <key=value>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "业务集成治理与平台适配器计划",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "inspect/audit/adapters/plan 只读；apply 确认后写适配源码；不是宿主协议入口"
       },
       {
         "name": "review",
-        "summary": "变更审查总控 run/baseline",
-        "write": "gated"
+        "args": "<run|baseline [plan|apply]> [--target <dir>] [--json] [--base <ref>] [--module <id>] [--rules <B1,B2>] [--run-id <id>] [--staged] [--quick] [--limit <n>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "变更审查及受控基线登记",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "run 写校验回执但不改源码；baseline plan 只读、apply 确认后写基线"
       },
       {
         "name": "commit",
-        "summary": "提交规范 validate/check/doctor",
-        "write": "readonly"
+        "args": "<validate|check|doctor> [--target <dir>] [--json] [--file <file>] [--message <text>] [--range <git-range>]",
+        "summary": "提交消息、提交范围及本地钩子诊断",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "fix",
-        "summary": "分级修复 advise/plan/apply/policy",
-        "write": "gated"
+        "args": "<advise|plan|apply|policy [plan|apply]> [path] [--target <dir>] [--json] [--rules <B1,B2>] [--module <id>] [--assertions <ids>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "分级修复建议、计划与确定性写链",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "advise/plan 只读；apply 确认后写白名单修复并复扫"
       },
       {
         "name": "config",
-        "summary": "配置分层 init/migrate/doctor/fix",
-        "write": "gated"
+        "args": "<init|migrate|doctor|fix> [--target <dir>] [--json] [--project <name>] [--module <id>] [--port <n>] [--datasource-type <oracle|mysql>] [--db-cluster <cx|non_cx|pt>] [--customer <name>] [--overwrite] [--to <customer>] [--from <customer>] [--plan|--apply] [--dry-run] [--probe] [--probe-timeout <ms>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "配置分层、环境迁移、体检与安全修复",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "init/migrate/fix 默认预览、确认后写配置；doctor 默认只读，--probe 额外探测 DB/Redis/Nacos TCP"
       },
       {
         "name": "troubleshoot",
-        "summary": "错误关键字 → 诊断步骤",
-        "write": "readonly"
-      },
-      {
-        "name": "route",
-        "summary": "task 的判定入口别名",
-        "write": "readonly"
-      },
-      {
-        "name": "explain",
-        "summary": "解释任务判定、候选、规则和未验证项",
-        "write": "readonly"
-      },
-      {
-        "name": "status",
-        "summary": "读取本包任务回执与输入新鲜度",
-        "write": "readonly"
-      },
-      {
-        "name": "doctor-host",
-        "summary": "静态宿主入口诊断，不证明宿主已加载",
-        "write": "readonly"
+        "args": "\"<keyword>\" | --list",
+        "summary": "错误关键字到诊断步骤",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "task",
-        "summary": "只读任务路由 → skill+规则子集+安全写链",
-        "write": "readonly"
+        "args": "[\"<task>\" | --input <task> | --type <id>] [--target <dir>] [--json] [--target-file <file>] [--run-id <id>] [--list]",
+        "summary": "判定并持久化 Skill/规则计划；--list 只读",
+        "execution": "programmatic",
+        "write": "recorded",
+        "sideEffects": "task 写本包 runs 计划/preflight；尚未执行业务动作；--list 不记录"
+      },
+      {
+        "name": "route",
+        "args": "[\"<task>\" | --input <task> | --type <id>] [--target <dir>] [--json] [--target-file <file>] [--run-id <id>] [--list]",
+        "summary": "只读任务判定与计划说明",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入；不记录 run"
+      },
+      {
+        "name": "explain",
+        "args": "[\"<task>\" | --input <task> | --type <id>] [--target <dir>] [--json] [--target-file <file>] [--run-id <id>] [--list]",
+        "summary": "只读解释判定、候选和未验证项",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入；不记录 run"
+      },
+      {
+        "name": "status",
+        "args": "[--target <dir>] [--json] [--run-id <id>]",
+        "summary": "读取本包任务回执、检查结果与新鲜度",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
+      },
+      {
+        "name": "doctor-host",
+        "args": "[--target <dir>] [--json] [--host <name>]",
+        "summary": "静态宿主入口诊断；不证明宿主已加载",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
       },
       {
         "name": "test",
-        "summary": "行为契约测试 gen/scenarios",
-        "write": "gated"
+        "args": "<gen|scenarios> <contract-file> [--target <dir>] [--json] [--output <file>] [--plan-hash <hash> --confirm] [--allow-production-writes]",
+        "summary": "行为契约测试生成及场景清单",
+        "execution": "programmatic",
+        "write": "gated",
+        "sideEffects": "默认输出内容；gen --output 确认后写测试文件"
       },
       {
         "name": "capabilities",
-        "summary": "输出 AI 能力清单（skills/触发词/MCP 工具/CLI 命令）",
-        "write": "readonly"
+        "args": "[--section <name>] [--json]",
+        "summary": "输出技能、MCP 与同源 CLI 能力清单",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入"
+      },
+      {
+        "name": "protocol",
+        "args": "describe --json | request --input-file <request.json> --json",
+        "summary": "公开集成协议：能力目录、任务及受控 execute",
+        "execution": "programmatic",
+        "write": "operation-defined",
+        "sideEffects": "describe 只读；request 按所选操作公开 sideEffects 执行"
       },
       {
         "name": "mcp",
+        "args": "",
         "summary": "启动 stdio MCP Server",
-        "write": "launcher"
+        "execution": "programmatic",
+        "write": "launcher",
+        "sideEffects": "启动服务；实际工具写入遵循各工具声明"
+      },
+      {
+        "name": "help",
+        "args": "",
+        "summary": "输出帮助和参数说明",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入",
+        "aliases": [
+          "--help",
+          "-h"
+        ]
+      },
+      {
+        "name": "version",
+        "args": "",
+        "summary": "输出包版本",
+        "execution": "programmatic",
+        "write": "readonly",
+        "sideEffects": "无写入",
+        "aliases": [
+          "--version",
+          "-v"
+        ]
       }
     ]
   },

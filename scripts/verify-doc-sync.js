@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const capabilities = require("../files/.wl-skills-bd/capabilities.json");
 const { normalizeSkillStatus } = require("../lib/capabilities");
+const { syncTaskDocs } = require("./sync-task-docs");
 
 const ROOT = path.resolve(__dirname, "..");
 const errors = [];
@@ -131,6 +132,7 @@ verifyActiveRuleRanges();
 verifyMcpToolCounts();
 verifyArchitectureCounts();
 verifyOrderedListNumbering();
+errors.push(...syncTaskDocs());
 
 if (errors.length > 0) {
   for (const error of errors) console.error(`doc-sync: ${error}`);

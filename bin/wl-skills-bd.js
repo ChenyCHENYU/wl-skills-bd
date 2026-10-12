@@ -16,6 +16,7 @@ const { formatReport } = require("../lib/reporters");
 const safeFix = require("../lib/safe-fix");
 const permissionExport = require("../lib/permission-export");
 const { normalizeArguments, commandPositionals } = require("../lib/cli-arguments");
+const { renderCommandHelp, createCommandDispatcher } = require("../lib/cli-catalog");
 
 function has(args, flag) {
   return args.includes(flag);
@@ -1114,31 +1115,7 @@ function help() {
 
 用法：wl-skills-bd <command> [options]
 
-  init         预览安装受管资产；携带 planHash + --confirm 后写入
-  update       预览 manifest 增量更新；写前重算并保护本地修改
-  diff         查看包内容、manifest 与当前项目差异
-  clean        预览清理未被修改的受管文件；确认后事务化执行
-  check        检查 manifest 和安装漂移
-  validate     执行 B1~B32 规则并输出 Controller 端点及数据库事实源差异
-  doctor       检查 Maven/JDK/质量门禁/租户接入/契约覆盖/环境配置
-  codegen      契约驱动生成：validate / plan / apply
-  contract     契约治理：seed / inspect / migrate / show / diff
-  db           数据库治理：preview / review（三方对账）/ drift / executed / ledger / snapshot-template（DDL 只生成不执行）
-  permissions  权限码导出：export（生成 kit SYS_PERMISSION_INFO 片段）
-  catalog      项目目录：plan / apply / show / check（默认仅当前模块）
-  context      精准上下文：plan（当前模块 + 一跳快照，不扫关联源码）
-  impact       字段影响：field（契约/存储/迁移/源码引用，必须指定模块）
-  integration  集成治理：inspect / audit（逻辑 ID、重试/死信/重放、重复工具）
-  review       变更审查总控：run / baseline（规则、适配、边界、供应链、覆盖率）
-  commit       提交规范：validate / check / doctor
-  fix          分级修复：advise / plan / apply / policy（确定性写链）
-  config       配置分层（v0.12）：init / migrate / doctor / fix
-  troubleshoot 故障排查（v0.12）：错误关键字 → 诊断步骤
-  task         任务驱动（v0.13）：只读识别任务类型 → skill+规则子集+安全写链步骤
-  test         测试生成（v0.16）：行为契约测试 gen / scenarios（测行为不测镜像）
-  capabilities AI 能力清单（v0.25）：skills 触发词/MCP 工具/CLI 命令/读取顺序
-  mcp          启动 stdio MCP Server                      
-  version      输出版本
+${renderCommandHelp()}
 
 通用参数：
   --target <dir>  指定项目根目录
@@ -1236,15 +1213,16 @@ fix 示例：
 
 任务驱动（v0.13，精准触发 + 统一安全写链）：
 
-  wl-skills-bd task --list                              # 列出 8 种任务类型
+  wl-skills-bd task --list                              # 列出 ${require("../lib/task-router").TASK_IDS.length} 种任务类型
   wl-skills-bd task "加个查询接口"                       # 自然语言识别任务 → skill/规则/步骤
   wl-skills-bd task "加字段落库"                         # 识别为 add-field
   wl-skills-bd task "改空指针bug"                        # 识别为 fix-bug
   wl-skills-bd task --type add-api                     # 输出契约增量与验证步骤
   wl-skills-bd task --type add-field --target-file <file> # 输出目标相关步骤；不直接写文件
 
-任务类型：new-service / add-api / add-field / add-business-cmd / fix-bug / refactor / audit / config-op
+任务类型：${require("../lib/task-router").TASK_IDS.join(" / ")}
 `);
+  return 0;
 }
 
 function commandTest(args) {
@@ -1554,43 +1532,43 @@ function commandCapabilities(args) {
   return 0;
 }
 
+function commandProtocol(args) {
+  return require("../lib/protocol-cli").runCli(args);
+}
+
+function commandMcp() {
+  require("../mcp/server").startServer();
+  return 0;
+}
+
+function commandVersion() {
+  console.log(pkg.version);
+  return 0;
+}
+
+// Function references are registered by their own names. Command/alias selection,
+// modes and arguments come only from cli-catalog, rather than a second command list.
+const commandHandlers = Object.fromEntries([
+  commandInstall, commandClean, commandCheck, commandValidate, commandDoctor,
+  commandCodegen, commandContract, commandDb, commandPermissions, commandCatalog,
+  commandContext, commandImpact, commandIntegration, commandReview, commandCommit,
+  commandFix, commandConfig, commandTroubleshoot, commandCapabilities, commandTask,
+  commandStatus, commandTest, commandProtocol, commandMcp, help, commandVersion,
+].map((handler) => [handler.name, handler]));
+const dispatcher = createCommandDispatcher(commandHandlers);
+
 function main(argv = process.argv.slice(2)) {
   const [command = "help", ...rawArgs] = argv;
-  if (["help", "--help", "-h"].includes(command)) { help(); return 0; }
-  if (["version", "--version", "-v"].includes(command)) { console.log(pkg.version); return 0; }
-  if (command === "protocol") return require("../lib/protocol-cli").runCli(rawArgs);
+  const descriptor = dispatcher.get(command);
+  if (!descriptor) {
+    console.error(`未知命令：${command}`);
+    help();
+    return 1;
+  }
   let args;
-  try { args = normalizeArguments(rawArgs); }
+  try { args = descriptor.rawArguments ? rawArgs : normalizeArguments(rawArgs); }
   catch (error) { console.error(error.message); return 1; }
-  if (["init", "update", "diff"].includes(command)) return commandInstall(command, args);
-  if (command === "clean") return commandClean(args);
-  if (command === "check") return commandCheck(args);
-  if (command === "validate") return commandValidate(args);
-  if (command === "doctor") return commandDoctor(args);
-  if (command === "codegen") return commandCodegen(args);
-  if (command === "contract") return commandContract(args);
-  if (command === "db") return commandDb(args);
-  if (command === "permissions") return commandPermissions(args);
-  if (command === "catalog") return commandCatalog(args);
-  if (command === "context") return commandContext(args);
-  if (command === "impact") return commandImpact(args);
-  if (command === "integration") return commandIntegration(args);
-  if (command === "review") return commandReview(args);
-  if (command === "commit") return commandCommit(args);
-  if (command === "fix") return commandFix(args);
-  if (command === "config") return commandConfig(args);
-  if (command === "troubleshoot") return commandTroubleshoot(args);
-  if (command === "capabilities") return commandCapabilities(args);
-  if (command === "task") return commandTask(args);
-  if (command === "route") return commandTask(args, false);
-  if (command === "explain") return commandTask(args, false);
-  if (command === "status") return commandStatus(args);
-  if (command === "doctor-host") return commandDoctor(args, true);
-  if (command === "test") return commandTest(args);
-  if (command === "mcp") { require("../mcp/server").startServer(); return 0; }
-  console.error(`未知命令：${command}`);
-  help();
-  return 1;
+  return dispatcher.run(command, args);
 }
 
 if (require.main === module) {
@@ -1600,4 +1578,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, commandHandlers };
