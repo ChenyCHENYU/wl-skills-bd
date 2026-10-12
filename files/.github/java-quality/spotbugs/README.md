@@ -1,5 +1,7 @@
 # SpotBugs 字节码分析（J4）
 
+当前模式以 [Java 质量门总说明](../README.md) 为准：wl-quality 保留严格硬门；wl-quality-audit 生产静态报告交给 Gate 分级，wl-quality-unit 独立运行单元/架构与覆盖率。检查不自动 apply 格式，也不运行外部集成测试。
+
 SpotBugs 在编译后检查 NPE、资源泄漏、并发、equals/hashCode 和可疑控制流。Java 8 基线固定使用 `spotbugs-maven-plugin:4.8.6.8`；4.9+ 插件要求 Java 11，不能用于 jh4j-cloud 3.1.0 的 Java 8 构建进程。
 
 ```bash

@@ -9,6 +9,12 @@
   <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
   <rule ref="category/java/errorprone.xml/OverrideBothEqualsAndHashcode"/>
   <rule ref="category/java/errorprone.xml/UseEqualsToCompareStrings"/>
+  <!-- 显式声明业务字符串的语言环境；协议/机器码用 Locale.ROOT，自然语言按契约选择。 -->
+  <rule ref="category/java/errorprone.xml/UseLocaleWithCaseConversions"/>
+
+  <!-- 密钥来源与 IV 生成由项目安全契约提供，禁止生成源码内固定值。 -->
+  <rule ref="category/java/security.xml/HardCodedCryptoKey"/>
+  <rule ref="category/java/security.xml/InsecureCryptoIv"/>
 
   <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
   <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>

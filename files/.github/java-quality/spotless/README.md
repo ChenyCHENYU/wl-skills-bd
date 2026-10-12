@@ -1,5 +1,7 @@
 # Spotless 格式门（J5）
 
+当前模式以 [Java 质量门总说明](../README.md) 为准：wl-quality 保留严格硬门；wl-quality-audit 生产静态报告交给 Gate 分级，wl-quality-unit 独立运行单元/架构与覆盖率。检查不自动 apply 格式，也不运行外部集成测试。
+
 Java 8 基线使用 `spotless-maven-plugin:2.30.0` 与 `google-java-format:1.7` 的 AOSP 风格。更高版本的 Spotless Maven Plugin 已提高运行 JRE 要求，不能直接放进 Java 8 构建。
 
 配置还固定：

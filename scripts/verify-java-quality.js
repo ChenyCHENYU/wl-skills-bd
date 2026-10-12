@@ -41,11 +41,17 @@ const xmlFiles = [
   "files/.github/java-quality/pmd/pmd-ruleset.xml",
   "files/.github/java-quality/spotbugs/spotbugs-exclude.xml",
   "files/.github/java-quality/maven-snippets/quality-profile.xml",
+  "files/.github/java-quality/maven-snippets/quality-audit-profile.xml",
+  "files/.github/java-quality/maven-snippets/quality-unit-profile.xml",
   "files/.github/java-quality/maven-snippets/p3c-legacy-profile.xml",
 ];
 for (const file of xmlFiles) assertXml(read(file), file);
 
 const qualityProfile = read("files/.github/java-quality/maven-snippets/quality-profile.xml");
+const auditProfile = read("files/.github/java-quality/maven-snippets/quality-audit-profile.xml");
+assert.match(auditProfile, /<id>wl-quality-audit<\/id>/);
+assert.match(auditProfile, /<maven.test.skip>true<\/maven.test.skip>/);
+assert.doesNotMatch(auditProfile, /<executions>/, "静态审计不得隐式绑定生命周期");
 assert.match(qualityProfile, /maven-checkstyle-plugin[\s\S]*?<version>3\.6\.0<\/version>/);
 assert.match(qualityProfile, /maven-pmd-plugin[\s\S]*?<version>3\.28\.0<\/version>/);
 assert.match(qualityProfile, /spotbugs-maven-plugin[\s\S]*?<version>4\.8\.6\.8<\/version>/);
@@ -89,7 +95,7 @@ try {
   <properties><maven.compiler.source>1.8</maven.compiler.source><maven.compiler.target>1.8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
   <dependencies><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.5</version><scope>test</scope></dependency></dependencies>
   <build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.4</version></plugin></plugins></build>
-  <profiles>${profileMatch[0]}</profiles>
+  <profiles>${profileMatch[0]}${auditProfile.match(/<profile>[\s\S]*<\/profile>/)[0]}${read("files/.github/java-quality/maven-snippets/quality-unit-profile.xml").match(/<profile>[\s\S]*<\/profile>/)[0]}</profiles>
 </project>\n`;
   fs.writeFileSync(path.join(tempRoot, "pom.xml"), pom, "utf8");
   fs.cpSync(QUALITY, path.join(tempRoot, ".github", "java-quality"), { recursive: true });
@@ -164,7 +170,7 @@ public class CoverageController {
     }
 }
 `, "utf8");
-  const coverageTest = path.join(tempRoot, "src", "test", "java", "com", "jhict", "fixture", "coverage", "CoverageTest.java");
+  const coverageTest = path.join(tempRoot, "src", "test", "java", "com", "jhict", "fixture", "coverage", "CoverageUnitTest.java");
   fs.mkdirSync(path.dirname(coverageTest), { recursive: true });
   fs.writeFileSync(coverageTest, `package com.jhict.fixture.coverage;
 
@@ -179,7 +185,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author wl-skills-bd
  */
-class CoverageTest {
+class CoverageUnitTest {
 
     @Test
     void shouldCoverServiceBranchesAndController() {
@@ -190,6 +196,18 @@ class CoverageTest {
     }
 }
 `, "utf8");
+  // 如果测试选择回退为 Surefire 默认 *Test，以下本地哨兵会失败；不访问任何外部系统。
+  for (const testName of ["DangerousFlowUnitTest", "LegacyUnclassifiedTest"]) {
+    const sentinel = path.join(path.dirname(coverageTest), `${testName}.java`);
+    fs.writeFileSync(sentinel, `package com.jhict.fixture.coverage;
+
+class ${testName} {
+    @org.junit.jupiter.api.Test
+    void mustNotRun() {
+        throw new AssertionError("External/unclassified test was selected");
+    }
+}\n`);
+  }
   const archUnitSource = path.join(tempRoot, "src", "test", "java", "com", "jhict", "fixture", "arch", "LayerRulesTest.java");
   fs.mkdirSync(path.dirname(archUnitSource), { recursive: true });
   fs.writeFileSync(
@@ -240,6 +258,72 @@ class CoverageTest {
     windowsHide: true,
   });
   assert.strictEqual(result.status, 0, `Java 质量 Maven 夹具失败：${result.error ? `\n${result.error.message}` : ""}\n${result.stdout || ""}\n${result.stderr || ""}`);
+  const reports = path.join(tempRoot, "target", "surefire-reports");
+  const testReports = fs.readdirSync(reports).filter((name) => name.endsWith(".xml"));
+  assert.ok(testReports.some((name) => name.includes("CoverageUnitTest")), "单元测试必须实际执行");
+  assert.ok(!testReports.some((name) => /DangerousFlow|LegacyUnclassified/.test(name)), "外部/未归类测试不得运行");
+  const profileArgs = (name, goals) => {
+    const args = commandArgs.filter((arg) => arg !== "verify" && arg !== "-Pwl-quality");
+    return [...args, `-P${name}`, ...goals];
+  };
+  fs.rmSync(reports, { recursive: true, force: true });
+  for (const name of ["checkstyle-result.xml", "pmd.xml", "spotbugsXml.xml"]) {
+    fs.rmSync(path.join(tempRoot, "target", name), { force: true });
+  }
+  const audit = spawnSync(command, profileArgs("wl-quality-audit", ["compile", "checkstyle:checkstyle", "pmd:pmd", "spotbugs:spotbugs"]), {
+    cwd: tempRoot, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true,
+  });
+  assert.strictEqual(audit.status, 0, `独立静态审计失败：${audit.stdout || ""}\n${audit.stderr || ""}`);
+  assert.ok(!fs.existsSync(reports), "静态审计不得运行测试");
+  for (const name of ["checkstyle-result.xml", "pmd.xml", "spotbugsXml.xml"]) {
+    assert.ok(fs.existsSync(path.join(tempRoot, "target", name)), `静态审计须新生产 ${name}`);
+  }
+  const unit = spawnSync(command, profileArgs("wl-quality-unit", ["verify"]), {
+    cwd: tempRoot, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true,
+  });
+  assert.strictEqual(unit.status, 0, `独立单元/架构作业失败：${unit.stdout || ""}\n${unit.stderr || ""}`);
+  const unitReports = fs.readdirSync(reports).filter((name) => name.endsWith(".xml"));
+  assert.ok(unitReports.some((name) => name.includes("CoverageUnitTest")));
+  assert.ok(!unitReports.some((name) => /DangerousFlow|LegacyUnclassified/.test(name)));
+  if (process.env.WL_QUALITY_FIXTURE_REPORT_DIR) {
+    const archive = path.resolve(process.env.WL_QUALITY_FIXTURE_REPORT_DIR);
+    fs.mkdirSync(archive, { recursive: true });
+    for (const name of ["checkstyle-result.xml", "pmd.xml", "spotbugsXml.xml", "jacoco/jacoco.xml"]) {
+      const source = path.join(tempRoot, "target", name);
+      if (fs.existsSync(source)) fs.copyFileSync(source, path.join(archive, path.basename(name)));
+    }
+    fs.cpSync(reports, path.join(archive, "surefire-reports"), { recursive: true });
+    fs.writeFileSync(path.join(archive, "source-root.json"), JSON.stringify({ root: fs.realpathSync(tempRoot) }) + "\n");
+  }
+  // 只编译、不运行：用真实分析器证明可发现资源泄漏与隐藏空指针路径。
+  const riskSource = path.join(tempRoot, "src", "main", "java", "com", "jhict", "fixture", "HiddenRisk.java");
+  fs.writeFileSync(riskSource, `package com.jhict.fixture;
+public class HiddenRisk {
+    public int leak() throws java.io.IOException {
+        java.io.InputStream stream = new java.io.FileInputStream("not-executed-fixture");
+        return stream.read();
+    }
+    public int nullPath() {
+        String value = null;
+        return value.length();
+    }
+}\n`);
+  const defects = spawnSync(command, profileArgs("wl-quality-audit", ["compile", "pmd:pmd", "spotbugs:spotbugs"]), {
+    cwd: tempRoot, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, windowsHide: true,
+  });
+  assert.strictEqual(defects.status, 0, `缺陷报告生产必须成功：${defects.stdout || ""}\n${defects.stderr || ""}`);
+  assert.match(fs.readFileSync(path.join(tempRoot, "target", "pmd.xml"), "utf8"), /rule="CloseResource"/);
+  assert.match(fs.readFileSync(path.join(tempRoot, "target", "spotbugsXml.xml"), "utf8"), /type=["']NP_ALWAYS_NULL["']/);
+  if (process.env.WL_QUALITY_FIXTURE_REPORT_DIR) {
+    const archive = path.resolve(process.env.WL_QUALITY_FIXTURE_REPORT_DIR);
+    for (const name of ["pmd.xml", "spotbugsXml.xml"]) {
+      fs.copyFileSync(path.join(tempRoot, "target", name), path.join(archive, `negative-${name}`));
+    }
+  }
+  fs.rmSync(riskSource);
+  fs.rmSync(path.join(tempRoot, "target", "classes", "com", "jhict", "fixture", "HiddenRisk.class"), { force: true });
+  console.log("✅ audit/unit-isolation：静态审计无测试、核心单元/架构实际执行、外部/未归类哨兵未执行");
+  console.log("✅ hidden-defects：真实 PMD 资源泄漏与 SpotBugs 隐藏空指针被发现（夹具方法未运行）");
   // 注释门使用真实 Checkstyle：属性/继承方法通过，业务方法缺文档或标签必须失败。
   const commentSource = path.join(tempRoot, "src", "main", "java", "com", "jhict", "fixture", "CommentSample.java");
   const baseComment = `package com.jhict.fixture;

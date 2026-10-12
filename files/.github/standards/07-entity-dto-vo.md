@@ -54,11 +54,11 @@ private Integer revision;
 
 ### 3.1 跨服务 JSON 构造契约
 
-- Feign/HTTP 使用的 request、response、DTO、VO 必须同时满足“可序列化”和“可反序列化”，提供方能返回 JSON 不代表调用方一定能还原对象。
+- 请求模型以及确需 Java 消费端还原的 response、DTO、VO 必须具备匹配实际 Jackson 配置的反序列化入口。提供方能输出 JSON 不能证明 Java 消费端能还原；仅输出 JSON 的返回模型不强制改成可变对象。
 - 可变模型统一使用非 `final` 字段、公共无参构造（推荐显式 `@NoArgsConstructor`）和 setter；`@AllArgsConstructor` 可以保留，但不能作为唯一构造入口。
-- 不可变模型必须使用 `@JsonCreator(mode = JsonCreator.Mode.PROPERTIES)`，并为每个参数显式声明 `@JsonProperty`；仅有 `@Getter + @AllArgsConstructor + final` 禁止用于跨服务传输。
+- 需要反序列化的不可变模型推荐使用 `@JsonCreator(mode = JsonCreator.Mode.PROPERTIES)`，并为每个参数显式声明 `@JsonProperty`；仅有 `@Getter + @AllArgsConstructor + final` 不能独自证明可反序列化，仅序列化用途可保留。
 - 跨服务模型变更必须使用真实 `ObjectMapper` 按实际命名策略执行“对象 → JSON → 同类型对象”往返测试；只断言 JSON 输出或只测试提供方 Controller 均不充分。
-- B32 对跨服务传输模型的危险构造方式执行阻断，修复时必须同时检查同一接口包中的同型 request/response 模型。
+- B32 对请求模型缺少反序列化入口保留 error；返回模型未证明 Java 消费端时仅 warn。核实真实 Jackson/Feign 配置后处理，不为仅序列化用途盲目增加 setter 或无参构造。
 
 ## 4. 类型映射
 

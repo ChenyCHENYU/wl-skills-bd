@@ -53,7 +53,7 @@ wl-skills-bd codegen plan wl-contract.json --json
 
 VO/PageVO 不继承 Entity，避免租户、软删和内部审计字段意外出现在 API。`revision` 只在详情→更新并发闭环中暴露。
 
-跨服务 request/response 模型必须具备 Jackson 反序列化入口。默认生成的 VO/PageVO 使用非 `final` 字段、setter 和显式 `@NoArgsConstructor`；不可变模型只有在逐参数声明 `@JsonCreator/@JsonProperty` 并通过真实 `ObjectMapper` 往返测试后才允许使用。`@AllArgsConstructor` 不能单独充当反序列化契约（B32）。
+请求及确需 Java 消费端反序列化的传输模型必须具备与实际 Jackson 配置匹配的入口；仅服务端序列化的返回模型无需因此改变可变性。默认生成的 VO/PageVO 使用非 `final` 字段、setter 和显式 `@NoArgsConstructor`；不可变模型只有在逐参数声明 `@JsonCreator/@JsonProperty` 并通过真实 `ObjectMapper` 往返测试后才允许使用。`@AllArgsConstructor` 不能单独充当反序列化契约（B32：请求缺入口 error；返回模型消费者未验证时 warn）。
 
 ## 字段规则
 
@@ -90,3 +90,10 @@ mvn verify -Pwl-quality
 ## 注释交付
 
 读取 `../../../standards/19-design.md` §9 的单一权威规范。对本次新建/实质修改的类和业务方法说明实际模块、职责、租户/事务/版本与副作用边界；保留有效历史。事实不足列 gap，不能从方法名编造幂等或异常。结合契约复核业务语义，分别报告 B12 正文与实际 Checkstyle 格式结果；同 runId 回查真实执行证据。无需兄弟包或 harness。
+
+
+## 精选静态质量约束
+
+生成或实质修改 Java 前读取 `../../../standards/15-code-quality.md` 和 `../../../standards/17-bug-prevention.md` 的质量/所有权边界：机器码大小写使用显式 Locale；不硬编码密钥或 IV；共享静态集合不可借固定长度 List 暴露可写状态。请求模型按契约支持 Jackson，只有跨对象、线程或异步所有权时才确定防御性复制与元素策略，不能把 Lombok setter 一概整改为不可变模型。
+
+Spring 构造注入保持共享协作者身份，不为 EI_EXPOSE_REP2 深拷贝 bean；非法配置时拒绝启动保持。检查同一任务的真实 J2/J3/J4 范围及回执，不把 B 规则执行或“已读取规范”的模型声明当作 PMD/SpotBugs 已执行。没有编译/分析证据的项明确未验证。详见 `../../../java-quality/codecc-triage.md`，本包不要求 Gate/scanner/Harness 运行时依赖。

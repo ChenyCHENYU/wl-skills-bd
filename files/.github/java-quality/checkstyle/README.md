@@ -1,6 +1,8 @@
 # Checkstyle 代码风格规则（J2）
 
-> **作用**：把 `standards/03-naming` + `standards/15-code-quality` 的命名/风格约定物化为 Checkstyle 规则，CI 跑 `mvn verify` 自动卡控。
+当前模式以 [Java 质量门总说明](../README.md) 为准：wl-quality 保留严格硬门；wl-quality-audit 生产静态报告交给 Gate 分级，wl-quality-unit 独立运行单元/架构与覆盖率。检查不自动 apply 格式，也不运行外部集成测试。
+
+> **作用**：把 `standards/03-naming` + `standards/15-code-quality` 的命名/风格约定物化为 Checkstyle 规则，严格模式由 `mvn verify -Pwl-quality` 卡控；存量接入先用审计报告与 Gate 分级治理。
 >
 > 官方：https://checkstyle.org/ （Java 代码风格事实标准，最权威）
 

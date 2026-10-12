@@ -1,7 +1,7 @@
 {
   "name": "@agile-team/wl-skills-bd",
-  "version": "0.39.0",
-  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.39.0：结构化执行、独立维护与兼容验收）",
+  "version": "0.40.0",
+  "description": "面向 Java 8、Spring Boot 2、jh4j-cloud 3 的后端规范、契约生成、质量门与 MCP（v0.40.0：分层质量检查、精选扫描约束与数据所有权复核）",
   "main": "lib/index.js",
   "bin": {
     "wl-skills-bd": "bin/wl-skills-bd.js"
@@ -34,7 +34,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://gitee.com/ycyplus163/wl-skills-bd.git"
+    "url": "git+https://github.com/ChenyCHENYU/wl-skills-bd.git"
   },
   "engines": {
     "node": ">=22"
@@ -53,6 +53,8 @@
     "lint:js": "node scripts/lint-js.js",
     "verify:quality-config": "node scripts/verify-java-quality.js",
     "verify:quality-maven": "node scripts/verify-java-quality.js --maven",
+    "preverify:quality-codecc": "node scripts/preflight-env.js --required-java 8 --check-maven",
+    "verify:quality-codecc": "node scripts/verify-codecc-quality.js",
     "capabilities:sync": "node scripts/sync-capabilities.js --write",
     "capabilities:check": "node scripts/sync-capabilities.js",
     "verify:doc-sync": "node scripts/verify-doc-sync.js",
@@ -61,7 +63,7 @@
     "test": "node scripts/run-tests.js",
     "test:coverage": "node scripts/run-tests.js --coverage",
     "verify": "npm run support:check && npm run version:verify && npm run capabilities:check && npm run verify:doc-sync && npm run verify:contract-invariants && npm run lint:skills && npm run lint:js && npm run verify:quality-config && npm run eval:quality && npm run test:coverage",
-    "release:check": "npm run verify && npm run verify:quality-maven && npm pack --dry-run --ignore-scripts",
+    "release:check": "npm run verify && npm run verify:quality-maven && npm run verify:quality-codecc && npm pack --dry-run --ignore-scripts",
     "prepublishOnly": "npm run support:check && npm run release:check",
     "support:check": "node lib/shared-support-check.cjs",
     "compatibility:check": "node scripts/compatibility-check.cjs"

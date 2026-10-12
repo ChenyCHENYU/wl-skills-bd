@@ -4,7 +4,11 @@
 
 > Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
 
-[![Status](https://img.shields.io/badge/status-v0.39.0-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v0.40.0-blue.svg)]()
+
+当前版本为 0.40.0，增加分层质量模式与精选扫描约束。业务项目需正常 update 后才能读取新增规范；本包不会自动修改业务源码或 POM。静态规则只读检查业务源码；Maven 构建/测试执行代码，必须在隔离 Runner 验收。当前接入建议见 [Java 质量门](files/.github/java-quality/README.md) 和 [Gate 质量分级与隔离](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/13-quality-cost-and-isolation.md)。
+
+本轮收敛：B32 请求入口缺失保留 error，未知消费端的返回 DTO 改为 warn，不自动改变 DTO 可变性；B30 正确保留 `{resource}` 等类级路由前缀。Maven 模板拆出静态审计和单元/架构测试作业，显式选择单元测试并排除外部流程/未归类测试；被排除的集合须另行归类验收，不能称为全部测试已通过。
 [![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
 [![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
 [![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
@@ -101,7 +105,7 @@ wl-skills-bd status --run-id comment-review --json
 | 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
 | 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
 | 数据库命名治理（v0.27） | 禁止新增 `is_` 数据库列和 `isXxx` Java 属性；需求镜像先告警，受管契约/ALTER/代码生成强阻断；统一使用 `*_flag`/`xxxFlag` |
-| 跨服务 JSON 契约（v0.28） | B32 阻断只有有参构造且缺少无参构造/`@JsonCreator` 的 request/response DTO；生成 VO 显式保留无参构造，要求真实 ObjectMapper 往返测试 |
+| 跨服务 JSON 契约（v0.28，0.40.0 校准） | B32 请求模型缺入口 error；返回模型消费者未验证时 warn，确认实际反序列化配置与契约测试；不强制仅序列化模型增加 setter |
 | 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
 | 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
 | 变更审查（v0.24） | Git 新增问题与历史基线分离；B 规则、项目断言、平台适配、供应链、JaCoCo 全量/变更行覆盖率汇总到同一质量门 |
@@ -111,7 +115,7 @@ wl-skills-bd status --run-id comment-review --json
 | 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效；缓存有进程字节上限 |
 | 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
 | 快速审计 | B1~B32；指定规则会在发现/读取/检查前真实短路；目录无法读取、文件过大或读取失败时报告诊断并标记 partial；text/JSON/Markdown/SARIF |
-| Java 质量门 | J1~J5 + J8 默认阻断；J6 P3C 隔离审计；J7 OpenAPI 运行时能力 |
+| Java 质量门 | wl-quality 保留 J1~J5/J8 严格硬门；存量接入用独立静态报告与单元/架构作业，Gate 按规则分级；J6 P3C 隔离审计、J7 运行时能力 |
 | 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
 | 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
 | 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
@@ -159,7 +163,7 @@ wl-skills-bd status --run-id comment-review --json
 
 ### v0.28.0 跨服务 JSON DTO 反序列化门禁
 
-- **机器阻断**：新增 B32，扫描跨服务 request/response DTO；只有 Lombok 全参/必参构造或显式有参构造、却没有无参构造或 `@JsonCreator` 时直接报错。
+- **机器分级**：B32 扫描传输模型；请求模型未发现反序列化入口为 error；返回模型缺少消费端证据为 warn。序列化用途无需整改，实际 Java 消费链须核实 Jackson 配置并测试。
 - **默认安全模板**：生成的 VO/PageVO 显式带 `@NoArgsConstructor`，配合非 `final` 字段和 setter，确保 Feign/Jackson 调用方可以还原响应对象。
 - **真实回归**：跨服务模型必须按实际命名策略执行 ObjectMapper 序列化→反序列化往返并逐字段断言，避免“提供方已提交、调用方解析失败并误重试”。
 - **低误报**：B32 仅覆盖传输模型路径/命名，显式 `@JsonCreator`、`@Jacksonized` 或 builder 反序列化配置放行，不干扰内部不可变值对象。
@@ -513,6 +517,21 @@ mvn verify -Pwl-quality
 
 完整接入方式见 [Java 质量门说明](files/.github/java-quality/README.md)。
 
+### 精选扫描规则与误报边界（v0.40.0）
+
+PMD 7 默认规则新增显式 Locale、硬编码密钥和固定 IV 检查；代码生成/增量 Java 任务读取 standards/15、17，预防问题而不依靠生成后清告警。J2 已承担括号、注释与 import，J3 已承担复杂度/资源规则，J4 已承担字节码缺陷，不为同一任务默认再启动一套重复引擎。
+
+Spring 协作者构造注入的 EI_EXPOSE_REP2 不做防御性复制；集合/数组输入、返回共享可变状态与 DTO 的实际所有权边界要分别复核，禁止按整个 @Service、DTO 包或 REP2 pattern 全局排除。Arrays.asList 固定长度但 set 可修改；共享静态表头应返回明确只读视图或按消费契约给快照。DTO 的默认值、primitive 与 Jackson 可变性遵循契约，不为了 P3C/Lombok 告警改语义。
+
+规则适用与未接入能力见 [精选扫描决策](files/.github/java-quality/codecc-triage.md)；Gate 负责组织风险/基线/豁免，不要求本包运行时依赖 Gate、scanner 或 Harness。机器码使用 Locale.ROOT，面向用户的语言转换按业务显式指定 Locale。检查和实际业务验证分开。
+
+```bash
+npm run verify:quality-codecc  # 本包源码维护者：临时 Java8 工程，真实 PMD/SpotBugs + locale/集合所有权行为
+```
+
+此命令不构建实际业务项目。原 code-scan-kit 执行失败/旧输出/CPD口径问题未因此修复；不能将其旧 HTML/CSV 直接当完整 Gate 证据。
+
+
 ## MCP 工具
 
 | 工具 | 写入 | 作用 |
@@ -549,6 +568,10 @@ Agent 接入约定：先读 `.wl-skills-bd/capabilities.json`（或调 `wls_be_c
 ```
 
 超预算时从 `structuredContent.response.nextCursor` 取得游标，再以同一工具调用 `{ "response": { "cursor": "..." } }` 续取；游标仅在当前 MCP 进程短期有效，不落项目仓库。
+
+内置扫描、任务路由、上下文规划和 MCP 执行器均由确定性脚本执行，没有内置模型 API 调用。AI 读取工具声明、规则、源码或输出时仍占上下文；先取摘要、再续取所需页，不为每次扫描或普通告警调用模型。缓存减少脚本工作，不能代表旧质量结果仍可用于不同源码/配置的放行。
+
+响应中的 `estimatedTokens` 及评测的 bytes/4 是趋势估算，Context Plan 的字符估算也不是模型 tokenizer 或计费凭证。实际用量取宿主/服务 usage；不可获取时明确登记。跨工程包统一阅读可用 [Gate inspect](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/14-low-token-execution.md)，但 Gate 的裁决仍消费完整原报告，不能使用 MCP/AI 裁剪摘要替代完整覆盖证据。
 
 ## 包架构
 

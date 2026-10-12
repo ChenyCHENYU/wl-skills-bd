@@ -18,12 +18,33 @@
     </dependencies>
     <build>
       <plugins>
+        <!-- 只运行已经归类为单元测试的集合；外部系统测试必须另建隔离作业。 -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.4</version>
+          <configuration>
+            <includes combine.self="override">
+              <include>**/*UnitTest.java</include>
+              <include>**/unit/**/*Test.java</include>
+              <include>**/LayerRulesTest.java</include>
+            </includes>
+            <excludes combine.self="override">
+              <exclude>**/*Flow*Test.java</exclude>
+              <exclude>**/*Integration*Test.java</exclude>
+              <exclude>**/*IT.java</exclude>
+              <exclude>**/integration/**</exclude>
+              <exclude>**/mq/**</exclude>
+            </excludes>
+            <failIfNoTests>true</failIfNoTests>
+          </configuration>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
           <version>3.6.0</version>
           <configuration>
-            <configLocation>${project.basedir}/.github/java-quality/checkstyle/checkstyle.xml</configLocation>
+            <configLocation>${maven.multiModuleProjectDirectory}/.github/java-quality/checkstyle/checkstyle.xml</configLocation>
             <consoleOutput>true</consoleOutput>
             <failOnViolation>true</failOnViolation>
             <includeTestSourceDirectory>false</includeTestSourceDirectory>
@@ -43,7 +64,7 @@
           <version>3.28.0</version>
           <configuration>
             <rulesets>
-              <ruleset>${project.basedir}/.github/java-quality/pmd/pmd-ruleset.xml</ruleset>
+              <ruleset>${maven.multiModuleProjectDirectory}/.github/java-quality/pmd/pmd-ruleset.xml</ruleset>
             </rulesets>
             <targetJdk>1.8</targetJdk>
             <failOnViolation>true</failOnViolation>
@@ -67,7 +88,7 @@
             <effort>Max</effort>
             <threshold>Low</threshold>
             <failOnError>true</failOnError>
-            <excludeFilterFile>${project.basedir}/.github/java-quality/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+            <excludeFilterFile>${maven.multiModuleProjectDirectory}/.github/java-quality/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
           </configuration>
           <executions>
             <execution>

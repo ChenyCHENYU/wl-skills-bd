@@ -793,11 +793,109 @@ public class MpsPlanReceiveResultVO {
   private final String planNo;
   private final int detailCount;
 }`,
-}, (root) => assert.strictEqual(
-  count(runBeRules(root, { rules: ["B32"] }), "B32"),
-  1,
-  "只有全参构造和 final 字段的跨服务返回 VO 必须被 B32 阻断",
-));
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B32"] });
+  assert.strictEqual(count(result, "B32"), 1);
+  assert.strictEqual(result.issues[0].severity, "warn", "未证实 Java 消费端的返回模型仅提示核实");
+  assert.strictEqual(result.stats.error, 0);
+});
+
+withFixture({
+  "src/main/java/demo/dto/request/ReceiveRequestDTO.java": `package demo.dto.request;
+@AllArgsConstructor
+public class ReceiveRequestDTO { private final String id; }`,
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B32"] });
+  assert.strictEqual(result.issues[0].severity, "error", "请求入口缺失仍阻断");
+});
+
+withFixture({
+  "src/main/java/demo/BaseDataController.java": `package demo;
+@RequestMapping("base-data/{resource}")
+public class BaseDataController {
+  // comment with ; and }
+  @PostMapping("queryPages")
+  public void queryPages() {}
+}`,
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B30"] });
+  assert.deepStrictEqual(result.endpoints.map((endpoint) => endpoint.path), ["/base-data/{resource}/queryPages"]);
+});
+
+withFixture({
+  "src/main/java/demo/ArrayRouteController.java": `package demo;
+@RequestMapping({"base-data/{resource}", "archive/{resource}"})
+public class ArrayRouteController {
+  @GetMapping("detail")
+  public void detail() {}
+}`,
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B30"] });
+  assert.deepStrictEqual(result.endpoints.map((endpoint) => endpoint.path), ["/archive/{resource}/detail", "/base-data/{resource}/detail"]);
+});
+
+// 合法 Spring 注解的顶层参数与字面量须区分；不靠截断/拆链消除告警。
+const routeParserCases = [
+  { name: "LiteralValue", classMapping: '@RequestMapping("/literal/value=preview")', paths: ["/literal/value=preview/detail"] },
+  { name: "LiteralPath", classMapping: '@RequestMapping("/literal/path=preview")', paths: ["/literal/path=preview/detail"] },
+  { name: "NamedAfterString", classMapping: '@RequestMapping(name="path=preview", value="/actual")', paths: ["/actual/detail"] },
+  { name: "MethodNamedAfterString", classMapping: '@RequestMapping("/scope")', methodMapping: '@GetMapping(name="value=preview", path="/method/path=literal")', paths: ["/scope/method/path=literal"] },
+  { name: "NamedArray", classMapping: '@RequestMapping(value /* path="/ignored" */ = {"/archive/{resource}", /* "/phantom" */ "/base-data/{resource}",})', paths: ["/archive/{resource}/detail", "/base-data/{resource}/detail"] },
+  { name: "PositionalArray", classMapping: '@RequestMapping({"/a/value=x", "/b/path=y"})', paths: ["/a/value=x/detail", "/b/path=y/detail"] },
+  { name: "CommentsAroundAssignment", classMapping: '@RequestMapping(/* value="/ignored" */ path /* name="path=fake" */ = /* path="/ignored" */ "/real")', paths: ["/real/detail"] },
+  { name: "NestedOtherExpression", classMapping: '@RequestMapping(headers=("path=" + "hidden"), name="value=hidden", path="/scope")', paths: ["/scope/detail"] },
+  { name: "RegexParentheses", classMapping: '@RequestMapping("/record/{id:(foo|bar)}")', methodMapping: '@GetMapping("/detail/{kind:(x|y)}")', paths: ["/record/{id:(foo|bar)}/detail/{kind:(x|y)}"] },
+  { name: "NonRouteStrings", classMapping: '@RequestMapping(name="path=hidden", headers={"value=hidden"})', paths: ["/detail"] },
+  { name: "MethodEnumStrings", classMapping: '@RequestMapping("/scope")', methodMapping: '@RequestMapping(path="/detail", name="RequestMethod.POST", method=RequestMethod.GET /* RequestMethod.DELETE */)', paths: ["/scope/detail"] },
+  { name: "CommentedMapping", classMapping: '@RequestMapping("/scope")', methodMapping: '/* @PostMapping("/phantom") */ @GetMapping("/detail")', paths: ["/scope/detail"] },
+  { name: "MultilineArray", classMapping: '@RequestMapping("/scope")', methodMapping: `@GetMapping(
+    // path="/ignored" and a closing bracket )
+    headers={"path=hidden", "value=hidden"},
+    path={"/a", // "/phantom"
+      "/b"}
+  )`, paths: ["/scope/a", "/scope/b"] },
+  { name: "NoArguments", classMapping: "@RequestMapping", methodMapping: "@GetMapping", paths: ["/"] },
+];
+for (const fixture of routeParserCases) {
+  const className = `${fixture.name}Controller`;
+  withFixture({
+    [`src/main/java/demo/${className}.java`]: `package demo;
+${fixture.classMapping}
+public class ${className} {
+  ${fixture.methodMapping || '@GetMapping("detail")'}
+  public void detail() {}
+}`,
+  }, (root) => {
+    const result = runBeRules(root, { rules: ["B30"] });
+    assert.deepStrictEqual(result.endpoints.map((endpoint) => `${endpoint.method} ${endpoint.path}`), fixture.paths.map((value) => `GET ${value}`), fixture.name);
+    assert.strictEqual(count(result, "B30"), 0, `${fixture.name} 不得新增假路由或重复告警`);
+  });
+}
+
+withFixture({
+  "src/main/java/demo/LeftLiteralController.java": controller("LeftLiteralController", "/value=left", "detail", "/detail"),
+  "src/main/java/demo/RightLiteralController.java": controller("RightLiteralController", "/path=right", "detail", "/detail"),
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B30"] });
+  assert.strictEqual(count(result, "B30"), 0, "不同字面量路由不可因解析丢失前缀而误报冲突");
+  assert.deepStrictEqual(result.endpoints.map((endpoint) => endpoint.path), ["/path=right/detail", "/value=left/detail"]);
+});
+
+withFixture({
+  "src/main/java/demo/NamedLiteralController.java": controller("NamedLiteralController", "/value=same", "first", "/detail"),
+  "src/main/java/demo/EquivalentLiteralController.java": `package demo;
+@RequestMapping(name="path=other", value="/value=same")
+public class EquivalentLiteralController {
+  @PostMapping(path="/detail")
+  public void second() {}
+}`,
+}, (root) => {
+  const result = runBeRules(root, { rules: ["B30"] });
+  assert.strictEqual(count(result, "B30"), 1, "相同完整字面量路由仍须真实阻断");
+  assert.deepStrictEqual(result.endpoints.map((endpoint) => endpoint.path), ["/value=same/detail", "/value=same/detail"]);
+});
+
+console.log("✅ B30 路由词法边界：字符串/注释、命名与数组、括号与多行注解、真实/伪冲突通过");
 
 withFixture({
   "src/main/java/demo/dto/response/MpsPlanReceiveResultVO.java": `package demo.dto.response;

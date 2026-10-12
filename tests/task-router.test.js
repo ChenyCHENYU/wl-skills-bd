@@ -42,6 +42,16 @@ assert.deepStrictEqual(taskRouter.buildRuleSubset("add-api"), ["B1", "B2", "B5",
 assert.deepStrictEqual(taskRouter.buildRuleSubset("add-field"), ["B3", "B4", "B7", "B18", "B25", "B26", "B31"]);
 assert.strictEqual(taskRouter.buildRuleSubset("audit").length, 32);
 assert.ok(taskRouter.getTask("new-service").standards.includes("29"));
+// 生成前读到的真实 canonical 质量资产必须可定位，不能只在 README 提到。
+for (const id of ["new-service", "add-api", "add-field", "add-business-cmd"]) {
+  const preflight = taskRouter.buildPreflightEvidence(id);
+  for (const standardId of ["15", "17"]) {
+    const asset = preflight.standards.find((item) => item.id === standardId);
+    assert.ok(asset && asset.state === "present" && /^[a-f0-9]{64}$/.test(asset.sha256), `${id} 缺质量规范 ${standardId}`);
+  }
+}
+assert.ok(!taskRouter.getTask("config-op").standards.includes("17"), "纯配置任务不得强加 Java 生成规范");
+
 assert.ok(taskRouter.getTask("add-field").steps.some((step) => step.includes("docs/db-spec")));
 assert.strictEqual(taskRouter.buildRuleSubset("config-op").length, 0);
 assert.deepStrictEqual(taskRouter.buildJavaGateSubset("new-service"), ["J1", "J2", "J3", "J8"]);

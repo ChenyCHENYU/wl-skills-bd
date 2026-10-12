@@ -133,19 +133,24 @@ public int getCount() {
 
 ---
 
-## R37 · Arrays.asList() 返回的 List 不可修改
+## R37 · Arrays.asList() 返回固定长度、与数组共享存储的 List
+
+`Arrays.asList()` 禁止改变长度的 `add/remove`，但允许 `set`，不是不可变集合；修改元素还会反映到原数组。需要增删时复制为 `ArrayList`，需要只读快照时再包 `Collections.unmodifiableList`。
 
 ```java
-// ❌ UnsupportedOperationException
-List<String> list = Arrays.asList("a", "b");
-list.add("c");   // 抛异常
+List<String> fixedSize = Arrays.asList("a", "b");
+fixedSize.set(0, "c");   // 允许替换元素
+// fixedSize.add("d"); // UnsupportedOperationException
 
-// ✅ 包一层 ArrayList
-List<String> list = new ArrayList<>(Arrays.asList("a", "b"));
-list.add("c");   // 正常
+// ✅ Java 8：独立、可增删的列表
+List<String> mutable = new ArrayList<>(fixedSize);
+mutable.add("d");
 
-// ✅ Java 9+：List.of("a","b") 同样不可变，明确表达不可变语义
+// ✅ Java 8：独立列表的只读快照；元素为 String，可安全共享
+List<String> readOnly = Collections.unmodifiableList(new ArrayList<>(fixedSize));
 ```
+
+包装只禁止通过该视图改动列表结构/元素引用；如果底层集合有其他可变别名，仍可能改变。浅复制不保护元素内部的可变状态，跨所有权时须按契约复制可变元素。Java 8 模板不生成 `List.of/List.copyOf`。
 
 ---
 
@@ -256,6 +261,37 @@ new SimpleDateFormat("YYYY-MM-dd").format(new Date());  // 跨年周出错
 new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 ```
+
+---
+
+## 业务字符串大小写必须显式选择 Locale
+
+- 协议码、状态码、枚举标识、外部系统代码等与用户语言无关的字符串统一使用 `Locale.ROOT`，例如 `code.toUpperCase(Locale.ROOT)`。
+- 面向用户的自然语言按业务契约选择显式 `Locale`；不要把用户语言统一替换为 ROOT，也不要依赖部署机器的默认语言环境。
+- 使用 Java 8 可用 API，保留原有 null、空白和非法值处理；不会因该规则擅自增加默认值或改变枚举匹配方式。
+- J3 的 `UseLocaleWithCaseConversions` 检查是否显式传入 Locale，不代替业务语义选择。参数来源不明时标记待确认；安全类和语言环境类规则的原生 priority 与门禁策略分开保留。
+
+```java
+// ❌ JVM 默认土耳其 Locale 下，billet 会转换出非 ASCII 的大写字母
+String protocolCode = input.toUpperCase();
+
+// ✅ 协议码的归一行为不依赖部署机器
+String protocolCode = input.toUpperCase(Locale.ROOT);
+
+// ✅ 自然语言按已确认的用户语言处理
+String displayText = input.toUpperCase(userLocale);
+```
+
+---
+
+## 可变对象按所有权边界保护，不机械整改构造注入
+
+1. Spring 构造注入、Mapper、Service、ObjectProvider 等容器协作者按引用共享；不能为消除 `EI_EXPOSE_REP2` 而复制、克隆或取消构造注入。
+2. 不可变领域对象接收外部可变集合、数组、Date，或暴露内部可变状态时，需要按契约做防御性复制并执行输入/输出变更负例。短生命周期的 JSON 请求 DTO 可以按已声明的可变契约使用 getter/setter，不能因此破坏 Jackson/Bean Validation。
+3. Java 8 集合快照示例为 `Collections.unmodifiableList(new ArrayList<>(input))`；数组使用适当的 `clone/copyOf`。只包 `unmodifiableList(input)` 不消除调用者对底层集合的修改能力；集合元素可变时，浅复制不足以隔离元素状态。
+4. 局部 `LinkedHashMap` 用于稳定结果顺序时保留。仅确认共享对象存在多线程读写后，按一致性、顺序和 null 契约选择同步或并发容器；禁止仅因规则名字把所有 Map 改成 ConcurrentHashMap。
+5. 构造器对缺失配置、重复注册或非法方向失败关闭时保留异常。`CT_CONSTRUCTOR_THROW` 需要生命周期/威胁模型确认，不能吞异常让不完整对象启动成功，也不能发布尚未构造完成的 `this`。
+6. 原始分析器的规则、category、priority、消息和证据保留；不根据 CSV 的统一严重标签直接判断这些上下文已经存在功能缺陷。缺源代码/字节码一致性、方法或字段定位时保持待确认。
 
 ---
 

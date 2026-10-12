@@ -1,0 +1,521 @@
+{
+  "schemaVersion": 1,
+  "purpose": "公开规则身份与BD生成/审查决策；不是平台完整规则清单或项目扫描结果，也不声明逐规则运行验证。",
+  "nativeSeverityPolicy": "保留原engine/tool/rule/category/priority/severity；policySeverity独立记录；CSV缺失字段不得猜测。",
+  "defaultExecution": "BD原J2/J3/J4；P3C/PMD6只通过隔离J6 profile；本目录不增加第二套执行器。",
+  "rules": [
+    {
+      "id": "Checkstyle/AbstractClassName",
+      "tool": "Checkstyle",
+      "ruleId": "AbstractClassName",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/BooleanExpressionComplexity",
+      "tool": "Checkstyle",
+      "ruleId": "BooleanExpressionComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/DeclarationOrder",
+      "tool": "Checkstyle",
+      "ruleId": "DeclarationOrder",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/FileLength",
+      "tool": "Checkstyle",
+      "ruleId": "FileLength",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/JavaNCSS",
+      "tool": "Checkstyle",
+      "ruleId": "JavaNCSS",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/MethodLength",
+      "tool": "Checkstyle",
+      "ruleId": "MethodLength",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/MethodName",
+      "tool": "Checkstyle",
+      "ruleId": "MethodName",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/MultipleVariableDeclarations",
+      "tool": "Checkstyle",
+      "ruleId": "MultipleVariableDeclarations",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/NPathComplexity",
+      "tool": "Checkstyle",
+      "ruleId": "NPathComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/NeedBraces",
+      "tool": "Checkstyle",
+      "ruleId": "NeedBraces",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/NestedTryDepth",
+      "tool": "Checkstyle",
+      "ruleId": "NestedTryDepth",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/OneStatementPerLine",
+      "tool": "Checkstyle",
+      "ruleId": "OneStatementPerLine",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/OverloadMethodsDeclarationOrder",
+      "tool": "Checkstyle",
+      "ruleId": "OverloadMethodsDeclarationOrder",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/ParameterNumber",
+      "tool": "Checkstyle",
+      "ruleId": "ParameterNumber",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "Checkstyle/RedundantImport",
+      "tool": "Checkstyle",
+      "ruleId": "RedundantImport",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/UnusedImports",
+      "tool": "Checkstyle",
+      "ruleId": "UnusedImports",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "Checkstyle/VariableDeclarationUsageDistance",
+      "tool": "Checkstyle",
+      "ruleId": "VariableDeclarationUsageDistance",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "P3C/AbstractMethodOrInterfaceMethodMustUseJavadocRule",
+      "tool": "P3C",
+      "ruleId": "AbstractMethodOrInterfaceMethodMustUseJavadocRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/AvoidComplexConditionRule",
+      "tool": "P3C",
+      "ruleId": "AvoidComplexConditionRule",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "P3C/AvoidPatternCompileInMethodRule",
+      "tool": "P3C",
+      "ruleId": "AvoidPatternCompileInMethodRule",
+      "classification": "context-advisory",
+      "advice": "固定正则热路径可预编译；一次性测试和动态正则不强加static常量。"
+    },
+    {
+      "id": "P3C/ClassMustHaveAuthorRule",
+      "tool": "P3C",
+      "ruleId": "ClassMustHaveAuthorRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/ClassNamingShouldBeCamelRule",
+      "tool": "P3C",
+      "ruleId": "ClassNamingShouldBeCamelRule",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "合法领域缩写与测试类后缀由Profile确定，不机械改公开类型名。"
+    },
+    {
+      "id": "P3C/CollectionInitShouldAssignCapacityRule",
+      "tool": "P3C",
+      "ruleId": "CollectionInitShouldAssignCapacityRule",
+      "classification": "context-advisory",
+      "advice": "已知有界预期大小时设置容量；大小未知时不猜容量，不按未经限制的请求数预分配。"
+    },
+    {
+      "id": "P3C/CommentsMustBeJavadocFormatRule",
+      "tool": "P3C",
+      "ruleId": "CommentsMustBeJavadocFormatRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/EnumConstantsMustHaveCommentRule",
+      "tool": "P3C",
+      "ruleId": "EnumConstantsMustHaveCommentRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/LowerCamelCaseVariableNamingRule",
+      "tool": "P3C",
+      "ruleId": "LowerCamelCaseVariableNamingRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/MethodTooLongRule",
+      "tool": "P3C",
+      "ruleId": "MethodTooLongRule",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "P3C/NeedBraceRule",
+      "tool": "P3C",
+      "ruleId": "NeedBraceRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "P3C/PackageNamingRule",
+      "tool": "P3C",
+      "ruleId": "PackageNamingRule",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "业务包结构由批准Profile决定，不因旧全小写规则重命名已公开路径。"
+    },
+    {
+      "id": "P3C/PojoMustOverrideToStringRule",
+      "tool": "P3C",
+      "ruleId": "PojoMustOverrideToStringRule",
+      "classification": "context-advisory",
+      "advice": "先确认诊断需求并排除敏感字段，不强制所有POJO加@Data/toString。"
+    },
+    {
+      "id": "P3C/PojoMustUsePrimitiveFieldRule",
+      "tool": "P3C",
+      "ruleId": "PojoMustUsePrimitiveFieldRule",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "按缺省/null/确定布尔值等字段契约选择类型，不全局替换primitive或包装类型。"
+    },
+    {
+      "id": "P3C/PojoNoDefaultValueRule",
+      "tool": "P3C",
+      "ruleId": "PojoNoDefaultValueRule",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "保留来自契约/Profile的分页和状态默认值，不为旧规约移除有效默认值。"
+    },
+    {
+      "id": "P3C/ServiceOrDaoClassShouldEndWithImplRule",
+      "tool": "P3C",
+      "ruleId": "ServiceOrDaoClassShouldEndWithImplRule",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "具体Service与Controller/远程接口实现遵循项目角色和命名，不强制全部Impl。"
+    },
+    {
+      "id": "P3C/UndefineMagicConstantRule",
+      "tool": "P3C",
+      "ruleId": "UndefineMagicConstantRule",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "PMD/AbstractClassWithoutAnyMethod",
+      "tool": "PMD",
+      "ruleId": "AbstractClassWithoutAnyMethod",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "Lombok数据基类、映射继承与禁止实例化可能有明确用途，须先判断框架角色。"
+    },
+    {
+      "id": "PMD/AddEmptyString",
+      "tool": "PMD",
+      "ruleId": "AddEmptyString",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "PMD/AvoidCatchingGenericException",
+      "tool": "PMD",
+      "ruleId": "AvoidCatchingGenericException",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/AvoidInstantiatingObjectsInLoops",
+      "tool": "PMD",
+      "ruleId": "AvoidInstantiatingObjectsInLoops",
+      "classification": "context-advisory",
+      "advice": "每项entity/DTO应保持独立对象身份；仅优化确实可安全共享的重量对象。"
+    },
+    {
+      "id": "PMD/CouplingBetweenObjects",
+      "tool": "PMD",
+      "ruleId": "CouplingBetweenObjects",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/CyclomaticComplexity",
+      "tool": "PMD",
+      "ruleId": "CyclomaticComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/DataClass",
+      "tool": "PMD",
+      "ruleId": "DataClass",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/ExcessiveClassLength",
+      "tool": "PMD",
+      "ruleId": "ExcessiveClassLength",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/ExcessiveImports",
+      "tool": "PMD",
+      "ruleId": "ExcessiveImports",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/ExcessiveMethodLength",
+      "tool": "PMD",
+      "ruleId": "ExcessiveMethodLength",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/ExcessiveParameterList",
+      "tool": "PMD",
+      "ruleId": "ExcessiveParameterList",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/GodClass",
+      "tool": "PMD",
+      "ruleId": "GodClass",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/InefficientEmptyStringCheck",
+      "tool": "PMD",
+      "ruleId": "InefficientEmptyStringCheck",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "PMD/LawOfDemeter",
+      "tool": "PMD",
+      "ruleId": "LawOfDemeter",
+      "classification": "context-advisory",
+      "advice": "区分跨聚合可变状态泄露与Mockito/AssertJ/MyBatis fluent DSL，不拆全部链式调用。"
+    },
+    {
+      "id": "PMD/ModifiedCyclomaticComplexity",
+      "tool": "PMD",
+      "ruleId": "ModifiedCyclomaticComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/NPathComplexity",
+      "tool": "PMD",
+      "ruleId": "NPathComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/NcssCount",
+      "tool": "PMD",
+      "ruleId": "NcssCount",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/NcssTypeCount",
+      "tool": "PMD",
+      "ruleId": "NcssTypeCount",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/SignatureDeclareThrowsException",
+      "tool": "PMD",
+      "ruleId": "SignatureDeclareThrowsException",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/SimplifyStartsWith",
+      "tool": "PMD",
+      "ruleId": "SimplifyStartsWith",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "旧PMD规则的迁移支持显式记录，不能以charAt替换而破坏空字符串语义。"
+    },
+    {
+      "id": "PMD/StdCyclomaticComplexity",
+      "tool": "PMD",
+      "ruleId": "StdCyclomaticComplexity",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/TooManyFields",
+      "tool": "PMD",
+      "ruleId": "TooManyFields",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/TooManyMethods",
+      "tool": "PMD",
+      "ruleId": "TooManyMethods",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/UseConcurrentHashMap",
+      "tool": "PMD",
+      "ruleId": "UseConcurrentHashMap",
+      "classification": "context-advisory",
+      "advice": "先证明共享并发访问；保留局部LinkedHashMap顺序及null语义，不全局替换Map。"
+    },
+    {
+      "id": "PMD/UseObjectForClearerAPI",
+      "tool": "PMD",
+      "ruleId": "UseObjectForClearerAPI",
+      "classification": "context-advisory",
+      "advice": "审查调用链、框架角色、测试DSL、生命周期和契约；默认不做机械修复，不因指标或统一严重标签直接阻断。"
+    },
+    {
+      "id": "PMD/UseUtilityClass",
+      "tool": "PMD",
+      "ruleId": "UseUtilityClass",
+      "classification": "exclude-or-profile-mismatch",
+      "advice": "只针对普通工具类；Spring配置/启动类不能改为私有构造工具类。"
+    },
+    {
+      "id": "PMD/UselessStringValueOf",
+      "tool": "PMD",
+      "ruleId": "UselessStringValueOf",
+      "classification": "generation-quality",
+      "advice": "生成代码遵守已批准的项目规范；存量先治理；通过原分析器与编译确认，不把风格匹配等同功能缺陷。"
+    },
+    {
+      "id": "SpotBugs/BC_UNCONFIRMED_CAST",
+      "tool": "SpotBugs",
+      "ruleId": "BC_UNCONFIRMED_CAST",
+      "classification": "pending-evidence",
+      "advice": "先核实具体目标类型、guard和资源契约；无原方法/类型定位时不能宣称ClassCastException已证明。"
+    },
+    {
+      "id": "SpotBugs/CT_CONSTRUCTOR_THROW",
+      "tool": "SpotBugs",
+      "ruleId": "CT_CONSTRUCTOR_THROW",
+      "classification": "context-advisory",
+      "advice": "配置/重复注册失败关闭保留异常；独立核实对象泄露与威胁模型，不吞异常。"
+    },
+    {
+      "id": "SpotBugs/DM_CONVERT_CASE",
+      "tool": "SpotBugs",
+      "ruleId": "DM_CONVERT_CASE",
+      "classification": "defect-candidate",
+      "advice": "明确字符串语义并用正反例复验；机器/协议码显式Locale.ROOT，自然语言显式契约Locale。"
+    },
+    {
+      "id": "SpotBugs/EI_EXPOSE_REP",
+      "tool": "SpotBugs",
+      "ruleId": "EI_EXPOSE_REP",
+      "classification": "pending-evidence",
+      "advice": "DTO可变契约与不可变领域对象不同；依据消费者和生命周期判断防御性复制。"
+    },
+    {
+      "id": "SpotBugs/EI_EXPOSE_REP2",
+      "tool": "SpotBugs",
+      "ruleId": "EI_EXPOSE_REP2",
+      "classification": "pending-evidence",
+      "advice": "区分Spring构造注入协作者与跨所有权可变输入；不能复制注入的Mapper/Service或全局抑制REP2。"
+    },
+    {
+      "id": "SpotBugs/MS_EXPOSE_REP",
+      "tool": "SpotBugs",
+      "ruleId": "MS_EXPOSE_REP",
+      "classification": "pending-evidence",
+      "advice": "核实静态集合、底层可变别名和元素类型；源码/字节码不一致时保持待确认。"
+    },
+    {
+      "id": "SpotBugs/THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+      "tool": "SpotBugs",
+      "ruleId": "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+      "classification": "context-advisory",
+      "advice": "框架回调失败传播与重试由契约确定，不吞异常伪造消费成功。"
+    },
+    {
+      "id": "SpotBugs/UPM_UNCALLED_PRIVATE_METHOD",
+      "tool": "SpotBugs",
+      "ruleId": "UPM_UNCALLED_PRIVATE_METHOD",
+      "classification": "pending-evidence",
+      "advice": "确认反射/框架/方法引用可达性与原方法名，再删除真正无用的private代码。"
+    },
+    {
+      "id": "PMD/UseLocaleWithCaseConversions",
+      "tool": "PMD",
+      "ruleId": "UseLocaleWithCaseConversions",
+      "classification": "generation-safety",
+      "defaultRuleRef": "category/java/errorprone.xml/UseLocaleWithCaseConversions",
+      "advice": "显式选择Locale；协议码ROOT，自然语言用契约语言环境；不能依赖默认部署Locale。"
+    },
+    {
+      "id": "PMD/HardCodedCryptoKey",
+      "tool": "PMD",
+      "ruleId": "HardCodedCryptoKey",
+      "classification": "generation-safety",
+      "defaultRuleRef": "category/java/security.xml/HardCodedCryptoKey",
+      "advice": "业务密钥使用批准外部来源；源码常量搬迁不算修复。"
+    },
+    {
+      "id": "PMD/InsecureCryptoIv",
+      "tool": "PMD",
+      "ruleId": "InsecureCryptoIv",
+      "classification": "generation-safety",
+      "defaultRuleRef": "category/java/security.xml/InsecureCryptoIv",
+      "advice": "IV/nonce按密码协议安全契约生成；禁止固定值，不猜长度或擅改协议。"
+    }
+  ],
+  "nonGoals": [
+    "不直接导入任何项目扫描数据",
+    "不添加LawOfDemeter/UseConcurrentHashMap为默认硬门",
+    "不自动修复DI/constructor fail-closed/fluent DSL/POJO日志/分页默认值",
+    "不要求Gate或Harness才能独立使用BD"
+  ]
+}
