@@ -76,12 +76,10 @@ function checkVersionMatch(file, regex, label) {
   }
 }
 
-// README 徽章（兼容多种格式：status-vX、status-skeleton%20vX）
-checkVersionMatch(
-  "README.md",
-  /status(?:-skeleton)?[%-]v\d+\.\d+\.\d+/,
-  "README 徽章",
-);
+// README 使用 npm 动态版本徽章，版本硬校验保留在发布资产与 CHANGELOG。
+if (!read("README.md").includes("https://img.shields.io/npm/v/@agile-team/wl-skills-bd")) {
+  errors.push("README.md: 缺少自动显示已发布版本的 npm 徽章");
+}
 // standards/index.md 版本声明
 checkVersionMatch(
   "files/.github/standards/index.md",

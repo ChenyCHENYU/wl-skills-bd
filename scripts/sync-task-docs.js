@@ -8,7 +8,7 @@ const { TASK_TYPES } = require("../lib/task-router");
 const ROOT = path.resolve(__dirname, "..");
 const START = "<!-- wl-bd-task-types:begin -->";
 const END = "<!-- wl-bd-task-types:end -->";
-const DOCS = ["README.md", "files/.github/standards/26-task-driven.md", "files/.github/skills/_registry.md"];
+const DOCS = ["files/.github/standards/26-task-driven.md", "files/.github/skills/_registry.md"];
 
 function taskTable(tasks = TASK_TYPES) {
   const items = Object.values(tasks);

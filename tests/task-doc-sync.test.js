@@ -15,7 +15,7 @@ test("BD CLI 帮助与当前任务目录同源，完整列出真实类型", () =
   assert.ok(result.stdout.includes("尚未执行业务动作"));
 });
 
-test("任务增量自动进入生成目录，当前三份文档逐字节对齐", () => {
+test("任务增量自动进入规范与 Skill 目录，当前文档逐字节对齐", () => {
   assert.deepEqual(syncTaskDocs(), []);
   const future = { ...TASK_TYPES, future: { id: "future", name: "未来任务", mode: "readonly", triggers: ["未来触发"], rules: ["B12"], javaGates: ["J2"], tools: ["validate"] } };
   const text = taskTable(future);

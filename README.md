@@ -1,794 +1,117 @@
-# @agile-team/wl-skills-bd
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ChenyCHENYU/wl-skills-bd/main/assets/wl-bd-logo-dark.svg">
+    <img alt="WL · World Leading · skills-bd" src="https://raw.githubusercontent.com/ChenyCHENYU/wl-skills-bd/main/assets/wl-bd-logo.svg" width="100%">
+  </picture>
+</p>
 
-> 项目范围：只对目标自身已接入且平台适用的项目判定规则；父工作区安装不启用子项目。移动端与未接入开源项目不套用。详见 [精准触发与范围配置](docs/project-scope.md)。
+<p align="center"><strong>把 Java 后端的工程规范、业务契约、代码生成和质量检查接成一条可验证的交付流程。</strong></p>
 
-> Java 8 后端工程的规范、契约代码生成、质量门、MCP 与安全修复闭环。
+<p align="center">
+  <a href="https://www.npmjs.com/package/@agile-team/wl-skills-bd"><img src="https://img.shields.io/npm/v/@agile-team/wl-skills-bd?color=886331" alt="npm" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node-%E2%89%A522-526A81.svg" alt="Node" /></a>
+  <a href="https://github.com/ChenyCHENYU/wl-skills-bd/blob/main/files/.github/java-quality/README.md"><img src="https://img.shields.io/badge/Java-8-886331.svg" alt="Java" /></a>
+</p>
 
-[![Status](https://img.shields.io/badge/status-v0.41.0-blue.svg)]()
+## 解决什么问题
 
-当前版本为 0.41.0，统一完整 CLI 能力目录、真实分发/帮助与安装快照，并补齐当前任务文档和聚合工作区范围诊断。业务项目需正常 update 后才能读取新增规范；本包不会自动修改业务源码或 POM。静态规则只读检查业务源码；Maven 构建/测试执行代码，必须在隔离 Runner 验收。当前接入建议见 [Java 质量门](files/.github/java-quality/README.md) 和 [Gate 质量分级与隔离](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/13-quality-cost-and-isolation.md)。
+| 场景 | 提供的能力 | 你能看到的结果 |
+| --- | --- | --- |
+| 开发靠口头约定 | 后端规范、任务路由、项目 Profile | 当前任务要读什么、检查什么、还缺什么 |
+| 接口、数据库与实现不一致 | 契约校验、代码生成、字段影响和前后端对账 | 差异定位、生成计划、待确认的业务疑点 |
+| 问题等到构建或上线才出现 | B 规则、Git 变更审查、Java 质量门模板 | 文件、行号、严重度、修复建议及真实检查范围 |
+| 修复依赖 AI 反复改代码 | 确定性修复、计划确认、备份、回滚与复扫 | 可审阅的前后差异，失败可恢复 |
 
-本轮收敛：B32 请求入口缺失保留 error，未知消费端的返回 DTO 改为 warn，不自动改变 DTO 可变性；B30 正确保留 `{resource}` 等类级路由前缀。Maven 模板拆出静态审计和单元/架构测试作业，显式选择单元测试并排除外部流程/未归类测试；被排除的集合须另行归类验收，不能称为全部测试已通过。
-[![Node](https://img.shields.io/badge/node-%3E%3D22-green.svg)]()
-[![JDK](https://img.shields.io/badge/JDK-8-blue.svg)]()
-[![Standards](https://img.shields.io/badge/standards-30-orange.svg)]()
+适用于**已接入的 Java 8 / Spring Boot 2 后端工程**。当前已验证的生成 Profile 是 `jh4j3-openapi3`：jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。其他技术栈需先核对兼容矩阵，不根据项目名称套用。
 
-当前唯一经过验证的生成 Profile 是 `jh4j3-openapi3`：Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus、OpenAPI 3。包内能力以机器 Schema、兼容矩阵和回归测试为准，不从存量业务代码猜约定。
+## 后端怎么安装
 
-独立与组合边界见 [机器能力声明](lib/capabilities.json)。后端契约、规则、CLI 和 MCP 均可独立使用，不要求安装其他 WL 包。安装器对共享 Markdown 只管理 `wl-skills-bd` 区块，对 MCP 只合并本包服务键，并保留 JSONC 注释及其他配置。预存相同内容仅登记引用，不能自动认领；`--force` 只可更新 manifest 证明归属的本包内容，不能覆盖用户或其他包贡献。项目 Delivery Profile 和业务配置不会因强制升级重置；清理保留本地修改及其引用记录。
+**这是 Node.js 工具包，不是 Maven 业务依赖。** Node.js 22+ 运行安装器、扫描器和 MCP；Java 8 / Maven 编译和验证业务代码。纯 Java 仓库可以直接用 `npx`，无需为了接入创建前端工程。
 
-Java 工程未声明本包 npm 依赖时，安装器将宿主 MCP 的 npx 调用固定到本次安装版本。配置生成器从有效 profile（含 profile.local）读取软删除字段和值，拒绝以模板默认值覆盖项目口径；profile 变化使旧生成计划失效。
+以下操作都在**实际后端仓库根目录**执行，聚合工作区不作为业务项目安装。
 
-## 如何确认本包正在起作用
-
-每次适用任务先运行项目本地 `wl-skills-bd task --input "修改目标文件" --target-file src/Foo.java --json`。编辑前展示真实 `notice`：包名与版本、判定、选中 Skill 或基础约束、具体规则、目标、runId 和尚未执行的检查。普通修改也需要基础约束提醒；相关但未覆盖的意图显示 gap 与建议；没有目标依据显示 needs-context，职责外显示 not-applicable，不强行匹配。
-
-Java/Maven 项目事实只补充模糊任务的上下文，不能把明确的 Vue 页面、CSS 样式或日常请求转成后端任务。明确 Java/Controller/Mapper 目标、后端职责或前后端联调内容仍按真实证据判定；单纯共享目录或存在 pom.xml 不代表所有请求都受 BD 约束。
-
-自有 CLI 值参数支持 `--target B` 与 `--target=B`；缺值、空白值和冲突的重复值会在写入前拒绝。`validate` 只接受一个目标位置参数，未知目标选项不会静默忽略；多个目标分别执行并复用任务 runId。执行器异常也写失败终态，不能把未完成检查显示为长期运行或通过。
-
-执行实际检查时复用 `--run-id`，结束读取 `wl-skills-bd status --run-id <id> --json`，分别报告执行和验证、实际检查文件、过期证据与未执行项。`notice.displayEvidence=unverified` 表示工具回执不能证明聊天界面展示；安装、路由或模型自报不能证明宿主加载/模型读取。
-
-`wl-skills-bd doctor-host --json` 对比已分发规范、本地执行器和正在运行的版本，漂移会显式报告。规范更新不会替代依赖升级：同步本包依赖、锁文件和受管入口；未使用的兄弟包无需安装。重开/刷新宿主加载后仍需观察真实任务调用，不能宣称所有 AI 自动触发。
-
-## 后端注释职责（v0.35.0）
-
-bd 独立提供后端注释规范、契约模板与检查，唯一权威为 [19-design §9](files/.github/standards/19-design.md)。无需 kit、UI 或 DSH。
-
-- 类/Mapper 说明业务模块、职责与访问边界；Service 写方法说明实际租户、事务、版本、重复请求和副作用行为。事实不足列 gap，不能编造幂等、权限或异常承诺。
-- Service/Mapper 模板从契约填充模块、租户与写入边界；保留原有有效注释/作者历史。模板的 `@author wl-skills-bd codegen` 是生成器标识，`@since 1.0.0` 是既有模板默认值，不代表项目负责人或真实业务创建时间；项目有明确元数据时按规范填写。
-- **B12** 检查 Service public/Mapper 方法的 Javadoc 正文，标签堆叠或空块不能代替实际说明。Service 的继承 `@Override` 与纯属性 getter/setter 豁免；名字像 getter 的业务方法仍检查。
-- **Checkstyle J2** 校验公共类型、方法文档和参数/返回/异常标签，启用纯属性与已声明注解豁免。Java 8 的真实 Maven 正/负夹具验证缺文档和缺返回标签的非零退出。
-- 自动检查证明结构与格式，业务说明准确性仍需对照契约和执行代码。CLI review 当前收集 B12，Maven J2 独立执行；二者并列展示，不宣称已有跨报告语义去重。
-
-正常 `update` 分发，不全库重写注释，也不要求安装兄弟包。
-
-## 公开集成协议 v1
-
-供单包客户端、harness 或其他编排层以统一 JSON 入口调用本包判定、状态与受控执行能力；执行映射和检查器均由 BD 自己维护，不新增兄弟包依赖。
+### 1. 预览接入计划
 
 ```bash
-wl-skills-bd protocol describe --json                      # 能力目录、六操作映射、请求/响应 Schema、错误码
-wl-skills-bd protocol request --input-file request.json --json
+npx @agile-team/wl-skills-bd init --json
 ```
 
-- 操作：`route` / `explain`（只读判定）、`task`（判定并持久化计划，尚未执行）、`status`（回查本包执行回执）、`doctor-host`（宿主入口静态诊断）、`execute`（按真实计划调用本包只读检查器）。旧五操作保持兼容；`features` 中的 `executor-invoke-v1` 表示支持稳定执行入口。
-- 判定请求字段：`protocolVersion`(1)、`operation`、`requestId`、`runId`、`projectRoot`、`task`、`targets`、`skill`、`host`+ `type`（条件式必要输入：task/type 至少其一）；执行请求另用下方 `executorId` / `parameters` Schema。
-- 统一信封：`{ ok, result | error, diagnostics }`；机器结果与诊断分离；非法输入在触达执行器前判 `invalid-input`，不写入任何记录。
-- 完整输入 Schema、执行器参数与错误码以 `describe` 为准；请求失败（exit 2）时 stdout 仍为可解析 JSON 信封。
-- `inventory.commands`、本地 CLI 分发/帮助和安装资产 `capabilities.json` 的 CLI 条目共用 `lib/cli-catalog.js`；完整列出业务治理、判定、协议、帮助/版本入口及参数、副作用。`check` 检查安装漂移；`validate` 执行规则并记录回执；`codegen` 使用位置参数 `<validate|plan|apply> <contract-file>`。目录不等于调用授权，修改仍遵循原命令的计划确认和项目边界。
-- MCP 完整输入 Schema 与副作用来自真实 `mcp/registry.js`。`tools/list` 的 `annotations.readOnlyHint` 和 `_meta["wl/sideEffects"]`、协议 MCP 目录及安装能力快照一致：`recorded` 写本包观测记录，`gated` 按模式可能写业务资产且仍需原计划确认；`readonly` 不写项目文件。`wls_be_task` 的 route/explain/status/list 模式仍只读，`wls_be_test` 只返回源码/场景，不保存测试文件。
-- **`ok=true` 只表示协议调用成功，不代表业务验证通过**；业务状态以 `result` 内 `validationStatus` / `executionStatus` 为准（仅计划时为 `unverified` / `not-executed`）。
-- 副作用：`task` 写计划，`execute` 调用检查器并写本包 runs 回执；二者不因协议调用获得修改业务文件权限。其余操作只读，各操作以 `sideEffects` 明确声明。
-- 协议实现为本包内置的同源快照 `integration-protocol.cjs`，五包一致；跨包一致性由 conformance `integration-protocol.check.cjs` 验收。
+查看待写入的规范、Skill、编辑器入口、MCP 和质量规则文件，取得 `planHash`。这一步不修改项目。
 
-### 单包稳定执行入口
-
-先对明确目标建立任务，再在项目外保存以下请求，使用同一个 runId：
+### 2. 确认并安装
 
 ```bash
-wl-skills-bd task --input "检查 Java Service 职责注释" --target-file src/FooService.java --run-id comment-review --json
-wl-skills-bd protocol request --input-file /tmp/bd-execute.json --json
-wl-skills-bd status --run-id comment-review --json
+npx @agile-team/wl-skills-bd init --plan-hash <planHash> --confirm
+npx @agile-team/wl-skills-bd check --json
 ```
 
-```json
-{
-  "operation": "execute",
-  "projectRoot": "/absolute/path/to/backend-project",
-  "runId": "comment-review",
-  "executorId": "validate",
-  "parameters": { "targets": ["src/FooService.java"], "rules": ["B12"] }
-}
-```
+只写本包受管资产，保留项目已有内容；`check` 检查安装完整性与漂移。纯 Java 仓库的 MCP 调用固定到安装版本。安装器不自动修改业务源码或 POM。
 
-`projectRoot`、`runId`、`executorId`、`parameters` 必填。目标需属于真实计划且位于项目内；缺计划、过期计划、规则/安装版本漂移、解释或禁止检查的任务、未知执行器和不合法参数会拒绝，不能由宿主拼出一条 CLI 绕开准入。
-
-当前支持 `validate`（单个文件或目录，可选 B 规则子集；省略 rules 时使用真实任务的 B 规则子集）与 `review-run`（需任务选中 `convention-audit-be`，仅整个项目根 `targets:["."]`，B 检查遵守计划子集）。普通注释基础任务不会升级成综合审查。BD 自己维护命令参数与范围语义；新增规则无需宿主再维护规则表。`execute` 不开放 codegen/apply、数据库写入或配置修复。
-
-结果保留原 `status`，附 `executorId` 与 `execution`（真实 `exitCode` / `signal` / stdout / stderr / 输出截断 / 取消）。业务检查退出 1 时仍是 `ok=true` 的已完成调用，业务失败和覆盖范围必须从真实回执判断。取消时立即终止执行器进程树；本次已开始但未完成的检查记执行失败、验证未验证，不伪造问题或通过项。输出超过 4 MiB 明确失败。详细边界见 [公开 API 与兼容性](docs/public-api.md)。
-
-## 核心能力
-
-| 能力 | 已落地内容 |
-|---|---|
-| 工程资产生命周期 | `init/update/diff/check/clean`；预览 planHash、确认、写前重算、冲突零写入、备份和整批回滚 |
-| 契约生成 | 严格 `wl-contract.json` → 15 个固定工程产物 + 按命令生成的请求 DTO + 2 个前后端协作产物 |
-| 业务规则生成（v0.29） | `businessKeys` 生成新增/修改归一化与有效数据去重；`batchPolicy` 生成 selected-only 合并门禁；`generation` 记录可追溯来源 |
-| 业务扩展（v0.9） | `customOperations` 业务命令/状态机、`relations` 主从关联、`alter` ALTER TABLE、`indexes` 自定义索引、可选 `export`、`externalId` 跨包桥接 |
-| 数据安全护栏（v0.10/v0.14） | B13~B19：Redis TTL/Redisson 锁/禁用命令、物理删禁令/全表写禁令/批量分批、受保护环境只读护栏、二次确认 |
-| 稳定性与多环境（v0.11/v0.14） | B20~B23：事务内 MQ·HTTP/Swagger 混用/巨型 Service；定时任务、环境隔离和统一写护栏 |
-| 独立协同（v0.12） | 内置统一 delivery profile；没有 design/kit 也能从评审需求独立生成；有 kit 时用 `wl-api-contract` 严格握手 |
-| 配置分层（v0.12/v0.23） | 三层分层模型 + env-matrix 单一事实源 + config init/migrate/doctor/fix；明文 Secret、Bean 覆盖、Actuator 全暴露和错误详情泄露体检 |
-| 任务驱动（v0.32） | 13 种任务类型覆盖全部 Skill；task 持久化判定与缺口，route/explain 只读；标准 DAG 表示尚未执行的计划，保留 pipelineHash 与确认门 |
-| 行为契约测试（v0.16） | 从契约 customOperations 生成场景测试（正常/前置拒绝/状态转移/batch）；测行为不测镜像，避免冗余 |
-| 生产保障契约（v0.17） | `assurance.level=production` 强制声明 SLO/RTO/RPO、权限、数据治理、一致性、韧性与六类评审证据；证据缺失时 completion 保持 draft |
-| 安全与数据口径（v0.17） | B24 方法安全启用门、B25 敏感 `toString` 门、B26 Mapper 绑定门、B27 父 BOM 依赖版本门、B28 框架扩展点 Bean 门；字段稳定语义 ID/定义/枚举/初始值/分级/脱敏/日志/所有者/唯一事实源 |
-| 边界与项目口径（v0.18） | 写入/查询约束分离、跨字段时间顺序、客户端/服务端上下文、Profile 驱动 HTTP 与分页、B26 Mapper 资源路径、B29 分页 DTO、B30 Controller 真实路由闭环 |
-| 数据库事实源（v0.20） | 文档表必须同名复用；字段名称/大小写/顺序/类型/可空性/默认值/注释精确门禁；扩展末尾追加并登记依据；MySQL 统一小写 |
-| 数据库命名治理（v0.27） | 禁止新增 `is_` 数据库列和 `isXxx` Java 属性；需求镜像先告警，受管契约/ALTER/代码生成强阻断；统一使用 `*_flag`/`xxxFlag` |
-| 跨服务 JSON 契约（v0.28，0.40.0 校准） | B32 请求模型缺入口 error；返回模型消费者未验证时 warn，确认实际反序列化配置与契约测试；不强制仅序列化模型增加 setter |
-| 存量契约与影响分析（v0.23） | `crud/schema-mirror/integration-projection` 分类；严格 CRUD 才允许 codegen；兼容迁移、字段容量/所有权/迁移链/源码引用可复现分析 |
-| 集成闭环（v0.23） | 逻辑 ID 算法版本与规范化、生产者/消费者/载荷版本、排序、重试/确认/死信/重放、错误码引用及重复工具审计 |
-| 变更审查（v0.24） | Git 新增问题与历史基线分离；B 规则、项目断言、平台适配、供应链、JaCoCo 全量/变更行覆盖率汇总到同一质量门 |
-| 平台适配（v0.24） | MQ/集成实现由项目登记真实依赖、API、配置、测试和运行证据；BD 只验证衔接与闭环，不选择 SDK、不连接 Broker、不覆盖平台封装 |
-| 项目策略（v0.24） | HTTP/幂等/并发等通用边界及 BOM/依赖/仓库门由项目显式激活；未配置时不做主观猜测、不新增阻断 |
-| 手册覆盖与高安全生成（v0.14） | 业务子域优先分层、强类型命令 DTO、租户/版本原子写、Flyway 不可变、DDL 评审报告和统一写链 |
-| 模块目录与精准上下文（v0.15/v0.21） | 当前模块增量扫描、一跳上下游快照、有界 Context Plan、全局去重、Source Index 内存/持久化缓存与安全失效；缓存有进程字节上限 |
-| 生成安全 | `validate/plan/apply`，`planHash + --confirm`，生产/完成度/证据门、受保护业务区、写入失败全量回滚；batch 默认全成全败 |
-| 快速审计 | B1~B32；指定规则会在发现/读取/检查前真实短路；目录无法读取、文件过大或读取失败时报告诊断并标记 partial；text/JSON/Markdown/SARIF |
-| Java 质量门 | wl-quality 保留 J1~J5/J8 严格硬门；存量接入用独立静态报告与单元/架构作业，Gate 按规则分级；J6 P3C 隔离审计、J7 运行时能力 |
-| 前后端协作 | 同一 manifest 核对前端 `api.md`、kit 风格 api.md、OpenAPI 3 和权限清单 |
-| 权限搬运（v0.9） | `permissions export` 把后端权限码导出为 kit `SYS_PERMISSION_INFO.md` 片段 |
-| 安全修复 | 先把问题分为可安全自动修复、补丁建议、平台模板或人工语义修复；B3/B5 与项目批准的精确替换保留计划确认、备份、回滚和强制复扫 |
-| AI 接入 | 18 个 MCP 工具复用同一核心；`.wl-skills-bd/capabilities.json` 单一机器能力清单（Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序）；统一 `response.mode/maxItems/maxBytes/cursor`，大结果按需续取而非重复注入上下文 |
-
-### v0.33.0 公开集成协议与输入校验收口
-
-- 新增 describe/request 统一信封的公开集成协议：外部宿主与适配器仅依赖公开入口获取能力清单与路由语料；`doctor-host` 修复 host 透传。
-- 能力清单与真实安装技能对齐（`taskTypes` 分离）；context null / 空 targets 输入校验返回可解释拒绝。
-
-### v0.32.0 任务判定与真实验证回执
-
-- 独立 task/route/explain/status/doctor-host 解释匹配、基线、歧义、缺口、职责外和上下文不足；13 个 Skill 均进入路由，缺 canonical 资产或必要输入时不能 ready。
-- 独有 `.agents/skills/wl-skills-bd/SKILL.md` gateway 引导按需读取本包规则。宿主发现和模型读取仍为未验证状态；Pre-flight SHA 只证明文件快照，模型自述标为声明。
-- 实际 CLI/MCP 检查记录 runId、文件、规则及 Profile 快照和逐项覆盖；状态区分执行与验证，过期回执失效，能力缺口和未检查范围不能算整体通过。同一任务跨适用包复用 `--run-id` 或 `WL_TASK_RUN_ID`。
-
-### v0.31.0 共享资产保护与独立组合协议
-
-- 共享 Markdown 按本包标记管理，MCP 只合并本包服务键；JSONC 注释、其他包内容、预存空文件及用户修改都保留。`--force` 不授予外来内容所有权，项目 Profile 和业务配置不会重置。
-- 公共 API Schema 明确定义生产保障、缺失证据、业务命令与关系查询事实；结构校验与项目 Profile、BD 生产预算分别负责各自口径。包内独立能力声明可供组合客户端读取，运行时不依赖其他 WL 包。
-- 旧整文件安装可依据可信基线转为本包区块；清理保留修改内容及引用记录，路径类型预检避免半安装。新增真实 CLI、迁移与跨包生命周期回归。
-
-### v0.30.1 精准诊断与结果预算
-
-- B29 的分页 Profile 损坏、B31 的契约事实源不可读或 Catalog 配置损坏会输出配置诊断并标记 `partial`；数据库漂移对账遇到事实源缺失也会阻断。没有文件需求的规则不再遍历整个工程。
-- MCP 的 `severity` 只筛选展示，整体错误数和结论仍以完整扫描为准；`partial` 不再显示为 `passed`。畸形 MCP 请求会返回协议错误，后续请求仍可处理。
-- MCP 对最终 JSON 结果和游标页执行严格字节上限；Catalog 全文只在 `structuredContent.catalog` 返回一次。安装、清理、代码生成在逐文件写入前再次核对哈希，发现并发漂移时回滚。
-- 质量门采用 65 个规则样本（B1~B32 均有正反例，含定位/严重度断言），检查冷热缓存和实际文件读取；发布验证只执行一次带覆盖率的全量测试。
-
-### v0.30.0 写入安全与扫描完整性
-
-- Flyway 迁移文件一旦存在且内容不同，`codegen apply --force` 仍整批阻断；应创建新迁移版本。
-- `init/update/clean` 先输出计划和 `planHash`；携带相同哈希与 `--confirm` 才写入，执行前重新核对文件与 manifest。`clean` 成功后保留恢复备份，失败时整批回滚。
-- 规则扫描遇到目录/文件读取错误或文件超过扫描上限时返回错误诊断，并将覆盖标记为 `partial`；完整质量门不会把未读文件算作通过。
-- `wl-skills-bd mcp` 可直接启动 stdio 服务；扫描、Source Index 与 MCP 游标缓存都有进程总字节上限。
-
-### v0.29.0 业务生成与迁移执行闭环
-
-- **真实业务键进入生成器**：`businessKeys[]` 明确字段、create/update、exact/trim、业务化提示、来源与数据库并发约束引用；Service 自动归一化、按租户和有效数据查重，更新时排除自身 ID。
-- **批量校验仅看所选记录**：`customOperations[].batchPolicy` 固定 `selectionScope=selected-only`，生成最少条数、一致字段和恰好 N 个不同分组门禁，避免未选同组数据误拦合法统合。
-- **跨层容量一致**：字段长度变更必须同步 Java 校验、数据库列宽、接口契约、文档和 150/151 等边界测试，不允许只扩 DTO 或只改表。
-- **Flyway 单写入**：迁移只能由 Flyway 框架执行一次；禁止先手工 `ALTER` 再补写履历。执行包必须一次性包含预检、备份/恢复演练、停写、迁移、后检、部署和冒烟门禁。
-- **运行验收防伪**：测试前确认账号公司/租户，写后按返回 ID 和同租户读路径回查；查询覆盖命中、无命中、重置及 UI→DTO→Mapper 参数映射。
-- 完整口径见 [业务生成与交付闭环](files/.github/guides/business-closure-playbook.md)。
-
-### v0.28.0 跨服务 JSON DTO 反序列化门禁
-
-- **机器分级**：B32 扫描传输模型；请求模型未发现反序列化入口为 error；返回模型缺少消费端证据为 warn。序列化用途无需整改，实际 Java 消费链须核实 Jackson 配置并测试。
-- **默认安全模板**：生成的 VO/PageVO 显式带 `@NoArgsConstructor`，配合非 `final` 字段和 setter，确保 Feign/Jackson 调用方可以还原响应对象。
-- **真实回归**：跨服务模型必须按实际命名策略执行 ObjectMapper 序列化→反序列化往返并逐字段断言，避免“提供方已提交、调用方解析失败并误重试”。
-- **低误报**：B32 仅覆盖传输模型路径/命名，显式 `@JsonCreator`、`@Jacksonized` 或 builder 反序列化配置放行，不干扰内部不可变值对象。
-
-### v0.27.0 数据库 `is_` 命名禁令
-
-- **统一口径**：数据库标志列使用 `*_flag`，Java 属性使用 `xxxFlag`；默认软删字段由 `IS_DELETE/isDelete` 收敛为 `DELETE_FLAG/deleteFlag`。
-- **文档先拦截**：`docs/db-spec/*.json` 一旦出现 `is_` 字段，B31 会明确提示 Java Bean get/set 与序列化映射风险，并给出 `*_flag` 建议。未安装项目为迁移告警，受管项目阻断生成。
-- **生成零扩散**：CRUD 业务字段、自定义命令字段及 ALTER 新增字段同时禁止 `is_`/`isXxx`；Profile 也不能把软删列覆盖回违规名称。
-- **允许安全退役**：规则不阻断 contract migration 显式删除旧 `is_` 列。存量治理仍须按 expand → backfill → switch → contract 执行，不能直接改列制造兼容风险。
-
-### v0.26.0 业务闭环与数据库复核
-
-- **状态机闭环校验**：契约校验把 stateTransition/command/batch 的前置与 patch 组合成状态转移图，从 initialValue 做可达性分析——不可达枚举值、永不可触发的空集前置直接 error；无终态（循环流程）产生人工确认警告。
-- **业务疑点人工确认门**：`codegen plan` 输出机器枚举的 `openQuestions[]`（空批语义、状态并发口径、命令防重、导出边界、关联空口径、ALTER 存量数据等）；阻断性疑点未确认时 apply 零写入，需携带 `--questions-reviewed`（MCP `questionsReviewed`）。清单确定性生成并计入 planHash。
-- **三方字段对账**：新增 `wl-skills-bd db review <contract> [--snapshot <file>]`——文档镜像/契约/线上快照逐字段正向对账（类型含长度/可空/默认值/注释），支持 `--output` 报告；codegen plan 的 `databaseSource.reconciliation` 同步暴露汇总。
-- **ALTER 影响硬门**：ALTER 契约在配置 Catalog 的项目由机器执行字段影响分析并留证据；未配置时必须登记 `alter.impactRef`（人工 impact field 结论/工单），否则 plan 阻断。
-- **快速恢复辅助**：ALTER 的 DDL 预览报告自动附"变更前证据采集 SQL"（information_schema/USER_TAB_COLUMNS 只读留底 + 行数）；新增 `db snapshot-template` 给 DBA 的快照导出 SQL 与 JSON 格式指南。
-
-### v0.25.0 AI 精准接入：能力清单、Pre-flight 证据与入口防漂移
-
-- **单一机器能力清单**：`capabilities.json` 升级为 schemaVersion 2 的 agent manifest——13 个 Skill 携带触发词、状态、风险与目标项目安装路径（修复安装后 `files/` 前缀死链），并索引 MCP 工具、CLI 命令和推荐读取顺序；`wl-skills-bd capabilities [--json]` 与 MCP `wls_be_capabilities` 一步返回。AGENTS.md 收敛为"清单 + 10 条不变式 + 指针"，MCP `initialize.instructions` 写明五步接入约定。
-- **Pre-flight 文件快照**：`task`（CLI `--json` / MCP structuredContent）输出任务必读 standards/skill 文件的 sha256 清单与 `preflightHash`。哈希可对账文件版本，模型是否实际读取仍需独立证据；v0.32 起明确区分文件快照与模型声明。
-- **入口防漂移门禁**：`verify-version` 校验 capabilities 的 MCP 名称与 registry 一致，并核验完整 CLI 条目参数/副作用和真实 handler 接线；CLI 测试对照公开目录、安装快照与实际帮助，新增无 handler 或重复别名即拒绝。`verify-doc-sync` 扫描文档中 "N 个 MCP" 数量漂移与 AGENTS.md 有序列表编号断档；`lint-skills` 强制每个 Skill 声明 `metadata.triggers` 且 standards 引用断链零容忍。
-
-### v0.24.0 变更审查、平台适配与精准修复
-
-- **同一质量门**：`review run` 汇总 Git 变更、B 规则、项目断言、平台适配、供应链与 JaCoCo；默认只阻断新增问题，并明确区分历史基线、有效豁免和过期豁免。
-- **平台拥有规则**：`.wl-skills-bd/integration-adapters.json` 由项目或平台团队登记真实 Maven 坐标、Producer/Consumer API、配置、测试和运行证据。BD 不内置 MQ SDK 选择，也不把某个平台封装推广成通用标准。
-- **零隐式激活**：未配置适配器或项目策略时，只返回 `not-configured`/事实清单，不根据依赖名猜接线、不改变已有质量门结果。
-- **受控实现衔接**：实现 recipe 只能渲染项目登记模板且只能新建文件；已有文件、未解析变量、写前漂移或受保护环境全部阻断，仍需项目编译、测试和 review 验证。
-- **精准修复**：`fix advise` 先分类；项目断言只有目标文件受证据约束、字面 before 恰好命中一次时才可 apply，写后复验失败自动回滚。权限、租户、SQL、MQ 语义和业务算法保持人工卡口。
-- **更省 Token**：Git changed-lines、规则执行计划、模块边界和摘要/cursor 先在确定性核心裁剪；review 的规则覆盖只列一次，模块证据只保留统计/扫描量，变更文件按 limit 截断；AI 只消费差异、证据位置和下一步。
-
-### v0.23.0 多模块、存量契约与精准影响闭环
-
-- **多模块根目录**：由 Catalog 配置显式发现模块根；doctor、配置体检和 B 规则按模块执行，根目录只汇总证据，不把聚合工程误判成单体工程。
-- **契约分流**：`contract inspect` 确定性区分严格 CRUD、数据库镜像与集成投影；只有 `crud` 可进入 codegen，存量格式通过 `contract migrate` 的 planHash/备份/回滚链渐进收敛。
-- **真实目录**：Catalog 只把契约形状 JSON 当资源，接口以 Controller 源码观测为准；默认仅返回摘要，`--section/--limit/--cursor` 按需读取。
-- **字段影响**：`impact field` 在指定模块内关联契约字段、存储容量、Java 校验、所有权、Expand/Backfill/Contract 迁移链及精确文件行号，禁止隐式全仓扫描。
-- **集成治理**：契约可声明版本化逻辑 ID 和集成投递闭环；`integration inspect/audit` 检查缺项以及 StableBusinessId/PayloadHash 的重复或实现漂移。
-- **量化结果**：质量基准的固定夹具覆盖 B1~B32 正反例，并把 Catalog 默认摘要与分页加入 token 回退门禁；夹具 precision/recall 不代表真实项目准确率，1000 资源夹具摘要约 118 tokens。
-
-### v0.22.0 契约、安全写链与数据库证据闭环
-
-- **单一事实源**：Standards、B 规则、Skill、Profile、运行时、API 与 DDL 能力由机器目录和不变量脚本交叉校验，避免文档、Schema、MCP 和执行器漂移。
-- **契约精度**：ID、审计列、字段约束、稳定语义 ID、错误码和目标数据库风险由 Profile/Contract 驱动；`contract seed` 只提取 DB Spec 可证明事实，未知业务决策显式留空。
-- **安全写链**：新增写入口统一经过预览、planHash、确认、写前漂移、符号链接边界、原子落盘、内容校验与失败回滚；多环境冲突和受保护环境默认 fail-closed。
-- **DDL 回执**：现场变更必须精确到列，同时绑定已审批 DDL hash、迁移内容 hash、来源、审批号与执行时间；宽限期最长 7 天，账本损坏不放行且重复回执保持幂等。
-- **上下文预算**：Context Plan 同时限制文件数、字节数和估算 token；MCP 默认摘要并支持游标续取，确定性扫描、缓存和质量评测继续复用 v0.21.0 能力。
-
-### v0.21.0 完整精益闭环
-
-- **准确率**：规则注册表先构建执行计划，未知规则 fail-closed；quick/staged 明确列出未评估规则，不能用局部扫描冒充全量通过。
-- **性能**：共享 ScanContext 一次发现、一次读取并复用内容；`--rules` 只加载对应文件类型。Source Index 用两级缓存加速重复 MCP 调用，任何指纹变化立即重建。
-- **Token**：所有 MCP 工具共享输出中间件，默认 20 项/20KB；超预算结果返回短期 cursor、真实字节和估算 token，不要求重跑原工具。
-- **节点粒度**：任务路由输出 4 个只读节点或 7 个写任务节点；只读节点才允许有界重试/超时，有副作用节点禁止自动重试并强制确认。
-- **量化门禁**：准确率语料、P95 性能、执行组缩减比例、缓存命中与 MCP 输出体积进入 `npm run eval:quality` 和 CI。
-
-### v0.18.0 项目口径与边界契约闭环
-
-- **Profile 是生效事实源**：包内 `POST + current=1,size=10,maxSize=200` 只是无项目配置时的基线；项目显式 GET、默认 20 或其他安全口径允许并报告覆盖，生成代码、契约和 DTO 与生效 Profile 不一致才阻断。
-- **写入/查询边界分离**：数据库列宽和精度进入写入/响应约束；查询条件只有显式 `queryConstraints` 才生成校验，避免把可输入文字的字段误套数值规则或把存储宽度机械套到检索框。
-- **跨字段与上下文可证明**：时间先后通过 `validationRules.chronology` 声明；`contextSource=server` 的公司、用户等可信字段禁止进入请求 DTO，客户端上下文按操作精确携带。
-- **运行期资源闭环**：B26 同时核对实际 Mapper XML 与本地 `mapper-locations`；B28 要求容器按接口解析唯一 Bean并验证装饰器委托；B29 按生效 Profile 检查 PageDTO 默认值和上限；B30 输出 Controller 真实端点清单并阻断重复方法+路径。
-- **通用而非业务定制**：执行器不内置客户、模块、表名、字段名或状态值，所有差异只来自项目契约、Profile、兼容矩阵和显式证据。
-
-### v0.18.2 Controller 真实端点闭环
-
-- `validate` 结果包含从源码提取的 `endpoints[]`（HTTP 方法、完整路径、处理方法、文件和行号）。
-- B30 阻断重复完整路由，避免新增接口被同路径覆盖或前端调用到不存在的隐式地址。
-- 不规定查询必须 GET；项目采用 POST 查询时按实际注解记录，不产生僵化误报。
-
-### v0.18.1 安装事务闭环
-
-- **预检阻断仍为零写入**：本地改动冲突未显式 `--force` 时，不写任何受管文件和 manifest。
-- **写入异常自动回滚**：复制、目录创建或 manifest 写入任一环节失败，恢复所有已改/已删/已新增文件与原 manifest，并清理本次失败事务的临时备份，不留下半安装状态。
-- **成功覆盖仍可恢复**：正常 `--force` 覆盖继续保留 `.wl-skills-bd/.state/backups/<timestamp>/` 备份；事务回滚不替代人工审计和备份。
-- **通用边界**：能力只作用于本包 manifest 受管资产，不读取或改写客户业务代码、数据库、Nacos 或项目 Profile。
-
-### v0.17.10 框架扩展点运行闭环
-
-- **跨平台升级不误报**：受管文本资产比较会归一化 LF/CRLF；Windows Git 换行转换不会再被当成本地定制，真实内容差异仍会阻断覆盖并要求人工确认。
-- **唯一 Bean 选择**：兼容矩阵登记平台已提供的框架扩展点；业务再注册同类型 Bean 时，B28 要求明确 `@Primary`，提前阻断部署阶段的 `NoUniqueBeanDefinitionException`。
-- **平台语义不丢失**：业务扩展必须通过平台 Bean 名显式限定并委托原实现；不允许用一个空壳 `@Primary` 静默替换公司、用户、组织、应用编号或审计字段等平台行为。
-- **空串日期边界**：持久化前把日期空字符串归一为 `null`，再交平台填充；不关闭数据库严格模式，不在每个 Service 重复补丁。
-- **测试能发现装配错误**：除方法行为测试外，新增框架 SPI Bean 必须有最小 Spring 容器测试，并按接口类型解析 Bean。B28 对缺少该证据给出警告。
-- **通用且精准**：规则只在兼容矩阵确认的父框架与扩展点上激活，不包含客户、模块、表名或业务字段；非 jh4j 工程不套用该约束。
-
-### v0.17.9 通用闭环边界
-
-- **不绑定业务域**：执行规则和模板不内置客户名、模块名、表名、页面路径、字典值或业务状态；业务差异只允许来自项目契约、Profile、兼容矩阵和显式本地覆盖。
-- **字段边界可追溯**：VARCHAR 长度、DECIMAL 总位数/小数位、必填和默认值从数据库契约生成到 `wl-api-contract`，并携带 `constraintSource`；不按 Java 属性名或中文标签猜规则。
-- **分页前后端同源**：无项目配置时基线为 `current=1,size=10,maxSize=200` 与 POST JSON body；项目存在 Delivery Profile 时以其方法、载荷位置和分页口径为准，OpenAPI 和前端握手按同一生效模型核对。
-- **依赖门精准激活**：B27 仅在工程实际继承兼容矩阵中已验证的父 BOM 时生效，只阻断该 BOM 已管理依赖的子模块显式版本漂移；其他父工程和非受管依赖不误报。
-- **真实运行闭环**：静态通过不等于可交付；必须继续完成 Maven 编译/测试/打包、fat jar 依赖检查、应用启动、配置中心加载、服务注册和首个真实 Mapper 查询。
-- **安全修复边界**：没有机器证据时只报告缺口，不推测字段、不自动改表、不自动补消费者，也不为通过扫描改写业务语义。
-
-## 快速开始
+### 3. 看第一份结果
 
 ```bash
-# 要求 Node.js >= 22
-npx @agile-team/wl-skills-bd init --json      # 读取 planHash；零写入
-npx @agile-team/wl-skills-bd init --plan-hash <hash> --confirm
-npx @agile-team/wl-skills-bd capabilities    # AI 单一能力清单（skills 触发词/工具/命令）
-npx @agile-team/wl-skills-bd doctor
-npx @agile-team/wl-skills-bd validate src/main --format sarif --output reports/backend.sarif
+npx @agile-team/wl-skills-bd doctor --json
+npx @agile-team/wl-skills-bd validate . --json
 ```
 
-`init/update/clean` 默认只预览。先取得计划的 `planHash`，评审后用同一命令加 `--plan-hash <hash> --confirm` 执行；写前会重新计算计划，漂移时零写入。`--json` 执行结果同时包含计划和 `result`（含备份编号）。用 `diff` 查看漂移、`check` 验证安装完整性；`clean` 只移除哈希未变的受管文件并保留恢复备份。冲突时整批零写入，显式 `--force` 仅允许覆盖安装资产或非迁移生成物，不能改写已有 Flyway 迁移。
+`doctor` 暴露 JDK、质量门、配置与契约缺项；`validate` 执行后端规则，返回问题位置、建议和覆盖情况。出现 `partial` 时先补齐缺项，不能把未检查范围算作通过。
 
-## 大型工程模块目录与精准上下文
+## 一个场景：提交前发现 SQL 问题
 
-从 `.wl-skills-bd/catalog.config.example.json` 复制为 `.wl-skills-bd/catalog.config.json`，登记模块的契约根、源码根、负责人和显式一跳上下游。日常开发必须指定当前模块：
+以订单模块为例，Mapper 中出现 `SELECT *`，字段增加后容易产生多余传输和映射风险。
+
+| 步骤 | 工具做什么 | 验收点 |
+| --- | --- | --- |
+| 识别任务 | `task` 确认目标、规范和规则，返回 `runId` | 编辑前能看到实际 `notice` 和待检查项 |
+| 定位问题 | `validate` 的 B3 定位 SQL 行 | 报告指出文件、行号及修复建议 |
+| 预览修复 | `fix plan <Mapper路径> --rules B3 --json` | 有安全、显式且别名匹配的 `BaseColumns` 才提供确定性替换 |
+| 确认执行 | 同目标 `fix apply` 携带 `--plan-hash <hash> --confirm` | 脚本写入、备份并复扫；不满足前置条件则留人工处理 |
+| 复验交付 | 同 `runId` 再 `validate` 并查询 `status` | 问题前后可对比，范围明确；继续完成 Maven 与业务验收 |
 
 ```bash
-wl-skills-bd catalog plan --module order
-wl-skills-bd catalog apply --module order --plan-hash <sha256> --confirm
-wl-skills-bd catalog check --module order
-wl-skills-bd catalog show --module order
-wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
-
-wl-skills-bd context plan --module order \
-  --task "增加订单创建接口" \
-  --keywords "幂等,客户" \
-  --max-tokens 12000 \
-  --json
+# 路径替换为项目实际文件；runId 使用 task 返回值
+npx @agile-team/wl-skills-bd task --input "修复订单 Mapper SQL 问题并复查" --target-file src/main/resources/mapper/OrderMapper.xml --json
+npx @agile-team/wl-skills-bd validate src/main/resources/mapper/OrderMapper.xml --rules B3 --run-id <runId> --json
+npx @agile-team/wl-skills-bd status --run-id <runId> --json
 ```
 
-模块模式只遍历 `order` 配置的契约/源码根。上游 `customer`、下游 `billing` 等模块只读取已生成快照，且仅把关系命中的契约列为候选，不扫描它们的源码目录。快照缺失时明确告警，不会偷偷回退全仓扫描。`catalog plan --full` 仅供 CI、首次初始化或显式全局治理。
+脚本负责可证明安全的机械修改，AI 解释差异与业务语义；权限、租户、SQL 语义和业务算法仍需审阅。单条规则通过只证明这次检查范围，未执行的规则、Java 构建和运行验证会保留未验证状态。
 
-机器快照写入 `.wl-skills-bd/catalog/`；人读文档写入 `docs/backend/`。每份生成文档都带用途、受众、范围、来源、目录哈希和 `editable: false` 注释头。当前模块文档是开发事实入口，项目索引只汇总快照。Catalog 会阻断重复契约、服务类、真实 API 路由、权限码、表写归属和 Flyway 版本；只有具备契约身份形状的 JSON 才进入资源目录，Controller 实际注解才是 API 观测事实。配置存在时，codegen 还会校验当前模块新鲜度并将上下文哈希绑定到 `planHash`。Context Plan 同时受文件数、字节数和估算 token 三重预算约束；中文任务会拆成可命中的语义片段，避免整句不命中后扩大扫描范围。
+新建接口、加字段或增加业务命令走另一条同样明确的链：**更新契约 → 校验 → 预览生成 → 确认写入 → 前后端对账 → 编译测试 → 运行验收**。详见 [代码生成流程](files/.github/guides/codegen-workflow.md) 与 [业务交付闭环](files/.github/guides/business-closure-playbook.md)。
 
-日常只需遵循五步：
+## 项目与流水线怎么配合
 
-1. `catalog check --module <module>`：确认当前模块目录新鲜；
-2. `context plan --module <module> --task "<任务>"`：加载当前模块和命中的一跳契约；
-3. 更新 `wl-contract.json`，执行 `codegen validate/plan/apply`；
-4. 执行 `contract diff --strict`、`validate` 和 Maven 质量门；
-5. 使用 `type(scope): 功能点-具体内容` 提交，CI 执行 `commit check --range <base>..HEAD`。
+| 层面 | 接入方式 | 成功标志 |
+| --- | --- | --- |
+| 开发与 AI | `init` 安装入口；任务开始判定，结束复扫并读 `status` | 有真实工具记录和检查文件，缺项明确显示 |
+| Git 变更审查 | `review run --base <基线分支> --json`；按项目配置接入钩子或 Gate | 区分新增问题、历史基线和有效豁免 |
+| Java 静态分析 | 审查后将包内 Maven Profile 接入父 POM，使用 `wl-quality-audit` | 各适用模块产出真实 Checkstyle / PMD / SpotBugs 报告 |
+| 单元与架构测试 | 独立使用 `wl-quality-unit`；已批准严格规范可使用 `wl-quality` | 编译、必测用例和覆盖率有独立结果 |
+| 统一门禁与通知 | 按需由 Gate 调用本包并汇总原生报告 | 钩子、CI、报告与群通知按接线实际触发 |
 
-不要把 `catalog --full` 当作本地默认，也不要直接修改生成的 Catalog JSON/Markdown。
+BD 提供后端规则与执行器；**Gate 负责跨包编排和质量闭环**。两者都可独立使用。Java Profile 需先审查 POM 差异、模块范围和测试集合，再在隔离 Runner 验收；不要把静态报告成功当作构建、测试和业务已通过。接入命令见 [Java 质量门](files/.github/java-quality/README.md)。
 
-## 契约驱动生成
+安装入口不等于所有宿主已自动执行。首次接入用一条可定位问题验证“触发 → 报告 → 修复 → 复扫”；日常执行交给已配置的 AI 宿主、钩子和流水线。
 
-从安装后的示例开始：
+## 按需深入
 
-```bash
-# 已有 DB Spec 时，先生成只含可证明事实的契约种子
-wl-skills-bd contract seed --table MDM_FEATURE_CATEGORY --database oracle --json
-wl-skills-bd contract inspect contracts/legacy.json --json
-wl-skills-bd contract migrate contracts/legacy.json --json
+| 需要 | 入口 |
+| --- | --- |
+| 全部任务、规则与日常操作 | [使用指南](files/.github/guides/usage.md) · [任务目录](files/.github/standards/26-task-driven.md) · [规范清单](files/.github/standards/index.md) |
+| 契约、数据库与前后端联调 | [生成流程](files/.github/guides/codegen-workflow.md) · [协作契约](files/.github/guides/frontend-backend-contract.md) |
+| Java 工具与 Maven 配置 | [Java 质量门](files/.github/java-quality/README.md) · [Maven 模板](files/.github/java-quality/maven-snippets/README.md) |
+| AI / MCP、协议与维护 | [MCP 工作流](files/.github/guides/mcp-workflow.md) · [公开 API](docs/public-api.md) · [维护契约](docs/maintenance-contract.md) |
+| 接入边界、范围配置与版本更新 | [项目范围](docs/project-scope.md) · `wl-skills-bd update / diff / doctor-host` |
 
-cp .github/templates/examples/feature-category.contract.json wl-contract.json
+## WL 系列
 
-# 契约驱动生成（plan 含 openQuestions 业务疑点与三方对账汇总）
-wl-skills-bd codegen validate wl-contract.json
-wl-skills-bd codegen plan wl-contract.json --json
-wl-skills-bd codegen apply wl-contract.json --plan-hash <sha256> --confirm   # 含阻断性疑点时另需 --questions-reviewed
+**WL · World Leading**。各包按职责独立接入，已接且适用的包可共享任务 `runId`。
 
-# 数据库三方对账复核（文档/契约/线上快照）与快照导出辅助
-wl-skills-bd db review wl-contract.json --snapshot snapshot.json --output reports/db-review.md
-wl-skills-bd db snapshot-template --database mysql --output docs/db-snapshot-guide.md
-```
-
-这条链路不依赖 `wl-skills-design` 或 `wl-skills-kit`。它们存在时可提供稳定 ID、页面契约和交叉验证；不存在时，bd 仍从已评审需求独立形成 `wl-contract.json` 并完成后端生成、检查和验证。
-
-契约必须明确：Profile、根包、业务子域、Entity/表、外部网关路径、权限码、Oracle/MySQL、迁移版本、恢复策略、只读验证 SQL 和字段写策略。无业务命令时生成 17 个产物：
-
-- 6 个模型：Entity、CreateDTO、UpdateDTO、PageDTO、VO、PageVO；
-- 4 个服务/持久层：Controller、直接 Service、Mapper.java（含可选 queryById）、Mapper.xml（含 queryById 段）；
-- 3 个 DDL 资产：正向 migration、人工恢复说明、DDL 风险/审批/验证预览报告；
-- 2 个测试骨架：ServiceTest、ControllerTest；
-- 2 个协作产物：`backend-contract.json`、`api.md`。
-
-每个需要 body 的业务命令额外生成一个 `OperationRequestDTO`。分页的 `current/size`、查询方法和载荷位置由生效 Delivery Profile 决定（内置基线使用 POST JSON body）；字段必须显式声明 `writable`，状态等命令字段应设为 `false`。
-
-DDL 只生成，不连接数据库、不自动执行、不伪造自动回滚。生产变更继续由 DBA/CD 和人工审批负责。
-
-严格生成契约固定为 `contractKind=crud`。存量数据库镜像和 OMS/跨系统投影可分别声明 `schema-mirror`、`integration-projection`，由兼容检查器纳入 Catalog 和治理报告，但不会被误送入代码生成器。兼容迁移默认只预览确定性动作；写入必须携带同一 planHash，保留备份，并在所有权等事实未明确时继续阻断。
-
-标准 CRUD 是完整实现。export、关联查询或缺少确定性 patch 的业务命令会明确标记为 draft，并放入 `<wl-custom>` 保护区；人工补齐实现和测试后，后续 codegen 会保留该区域。需要拒绝所有业务骨架时，在 apply 增加 `--require-complete`。
-
-生产契约还可声明 `assurance.level=production`。此时必须给出业务关键级别、SLO、RTO/RPO、认证与方法安全、审计、数据治理、幂等/事件/跨服务事务策略、超时/重试/熔断/限流，以及威胁模型、授权评审、压测、运行手册、恢复演练和数据评审六类非空证据文件。还必须声明 `dbCluster`、`databaseTarget`（库位、规模、停机预算、在线 DDL、备份与恢复责任人）、业务 `errors` 目录，以及所有对外响应字段的稳定 `semanticId`。包只验证声明和证据链，不冒充安全、DBA、SRE 或业务审批；完整要求见 [生产保障规范](files/.github/standards/28-production-assurance.md)。
-
-最小生产保障声明示例（证据路径相对业务项目根目录，文件必须存在且非空）：
-
-```json
-{
-  "assurance": {
-    "level": "production",
-    "criticality": "core",
-    "slo": { "availabilityPercent": 99.9, "p95LatencyMs": 500, "p99LatencyMs": 1000, "maxErrorRatePercent": 0.1 },
-    "recovery": { "rtoMinutes": 60, "rpoMinutes": 15 },
-    "security": { "authorizationModel": "tenant-data-scope", "methodSecurityRequired": true, "auditRequired": true },
-    "dataGovernance": { "owner": "主数据团队", "sourceOfTruth": "feature-category", "classificationDefault": "internal", "retentionPolicy": "按企业主数据保留策略执行" },
-    "consistency": { "idempotencyStrategy": "business-key", "eventDelivery": "none", "crossServiceTransaction": "none" },
-    "resilience": { "dependencyTimeoutMs": 3000, "retryMaxAttempts": 1, "circuitBreakerRequired": true, "rateLimitRequired": true },
-    "evidence": {
-      "threatModelRef": "docs/evidence/threat-model.md",
-      "authorizationReviewRef": "docs/evidence/authorization-review.md",
-      "loadTestRef": "docs/evidence/load-test.md",
-      "runbookRef": "docs/evidence/runbook.md",
-      "restoreDrillRef": "docs/evidence/restore-drill.md",
-      "dataReviewRef": "docs/evidence/data-review.md"
-    }
-  }
-}
-```
-
-### 业务扩展能力（v0.9）
-
-契约可选声明以下扩展，codegen 自动生成对应代码：
-
-| 扩展字段 | 生成内容 | 典型场景 |
-|---|---|---|
-| `customOperations[]` | 强类型命令 DTO + 前置校验 + `ID/COMPANY_ID/DELETE_FLAG/REVISION` 原子写；batch 返回 successCount/failureCount/failures | submit/approve/reject/withdraw/changeStatus/convert/release/close/cancel/batchXxx |
-| `relations[]` | 主 Controller 的 queryXxxByParentId 接口；manifest 暴露关联契约 | 订单/明细、配置/子项、主从表 |
-| `alter{}` | `phase=expand` 只允许可空 add/显式 widening modify；`phase=contract` 只允许带审批单的 drop；Catalog 未配置时必须登记 `impactRef` 影响分析结论 | 加字段、扩长度、审批后删废弃字段 |
-| `indexes[]` | 渲染到 migration（唯一索引/普通索引） | 业务唯一键、查询性能索引 |
-| `api.permissions.export` | GET /export Controller + Service 骨架 | 列表导出 |
-| `externalId`（顶层/字段/操作/关联） | 写入 manifest 供 wl-skills-design design-model 跨包追溯 | 稳定 ID 桥接 |
-
-业务命令命名规范与 wl-skills-kit api-contract 对齐；B5 规则已扩展识别全部业务命令前缀，确保 @Transactional 覆盖。
-
-## 前后端协作
-
-`wl-skills-bd` 不直接修改前端工程。bd 与 kit 各自可从评审需求独立建立契约，通过共同的 `jh4j3-openapi3@1.0` delivery profile 和 `wl-api-contract` 结构自然协同；design-model 只是可选追溯增强，不是硬依赖：
-
-```bash
-wl-skills-bd contract show wl-contract.json --format markdown \
-  --output docs/contracts/feature.verified.api.md
-wl-skills-bd contract diff wl-contract.json \
-  --frontend docs/contracts/page.api.md \
-  --openapi openapi.json \
-  --permissions permissions.json \
-  --strict
-```
-
-核对范围包括 Profile/协议、资源、API_CONFIG、HTTP 方法/路径、查询/请求/响应字段、`code=2000`、分页、`revision`、权限码和双方 completion。与前端 `wl-skills-kit` 的独立边界和严格握手见 [前后端契约指南](files/.github/guides/frontend-backend-contract.md)。
-
-## 数据库事实源闭环（v0.20）
-
-针对 2026-08-20 数据库治理事故（文档表被改名/架空、字段漏建、现场直接加列、扩展表无来源、SIT 重复审批返工）建立可执行门禁：
-
-**事实源链条**：需求文档镜像（`docs/db-spec/*.json`）↔ 契约（wl-contract.json）↔ Flyway 迁移 ↔ 线上库快照。
-
-- **B31 精确门禁**：文档表必须同名复用；字段名称与大小写、顺序、类型、可空性、默认值、注释逐项对账。受管项目缺少 `docs/db-spec` 时，codegen 和 db preview 零写入阻断。
-- **正向复核（v0.26）**：`db review` 输出文档/契约/(可选)线上快照的逐字段对账表，apply 前人工评审不再靠肉眼比 diff；ALTER 的 DDL 预览附变更前只读证据采集 SQL，出问题可快速回溯。
-- **扩展有依据**：基线不足先在原表末尾追加；新表/字段必须在 `.wl-skills-bd/db-governance.json` 登记用途、原因、需求/上游来源、审批人和审批号。旧 naming waiver 不再允许长期掩盖表改名。
-- **生成链同门**：B31、`codegen validate/plan/apply`、`db preview` 使用同一校验，文档/治理 fingerprint 进入 planHash；MySQL 生成器只接受并生成 `lower_snake_case`，Oracle 保持 `UPPER_SNAKE_CASE`。
-- **`wl-skills-bd db drift --snapshot <file>`**：推荐快照携带列序、类型、可空性、默认值和注释，精确对账文档与契约；无源表/字段或属性漂移均 error。
-- **现场变更只给短期宽限**：`db executed` 必须精确到表和列，并携带已审批 DDL hash、迁移内容 hash、来源、审批号和执行时间；默认 24 小时、最长 7 天到期。台账写入同样经过预览、独立 planHash、确认、环境护栏和原子写入，损坏台账绝不覆盖。
-- **严结构、简流程**：dev/sit 的结构门禁不降级，但一次 planHash 审批后连续执行 precheck → migrate → validate → postcheck → 冒烟；pre/prod 才要求变更单、DBA/CD、备份恢复和窗口。
-- **可重建**：CI 用空 schema 跑 Flyway 全量 migrate/validate，再与全属性快照对账；真正恢复依赖数据备份/日志 + Git 中不可变迁移，DBeaver 临时导出不作为事实源。
-- **`wl-skills-bd catalog rules`**：规则注册表自检——ID 唯一、severity/fix 合法、executor=be-rules 的规则在扫描器有真实输出（杜绝幽灵规则）、J 系列如实标注"依赖项目 pom 接线"。
-
-安全边界不变：DDL 只生成不执行；本包不连接数据库（drift 用离线快照）；生产变更仍由 DBA/CD 审批执行，执行后用 `db executed` 回执闭环。
-
-### 字段影响与集成闭环（v0.23）
-
-```bash
-# 必须指定模块；按字段/列名关联契约、库表、Java 边界、迁移链和源码证据
-wl-skills-bd impact field --module pl --table pl_l2_heat_plan_out --field heat_no --limit 50 --json
-
-# 检查单份契约的逻辑身份、载荷版本、重试/确认/死信/重放声明
-wl-skills-bd integration inspect contracts/heat-plan.contract.json --json
-
-# 在当前模块源码根内检查 StableBusinessId / PayloadHash 重复与实现漂移
-wl-skills-bd integration audit --module pl --json
-
-# 读取项目声明的平台封装适配状态；未配置时不猜 MQ SDK，也不产生违规
-wl-skills-bd integration adapters --module pl --json
-
-# 增量审查 Git 变更；默认 partial 会 fail-closed，项目可显式配置阶段策略
-wl-skills-bd review run --base origin/main --module pl --json
-
-# 交付前完整门禁，不带 base/staged/quick/rules
-wl-skills-bd review run --module pl --json
-```
-
-`impact field` 不执行数据库查询，也不靠字段名猜业务语义；所有结论来自兼容契约、Catalog 模块根和源码精确引用。输出默认 50 条证据并返回 `nextCursor`。逻辑 ID 必须固定来源字段顺序、分隔符/namespace、trim/case/nullToken、UTF-8、算法版本和最大长度；启用重试的集成必须绑定可重试错误码并声明死信闭环。
-
-### 平台适配与项目质量门（v0.24）
-
-从 `.wl-skills-bd/*.example.json` 按需复制配置；这些文件是项目策略，不是 BD 的平台假设：
-
-```bash
-# 生成历史问题基线；apply 仍需评审 planHash
-wl-skills-bd review baseline plan --json
-wl-skills-bd review baseline apply --plan-hash <hash> --confirm
-
-# 仅使用项目登记的 recipe 生成一个不存在的新文件
-wl-skills-bd integration plan --binding order-created --recipe consumer \
-  --var className=OrderCreatedConsumer --json
-wl-skills-bd integration apply --binding order-created --recipe consumer \
-  --var className=OrderCreatedConsumer --plan-hash <hash> --confirm
-
-# 先分类所有修复，再决定自动、模板或人工处理
-wl-skills-bd fix advise --module pl --json
-wl-skills-bd fix policy plan --assertions PLATFORM_TIMEOUT --json
-wl-skills-bd fix policy apply --assertions PLATFORM_TIMEOUT \
-  --plan-hash <hash> --confirm
-```
-
-- `quality-gate.json`：新增问题/历史基线、阻断级别、warning 预算、覆盖率与有期限豁免；默认要求完整规则覆盖，partial 不能冒充通过。
-- `integration-adapters.json`：平台依赖、Producer/Consumer/配置/测试/capability 证据及方向门禁；BD 只验证 `declared → dependency → configured → wired → tested → runtime-evidenced` 成熟度。
-- `quality-assertions.json`：项目自有的 HTTP、幂等、并发等边界断言；没有显式激活证据就不执行，只有项目批准的精确替换可进入写链。
-- `supply-chain.json`：依赖收敛、动态版本、快照、BOM、禁用坐标与仓库前缀；未配置时只做确定性 POM 清单。
-
-适配 recipe 不覆盖已有平台封装、不修改 POM/配置、不连接 Broker，也不宣称生成后已可运行；项目编译、测试、容器装配及 `review run` 仍是交付门。完整约束见 [standards/30](files/.github/standards/30-change-review-integration-adapter.md) 与 [integration-adapter-be](files/.github/skills/core/integration-adapter-be/USAGE.md)。
-
-## 检查与安全修复
-
-```bash
-wl-skills-bd validate src/main --strict
-wl-skills-bd validate src/main --format markdown --output reports/AUDIT_BE.md
-
-wl-skills-bd fix plan src/main --rules B3,B5 --json
-wl-skills-bd fix apply src/main --rules B3,B5 --plan-hash <sha256> --confirm
-wl-skills-bd fix advise --module <module> --json
-wl-skills-bd fix policy plan --assertions <id> --json
-wl-skills-bd fix policy apply --assertions <id> --plan-hash <sha256> --confirm
-```
-
-内置自动修复白名单只有：
-
-- B3：能安全解析同 XML `BaseColumns`、别名一致且 SQL 不含危险文本替换时，将 `SELECT *` 替换为列清单；
-- B5：能确定是公开写方法且不存在事务注解冲突时，补 `@Transactional(rollbackFor = Exception.class)`。
-
-B1/B2/B4/B6~B12 以及不满足前置条件的 B3/B5 只报告证据和人工方案。项目断言可额外登记 `safeReplacement`，但必须是 evidenceRefs 范围内的单文件、单次字面替换；0 次或多次匹配均零写入。apply 会重算计划、验证 `planHash`、备份原文件、失败时恢复，并强制复扫；业务语义修复永不因“AI 看起来合理”而自动执行。
-
-## Java 质量门
-
-将 `.github/java-quality/maven-snippets/quality-profile.xml` 的 `<profile>` 合入父 POM，然后执行：
-
-```bash
-mvn verify -Pwl-quality
-```
-
-| 编号 | 工具 | 默认行为 |
-|---|---|---|
-| J1 | ArchUnit | 阻断 Controller→Mapper/Repository 等分层逆向依赖 |
-| J2 | Checkstyle | 阻断命名、Javadoc、import 与规模偏差 |
-| J3 | PMD 7 | 阻断缺陷、复杂度、资源和性能偏差 |
-| J4 | SpotBugs | 阻断字节码缺陷 |
-| J5 | Spotless | 阻断格式漂移 |
-| J6 | P3C 2.1.1 / PMD 6 | 可选、非阻断、必须与 PMD 7 隔离运行 |
-| J7 | Knife4j/OpenAPI | 运行时文档能力，不冒充静态质量门 |
-| J8 | JaCoCo 0.8.15 | Service 类行/分支 ≥70%/60%，Controller 类行 ≥50% |
-
-完整接入方式见 [Java 质量门说明](files/.github/java-quality/README.md)。
-
-### 精选扫描规则与误报边界（v0.40.0）
-
-PMD 7 默认规则新增显式 Locale、硬编码密钥和固定 IV 检查；代码生成/增量 Java 任务读取 standards/15、17，预防问题而不依靠生成后清告警。J2 已承担括号、注释与 import，J3 已承担复杂度/资源规则，J4 已承担字节码缺陷，不为同一任务默认再启动一套重复引擎。
-
-Spring 协作者构造注入的 EI_EXPOSE_REP2 不做防御性复制；集合/数组输入、返回共享可变状态与 DTO 的实际所有权边界要分别复核，禁止按整个 @Service、DTO 包或 REP2 pattern 全局排除。Arrays.asList 固定长度但 set 可修改；共享静态表头应返回明确只读视图或按消费契约给快照。DTO 的默认值、primitive 与 Jackson 可变性遵循契约，不为了 P3C/Lombok 告警改语义。
-
-规则适用与未接入能力见 [精选扫描决策](files/.github/java-quality/codecc-triage.md)；Gate 负责组织风险/基线/豁免，不要求本包运行时依赖 Gate、scanner 或 Harness。机器码使用 Locale.ROOT，面向用户的语言转换按业务显式指定 Locale。检查和实际业务验证分开。
-
-```bash
-npm run verify:quality-codecc  # 本包源码维护者：临时 Java8 工程，真实 PMD/SpotBugs + locale/集合所有权行为
-```
-
-此命令不构建实际业务项目。原 code-scan-kit 执行失败/旧输出/CPD口径问题未因此修复；不能将其旧 HTML/CSV 直接当完整 Gate 证据。
-
-
-## MCP 工具
-
-| 工具 | 写入 | 作用 |
-|---|:---:|---|
-| `wls_be_capabilities` | 否 | AI 首次接入的单一能力清单：Skill 触发词/状态/安装路径、规则范围、MCP 工具、CLI 命令与读取顺序 |
-| `wls_be_validate` | 否 | B1~B32 扫描；结果含 Controller `endpoints[]` 清单 |
-| `wls_be_doctor` | 否 | JDK/Maven/Profile/质量门/租户证据/契约覆盖体检 |
-| `wls_be_codegen` | 条件 | 契约 validate/plan/apply |
-| `wls_be_contract` | 条件 | seed/inspect/migrate/show/diff/impact/integration-inspect；仅 migrate 写入且保留计划确认门 |
-| `wls_be_safe_fix` | 条件 | B3/B5 安全修复闭环 |
-| `wls_be_review` | 条件 | 变更门禁、质量基线、平台适配、项目断言、供应链与修复分级；写模式保留 planHash/确认链 |
-| `wls_be_standards` | 否 | 读取 30 条规范 |
-| `wls_be_templates` | 否 | 读取 16 个模板 |
-| `wls_be_db_preview` | 否 | 只读预览 CREATE/ALTER DDL + Expand-Contract 阶段 |
-| `wls_be_export_permissions` | 条件 | 导出权限码为 kit SYS_PERMISSION_INFO.md 片段 |
-| `wls_be_config` | 条件 | 配置分层 init/migrate/doctor/fix；写操作保留计划与确认门 |
-| `wls_be_troubleshoot` | 否 | DB/Redis/Nacos/K8s 等常见故障诊断树 |
-| `wls_be_task` | 否 | 任务判定（task 写观测记录，route/explain 只读）：自然语言/显式类型 → Skill、规则子集、统一安全写链与 Pre-flight 证据（必读文件 sha256 清单） |
-| `wls_be_catalog` | 条件 | 当前模块目录 plan/apply/check/show + integration-audit；show 支持 section/cursor，默认禁止隐式全量扫描 |
-| `wls_be_context` | 否 | 当前模块 + 一跳快照的文件/字节/token 有界上下文选择，不扫描关联源码 |
-| `wls_be_commit` | 否 | `type(scope): 功能点-具体内容` 单条/range 校验与 Hook doctor |
-| `wls_be_test` | 否 | 行为契约测试生成（gen/scenarios），测行为不测镜像 |
-
-写工具默认停在 plan/preview；apply 必须显式确认。Cursor、VS Code、Kiro、Copilot、Claude Code 和通用 Agents 的配置随 `init` 安装。详见 [MCP 工作流](files/.github/guides/mcp-workflow.md)。
-
-Agent 接入约定：先读 `.wl-skills-bd/capabilities.json`（或调 `wls_be_capabilities` / `wl-skills-bd capabilities`）拿到触发词与读取顺序，再用 `wls_be_task` 路由任务，按其 Pre-flight 证据加载规范。
-
-所有工具都可增加统一响应控制：
-
-```json
-{
-  "response": { "mode": "summary", "maxItems": 20, "maxBytes": 12000 }
-}
-```
-
-超预算时从 `structuredContent.response.nextCursor` 取得游标，再以同一工具调用 `{ "response": { "cursor": "..." } }` 续取；游标仅在当前 MCP 进程短期有效，不落项目仓库。
-
-内置扫描、任务路由、上下文规划和 MCP 执行器均由确定性脚本执行，没有内置模型 API 调用。AI 读取工具声明、规则、源码或输出时仍占上下文；先取摘要、再续取所需页，不为每次扫描或普通告警调用模型。缓存减少脚本工作，不能代表旧质量结果仍可用于不同源码/配置的放行。
-
-响应中的 `estimatedTokens` 及评测的 bytes/4 是趋势估算，Context Plan 的字符估算也不是模型 tokenizer 或计费凭证。实际用量取宿主/服务 usage；不可获取时明确登记。跨工程包统一阅读可用 [Gate inspect](https://github.com/ChenyCHENYU/wl-skills-gate/blob/main/docs/14-low-token-execution.md)，但 Gate 的裁决仍消费完整原报告，不能使用 MCP/AI 裁剪摘要替代完整覆盖证据。
-
-## 包架构
-
-```text
-files/.wl-skills-bd/   机器事实：能力清单 manifest、Schema、Profile、兼容矩阵、规则目录
-files/.github/        人读规范、Skills、模板、质量门、指南
-lib/                  确定性核心、规则执行计划、共享扫描上下文、Source Index 缓存与 Pipeline
-bin/                  CLI 适配
-mcp/                  18 个工具的协议/Schema 适配、统一结果预算与游标存储
-scripts/ + tests/     包治理、准确率/性能/token 评测、真实 Java 8 夹具和回归测试
-```
-
-详细设计见 [架构说明](https://github.com/ChenyCHENYU/wl-skills-bd/blob/main/kit-internal/architecture.md) 和 [规则覆盖矩阵](https://github.com/ChenyCHENYU/wl-skills-bd/blob/main/kit-internal/rule-coverage.md)。
-
-## 能力边界
-
-13 个 Skill 中 11 个已落地，1 个部分落地（db-migration：CREATE/ALTER/索引已自动生成），1 个仍是诚实标记的流程骨架（业务文档抽取）。项目上下文由 catalog/context 执行器落地；平台适配由 review/integration 执行器落地；行为单测由 `test gen/scenarios` 落地；环境配置由 config init/migrate/doctor/fix 落地。无执行器的能力不展示虚构命令，也不承诺自动应用。
-
-## 稳定性与多环境护栏（v0.11）
-
-基于 mdm-service 实证反例，补齐 v0.10 之后发现的 4 类事故源：
-
-| 场景 | 禁止 | 强制 | 兜底 |
-|---|---|---|---|
-| 分布式锁 | 长 TTL（>10min）无 watchdog | Redisson RLock 自动续期 | B14 扩展 |
-| 事务内发 MQ/HTTP | 回滚后消息已发/长事务锁占用 | 移出事务或用事务消息 | B20 error |
-| HttpUtil 裸调用 | 无超时拖垮线程池 | 加 .timeout 或用 Feign+熔断 | B21 warn |
-| Swagger 2/OpenAPI 3 混用 | 同类 @Api+@Tag 冗余 | 统一 OpenAPI 3，存量保留 | B22（混用 error/纯 Swagger 2 warn） |
-| Service 注入 > 10 | 巨型类信号 | 按子域拆分 | B23 warn |
-
-**多环境与受保护环境护栏**（standards/24）：
-- 5 环境矩阵：dev/sit/uat/pre/prod + Nacos namespace 隔离
-- 业务中心 × 端口 × 数据库集群（cx/non_cx/pt）映射固化
-- `pre/prod/production` 对 codegen/safe-fix/config/permissions apply 默认零写入，需评审后显式授权
-- 分支与合并链由团队单独管控，不在 bd 内固化
-
-## 数据安全护栏（v0.10）
-
-把生产事故源从口头规范固化为机器兜底（be-rules B13~B19），AI 生成 Redis/批量/外部调用代码时强制对照 standards 20/21/22：
-
-| 场景 | 禁止 | 强制 | 兜底 |
-|---|---|---|---|
-| Redis set | 无 TTL | 带过期时间 | B13 error |
-| 分布式锁 | setnx 自实现 | Redisson RLock | B14 error |
-| Redis 命令 | KEYS \*/FLUSHDB/FLUSHALL | SCAN | B15 error |
-| Redis 序列化 | JDK 序列化 | Jackson + JavaTimeModule | B16 warn |
-| 删除数据 | deleteBatchIds/TRUNCATE/DROP | 使用当前 profile 的软删列/删除值（默认 DELETE_FLAG=0） | B17 error |
-| 全表写 | update/delete 无 WHERE | WHERE + COMPANY_ID 谓词 | B18 error |
-| 批量写 | saveBatch > 1000 | ≤1000 或分批游标 | B19 warn |
-
-`pre/prod/production` 的 codegen/safe-fix/config/permissions apply 默认阻断；敏感操作须二次确认。详见 [ops/data-safety](files/.github/skills/ops/data-safety/SKILL.md)。
-
-## Swagger 与 Apifox（v0.11）
-
-- **新代码统一 OpenAPI 3**（`io.swagger.v3.oas.annotations`），存量 Swagger 2 允许保留
-- **Apifox 集成**：springdoc-openapi 自动生成 OpenAPI 3 JSON，Apifox 定时同步（sit/uat 环境）
-- **B22 检测**：同类混用 @Api + @Tag → error；纯 Swagger 2 → warn
-- 详见 [standards/13 §8.1/§8.2](files/.github/standards/13-api-doc-swagger.md)
-
-## 配置分层与多环境管理（v0.12）
-
-把"配置管理 + 环境迁移 + 故障排查"标准化为工程级闭环。任何业务项目套用同一套模式：一处声明（env-matrix）、全工程应用、一键体检、一键迁移、一键排查。详见 [standards/25](files/.github/standards/25-config-layering.md)。
-
-**三层分层模型**：
-- L1 代码库（git，零硬编码）：bootstrap.yml / application.yml / logback 全 `${VAR}` 占位
-- L2 环境变量（部署侧，不进 git）：K8s ConfigMap + Secret / .env / CI 变量
-- L3 Nacos 动态（运行时，namespace 隔离）：application-{env}.yml / datasource-{type}-{cluster}-{env}.yml
-
-**工程闭环**：
-
-```bash
-# 1. 生成标准配置骨架（新项目 5 分钟搭好）
-wl-skills-bd config init --project wl-sale --module sale --port 10000 --db-cluster cx --json
-wl-skills-bd config init --project wl-sale --module sale --port 10000 --db-cluster cx --plan-hash <hash> --confirm
-
-# 2. 声明客户差异（编辑 .wl-skills-bd/env-matrix.yml，单一事实源）
-
-# 3. 客户迁移（内网→华新→下一个，L1 代码零改动）
-wl-skills-bd config migrate --to huaxin --plan
-wl-skills-bd config migrate --to huaxin --apply --plan-hash <hash> --confirm
-
-# 4. 全链路体检（本地启动不了？查哪里？）
-wl-skills-bd config doctor              # L0~L8 静态体检
-wl-skills-bd config doctor --probe      # + DB/Redis/Nacos TCP 连通性探测
-
-# 5. 安全修复（明文密码自动改占位符 + 复扫）
-wl-skills-bd config fix --plan
-wl-skills-bd config fix --plan-hash <hash> --confirm
-
-# 6. 故障排查（错误关键字 → 诊断步骤）
-wl-skills-bd troubleshoot "Communications link failure"
-wl-skills-bd troubleshoot "NacosException"
-wl-skills-bd troubleshoot "CrashLoopBackOff"
-```
-
-**L0~L8 体检项**：config-skeleton / config-secret（明文密码）/ config-security-posture（Bean 覆盖、Actuator 全暴露、env/configprops 值和错误详情泄露）/ config-placeholder / env-matrix / env-completeness / config-nacos / env-dbcluster / env-k8s-manifest / env-port / env-consistency / env-production-guard + 可选 probe-db/redis/nacos。`env-port` 优先校验 env-matrix 中项目冻结端口，不会用通用业务域范围覆盖已确认的客户端口。
-
-**治理列闭环**：受管 profile 提供默认值；项目差异写入未受管的 `.wl-skills-bd/profile.local.json`，禁止直接编辑 `profiles/*.json` 制造安装漂移。合并后的 `softDelete/auditTime` 同时驱动 DDL、Entity、Service 与 Mapper XML；doctor 校验 profile、`rules.local.json`、本地 MyBatis-Plus 运行值三点一致。运行值仅由 Nacos 下发时，doctor 会明确标记“本地未验证”，联调前需保留配置证据。
-
-**内置 10 类故障诊断树**：DB 连接 / Redis 连接 / Nacos 连接 / K8s Pod / 端口占用 / Bean 创建 / Profile 未激活 / Flyway 迁移 / Feign 超时 / MQ 失败。
-
-> 边界：bd 不持有 Nacos 写凭据，不读 Nacos 服务端配置内容（SRE 域）；连通性探测用 TCP socket（端口可达性），不执行 SQL/PING，不持有真实凭据。
-
-## 任务驱动与精准触发（v0.13）
-
-bd 既能全链路新开发完整服务，也能像 wl-skills-kit 一样单点触发（加个接口/落库/改 bug）。关键：**任何任务模式都必须遵守对应规范兜底，不让约束形同虚设**。详见 [standards/26](files/.github/standards/26-task-driven.md)。
-
-<!-- wl-bd-task-types:begin -->
-当前 **13 种任务类型**（从 task-router 与规则 catalog 生成）：
-
-| 任务类型 | 名称 | 模式 | 典型触发词 | 计划规则/质量门 | 原工具 |
-|---|---|---|---|---|---|
-| new-service | 新开发完整后端服务 | full | 新开发/新建服务/全套CRUD | B1/B2/B3/B4/B5/B7/B8/B12/B17/B18/B20/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J8 | codegen/validate/contract/permissions |
-| add-api | 加一个接口/方法 | incremental-contract | 加接口/加方法/加一个 | B1/B2/B5/B8/B12/B20/B24/B25/B26/B30/B31/B32 | codegen/validate/contract |
-| add-field | 加字段落库 | incremental-contract | 加字段/落库/加列 | B3/B4/B7/B18/B25/B26/B31 | codegen/validate/db |
-| add-business-cmd | 加业务命令/状态机 | incremental-contract | 加业务命令/状态机/加submit | B5/B8/B17/B20/B24/B25/B26/B31 | codegen/validate/contract |
-| fix-bug | 修 bug/修复问题 | fix | 改bug/修复/fix | B3/B5/B7/B8/B17/B18/B24/B25/B26/B28/B30/B31/B32 | validate/fix/troubleshoot |
-| refactor | 重构/优化 | fix | 重构/优化/refactor | B5/B6/B8/B9/B10/B11/B12/B23/B24/B25/B26/B28/B30/B31/B32/J1/J2/J3/J8 | validate/fix |
-| audit | 审计/体检 | readonly | 审计/体检/检查 | B1/B2/B3/B4/B5/B6/B7/B8/B9/B10/B11/B12/B13/B14/B15/B16/B17/B18/B19/B20/B21/B22/B23/B24/B25/B26/B27/B28/B29/B30/B31/B32/J1/J2/J3/J4/J5/J8 | doctor/validate |
-| config-op | 配置/环境/部署 | config | 配置/环境/部署 | 见 task 回执 requiredChecks | config/troubleshoot |
-| generate-tests | 生成行为契约测试 | readonly | 生成单元测试/生成单测/补覆盖率 | B1/B5/B24/B25/B32/J8 | test/validate |
-| integration-adapter | MQ/HTTP 集成适配 | readonly | mq 对接/接入 mq/消息封装 | B20/B21/B28/B32/J1/J8 | integration/review |
-| project-context | 模块上下文治理 | readonly | 模块上下文/查关联服务/生成前去重 | 见 task 回执 requiredChecks | catalog/context |
-| extract-business-doc | 反向抽取业务文档 | readonly | 抽取业务文档/业务理解/接手陌生模块 | 见 task 回执 requiredChecks | context |
-| data-safety | 数据与缓存安全 | readonly | 缺 ttl/没有 ttl/缓存安全 | B13/B14/B15/B16/B17/B18/B19/B25 | validate/fix |
-
-表格表示判定与计划，具体范围、资产缺口、待补输入和实际验证状态以 task/status 回执为准。反向业务文档抽取目前只有骨架指导，缺少语义执行器时明确报告 gap。
-<!-- wl-bd-task-types:end -->
-
-维护任务定义或 catalog 后，在包仓库运行 `node scripts/sync-task-docs.js --write` 同步当前目录，再运行 `npm run verify:doc-sync`；门禁默认只读，发现文档漂移会失败。规则与步骤仍由原任务/执行器维护，表格不建立第二套路由。
-
-**路由与安全写链**：
-
-```bash
-# 自然语言识别（推荐）
-wl-skills-bd task "加个查询接口"           # → add-api
-wl-skills-bd task "加字段落库"             # → add-field
-wl-skills-bd task "改个空指针bug"          # → fix-bug
-wl-skills-bd task "连不上redis"           # → config-op
-wl-skills-bd task "新开发销售模块全套"      # → new-service
-wl-skills-bd task --list                   # 列出 13 种任务
-
-# 指定类型输出契约增量、计划确认和验证步骤；task 记录计划，不改写业务文件
-wl-skills-bd task --type add-api
-wl-skills-bd task --type add-field --target-file src/main/java/.../Foo.java
-```
-
-**规范兜底**：加接口/字段/业务命令先更新 `wl-contract.json`，再走 codegen validate/plan/apply 的 `planHash + --confirm + 回滚` 链，最后跑对应规则子集和 `contract diff --strict`。`task --apply` 会被明确拒绝，避免出现第二套无事务写入器。
-
-## 行为契约测试（v0.16）
-
-从契约 customOperations 自动生成关键场景测试，**测行为不测镜像**（避免冗余）。详见 [unit-test-gen](files/.github/skills/test/unit-test-gen/SKILL.md)。
-
-```bash
-# 列出测试场景
-wl-skills-bd test scenarios wl-contract.json
-# → submit（stateTransition）：2 个场景（正常路径 + 前置拒绝）
-# → batchCancel（batch）：2 个场景（整批成功 + 前置失败整批拒绝）
-
-# 生成完整 ServiceTest（含 smoke + 业务行为契约）：先预览，再确认同一计划
-wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java --json
-wl-skills-bd test gen wl-contract.json --output src/test/java/.../XxxServiceTest.java --plan-hash <hash> --confirm
-```
-
-**生成原则**：
-- ✅ 正常路径：前置满足 → 调用真实 Service，直接断言实体状态/业务结果已变更
-- ✅ 前置拒绝：状态不满足 → `assertThrows(ServiceException.class)`
-- ✅ batch 原子语义：整批成功时验证计数与状态；任一记录不满足前置时 `assertThrows`，禁止部分成功
-- ❌ 不测 DTO getter / 纯转发 / verify setter 调用次数（冗余）
-
-> 生成 Service 使用显式、租户安全的 Mapper 边界（`selectActiveById/selectActiveByIds/updateAtomic`），测试直接 mock 这些边界；生成测试不得含 TODO、空断言或 `service.undefined`。权限负向、目标数据库 SQL、并发与压测属于集成/生产 assurance 证据，不由纯 Service 单测伪造。
-
-## 包自身验收
-
-```bash
-npm run verify                 # 版本/计数/Schema/规则/测试套件（含协作契约、扩展编译、事务回滚与生产护栏）
-npm run eval:quality           # precision/recall、P95、规则短路、缓存、MCP 与 Catalog token 回退门禁
-npm run verify:quality-maven   # Java 8 真实 Maven 生命周期 + 实际生成源码 Checkstyle/Spotless/PMD 门
-npm run release:check          # 全量验证 + npm 发布内容 dry-run
-```
-
-CI 固定 Node 22 和 Java 8。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
-
-## 伴生工程
-
-- 前端工程脚手架：[wl-skills-kit](https://github.com/ChenyCHENYU/wl-skills-kit#readme)
-- 前端视觉能力：[wl-skills-ui](https://github.com/ChenyCHENYU/wl-skills-ui#readme)
-
-
-每次后端任务用 `wl-skills-bd task --input "<完整任务>" --json`取得 runId、判定、候选、规则和未验证项。`route`/`explain` 只读解释，不记录runId；相关任务使用 `task` 持久化判定与建议。13 个 canonical Skill 均有路由；相关却缺 Skill、规则、资产或执行器会记录 gap 建议，歧义不会强行选中。`.agents/skills/wl-skills-bd/SKILL.md` 是本包独有 Codex gateway，按需加载 canonical 文件；陌生入口不会被安装器或 force 覆盖。
-
-`validate --run-id <runId> --json`、`review run --run-id <runId> --json` 及等价 MCP 返回真实工具回执，含输入快照、实际规则覆盖与执行状态。`status --run-id <runId> --json` 检查尚未执行项和过期输入，`doctor --host codex --json` 只静态检查宿主入口。任务计划、文件哈希和模型读取自述不能当作已执行或已读取证据；模型自述标为“模型声明”，Java/Maven 与运行验证没有实际证据时保持未验证。观测记录只写 `.wl-skills-bd/runs/`，代码、配置、数据库与权限写入继续受现有确认链约束。
-
-同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。
-
-### 当前请求、动作边界与 Harness 集成
-
-任务判定保留原始文本，并将当前请求、历史引用和明确否定分开。自然语言判定覆盖已公开语料与规则，不能承诺任意表述都自动命中；遇到歧义或缺口应补充目标/领域或显式指定本包能力，不能静默选择。编辑前显示真实 `notice`，包括版本、技能、规则、目标、runId、动作与待检查项。
-
-`protocol describe --json` 声明 `task-intent-v1`、`result-core-v1`、`executor-catalog-v1` 与 `executor-invoke-v1`；`schemas.resultCore` 与各操作 `schemas.results` 可供宿主验证。原有结果字段保留，`result.integration` 提供项目适用范围、动作模式、规则身份、目标、就绪状态、允许执行器和真实执行/验证状态。`execute` 将 CLI 参数映射收回本包，宿主只传公开结构化参数。`ok` 只表示调用成功。判定操作未声明使用的输入字段进入 diagnostics，不会转成授权依据；执行参数按完整 Schema 拒绝不合法字段。
-
-`action.mode` 为 explain/plan/inspect/apply/unspecified；解释和规划不自动启动检查。`businessWritesAuthorized=false`，任务意图不能替代业务写入授权。`ruleRefs` 为包自有规则身份（包名、规则 ID、版本、来源、性质），自然语言约束有稳定 ID；原规则名称与列表保留。所有规则的机械/语义验证仍以实际回执为准。
-
-`inventory.executors` 声明本包业务只读检查器、目标与参数 Schema；其适用条件由本包判定。外部适配器须核对同项目、同包、同版本、同 runId 的真实计划、新鲜度与允许动作，指定一个目标，不能扩大范围；支持规则子集的执行器不得选择计划外规则。多目标先拆分任务计划，再按每个计划的授权目标分别调用。五包和 Harness 均为可选组合，不新增兄弟包或 Harness 运行时依赖；卸下适配器后原 CLI/MCP 继续独立使用。
-
-仅补注释的请求会排除“不新增接口/不实现功能”的否定动作；后端目标文件或实际 Maven 项目证据决定 B12 基线。只有 Service 等称谓而没有后端事实时返回 needs-context。
-
-### 任务反馈与执行边界
-
-编辑前展示实际 `notice` 的包版本、判定、动作、技能/规则、目标、runId、待检查项与版本对齐信息；解释/规划和明确禁止检查时不自动执行检查。`runtime=mismatch/invalid` 或 `planStale=true` 必须先同步本包或重新判定。只读 `inspect` 输入变化后重新 `task`；`apply` 完成正常业务修改后可用同 runId 做实际复扫，但规则、配置或版本变化仍需重新判定。
-
-单包只读取自身公开能力；多包复用同 runId 并各存各的证据。`matched/ready/ok=true` 仅说明判定或调用成功，是否完成以实际 `executionStatus/validationStatus/checkedFiles` 为准。未接入或不适用的项目不借父目录规则；宿主发现、模型读取、反馈展示没有真实证据时继续标记未验证。
-
-维护边界、结构化执行和防漂移验收：[维护契约](docs/maintenance-contract.md)。
-
-1.0 评估与稳定公开面准入：[版本成熟度](docs/release-maturity.md)。
-
-MCP 请求入口使用共享 JSON-RPC 边界校验：非法请求/参数返回明确错误并继续服务，仅注册工具可调用；通知不应答，`id:null` 请求保留原 id。
+| 包 | 职责 |
+| --- | --- |
+| [skills-gate](https://github.com/ChenyCHENYU/wl-skills-gate) | 项目接入、钩子与 CI 门禁、报告闭环 |
+| [skills-kit](https://github.com/ChenyCHENYU/wl-skills-kit) | PC 前端工程与代码规范 |
+| [skills-ui](https://github.com/ChenyCHENYU/wl-skills-ui) | UI 一致性、扫描与确定性修复 |
+| **skills-bd** | Java 后端契约、生成与质量检查 |
+| [skills-test](https://github.com/ChenyCHENYU/wl-skills-test) | 测试规划、执行与验收证据 |
+| [skills-design](https://github.com/ChenyCHENYU/wl-skills-design) | 需求、设计与交付文档 |
